@@ -18,13 +18,13 @@ const keys = reactive({ up: false, down: false, left: false, right: false })
 const sceneStyle = computed(() => ({
   backgroundImage: `url(${escenarioImg})`,
   backgroundSize: 'cover',
-  backgroundPosition: 'center'
+  backgroundPosition: 'center',
 }))
 
 const playerStyle = computed(() => ({
   width: `${player.size}px`,
   height: `${player.size}px`,
-  transform: `translate(${Math.round(player.x)}px, ${Math.round(player.y)}px)`
+  transform: `translate(${Math.round(player.x)}px, ${Math.round(player.y)}px)`,
 }))
 
 let rafId: number | null = null
@@ -60,7 +60,8 @@ function loop(ts: number) {
   const dt = (ts - lastTime) / 1000
   lastTime = ts
 
-  let vx = 0, vy = 0
+  let vx = 0,
+    vy = 0
   if (keys.up) vy -= 1
   if (keys.down) vy += 1
   if (keys.left) vx -= 1
@@ -102,9 +103,9 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   top: 0;
-  background: linear-gradient(135deg,#ffd86b,#ff7aa2);
+  background: linear-gradient(135deg, #ffd86b, #ff7aa2);
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
   transition: transform 0.04s linear;
 }
 </style>
