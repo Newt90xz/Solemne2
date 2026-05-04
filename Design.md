@@ -104,3 +104,7 @@ Opcionales:
 
 - pinia (estado global)
 - howler.js (audio)
+
+Historia del Juego(Digital Void):
+
+seremos un virus y nuestros enemigos seran antivirus, el objetivo es sobrevivir el mayor tiempo posible y eliminar a los antivirus para ganar experiencia y mejorar tus habilidades. A medida que avanzas, te enfrentaras a jefes cada vez mas dificiles y enemigos con habilidades unicas, abra un jefe unico y sera el firewall de este jefe solo se podra escapar NO derrotar, los ataques de este seran que nos intentara detener con muros y si nos toca nos mata(el firewall intentara atraparnos) . El juego se desarrolla en un entorno digital, con gráficos pixel art y una banda sonora retro.
