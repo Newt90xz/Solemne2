@@ -1,6 +1,7 @@
 <template>
   <div class="game-viewpoint" ref="viewportRef">
   <div class="game-scene" ref="sceneRef" :style="sceneStyle">
+    <div class="aim-line" :style="aimLineStyle"></div>
     <div class="player" :style="playerStyle"></div>
   </div>
   </div>
@@ -10,11 +11,14 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import escenarioImg from '../assets/Escenario_Principal.png'
 
+const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 
 const player = reactive({ x: 500, y: 500, size: 26 })
 const camera = reactive ({x: 0, y: 0})
 const speed = 320 // pixels per second
+
+const mouseScreen = reactive({ x: 0, y: 0, active: false })
 
 const worldSize = { width: 5000, height: 5000}
 
@@ -32,8 +36,41 @@ const sceneStyle = computed(() => ({
 const playerStyle = computed(() => ({
   width: `${player.size}px`,
   height: `${player.size}px`,
-  transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px)`,
+  transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
+  transformOrigin: '50% 50%',
 }))
+
+const playerCenterScreen = computed(() => ({
+  x: player.x - camera.x + player.size / 2,
+  y: player.y - camera.y + player.size / 2,
+}))
+
+const aimDelta = computed(() => {
+  const start = playerCenterScreen.value
+  const targetX = mouseScreen.active ? mouseScreen.x : start.x
+  const targetY = mouseScreen.active ? mouseScreen.y : start.y
+  return {
+    dx: targetX - start.x,
+    dy: targetY - start.y,
+  }
+})
+
+const aimAngleDeg = computed(() => {
+  const { dx, dy } = aimDelta.value
+  if (dx === 0 && dy === 0) return 0
+  return Math.atan2(dy, dx) * (180 / Math.PI)
+})
+
+const aimLineStyle = computed(() => {
+  const start = playerCenterScreen.value
+  const { dx, dy } = aimDelta.value
+  const length = Math.hypot(dx, dy)
+  return {
+    width: `${Math.max(0, Math.round(length))}px`,
+    transform: `translate(${Math.round(start.x)}px, ${Math.round(start.y)}px) rotate(${aimAngleDeg.value}deg)`,
+    opacity: mouseScreen.active ? '1' : '0.35',
+  }
+})
 
 let rafId: number | null = null
 let lastTime = 0
@@ -50,6 +87,18 @@ function onKeyUp(e: KeyboardEvent) {
   if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = false
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false
+}
+
+function onMouseMove(e: MouseEvent) {
+  if (!sceneRef.value) return
+  const rect = sceneRef.value.getBoundingClientRect()
+  mouseScreen.x = e.clientX - rect.left
+  mouseScreen.y = e.clientY - rect.top
+  mouseScreen.active = true
+}
+
+function onMouseLeave() {
+  mouseScreen.active = false
 }
 
 function clampPlayer() {
@@ -101,23 +150,46 @@ function loop(ts: number) {
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseleave', onMouseLeave)
   rafId = requestAnimationFrame(loop)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseleave', onMouseLeave)
   if (rafId) cancelAnimationFrame(rafId)
 })
 </script>
 
 <style scoped>
+.game-viewpoint {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .game-scene {
   width: 100%;
   height: 100vh;
   position: relative;
   display: block;
 }
+
+.aim-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  background: rgba(255, 70, 70, 0.95);
+  transform-origin: 0 50%;
+  box-shadow: 0 0 8px rgba(255, 70, 70, 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+
 .player {
   position: absolute;
   left: 0;
@@ -126,5 +198,18 @@ onUnmounted(() => {
   border-radius: 0px;
   box-shadow: none;
   will-change: transform;
+  z-index: 3;
+}
+
+.player::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  width: 10px;
+  height: 4px;
+  border-radius: 3px;
+  transform: translateY(-50%);
+  background: rgba(255, 70, 70, 0.95);
 }
 </style>
