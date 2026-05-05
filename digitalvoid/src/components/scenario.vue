@@ -50,5 +50,5 @@ function handleSaveSettings(payload: GameSettings) {
     @save="handleSaveSettings"
     @go-back="handleBackToMenu"
   />
-  <GameScene v-else-if="currentView === 'game'" />
+  <GameScene v-else-if="currentView === 'game'" @exit="handleBackToMenu" />
 </template>

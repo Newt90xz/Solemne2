@@ -9,6 +9,22 @@
         <p class="hud-help">Cambiar: 1-6</p>
       </div>
 
+      <div class="hud-actions">
+        <button class="hud-button" type="button" @click="togglePause">
+          {{ isPaused ? 'Reanudar' : 'Pausar' }}
+        </button>
+        <button class="hud-button hud-button-secondary" type="button" @click="exitGame">
+          Salir
+        </button>
+      </div>
+
+      <div v-if="isPaused" class="pause-overlay">
+        <div class="pause-card">
+          <p class="pause-title">Juego en pausa</p>
+          <p class="pause-text">Pulsa reanudar para continuar o salir para volver al menú.</p>
+        </div>
+      </div>
+
       <div class="aim-line" :style="aimLineStyle"></div>
 
       <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
@@ -27,6 +43,7 @@ import {
   WEAPON_ORDER,
   type WeaponId,
 } from '../game/weapons'
+import { useGameStore } from '../stores/game'
 
 interface Bullet {
   id: number
@@ -40,20 +57,25 @@ interface Bullet {
   color: string
 }
 
+const emit = defineEmits<{
+  (e: 'exit'): void
+}>()
+
 const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
+const gameStore = useGameStore()
 
 const player = reactive({ x: 500, y: 500, size: 26 })
 const camera = reactive({ x: 0, y: 0 })
 const speed = 320 // pixels per second
 
 const mouseScreen = reactive({ x: 0, y: 0, active: false })
-const mouse = reactive({ down: false })
 
 const worldSize = { width: 5000, height: 5000 }
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
+const isPaused = ref(false)
 
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
@@ -109,7 +131,6 @@ const aimLineStyle = computed(() => {
 let rafId: number | null = null
 let lastTime = 0
 let nextBulletId = 1
-let shootAccumulator = 0
 
 function bulletStyle(bullet: Bullet) {
   return {
@@ -123,6 +144,11 @@ function bulletStyle(bullet: Bullet) {
 }
 
 function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    togglePause()
+    return
+  }
+
   if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true
   if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true
@@ -133,7 +159,6 @@ function onKeyDown(e: KeyboardEvent) {
     const id = WEAPON_ORDER[index]
     if (id) {
       selectedWeaponId.value = id
-      shootAccumulator = 0
     }
   }
 }
@@ -146,6 +171,7 @@ function onKeyUp(e: KeyboardEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
+  if (isPaused.value) return
   if (!sceneRef.value) return
   const rect = sceneRef.value.getBoundingClientRect()
   mouseScreen.x = e.clientX - rect.left
@@ -155,23 +181,32 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseDown(e: MouseEvent) {
   if (e.button !== 0) return
-  mouse.down = true
+  if (isPaused.value) return
   onMouseMove(e)
-}
-
-function onMouseUp(e: MouseEvent) {
-  if (e.button !== 0) return
-  mouse.down = false
+  shootFromPlayer()
 }
 
 function onMouseLeave() {
   mouseScreen.active = false
-  mouse.down = false
 }
 
 function clampPlayer() {
   player.x = Math.max(0, Math.min(player.x, worldSize.width - player.size))
   player.y = Math.max(0, Math.min(player.y, worldSize.height - player.size))
+}
+
+function togglePause() {
+  isPaused.value = !isPaused.value
+  if (isPaused.value) {
+    keys.up = false
+    keys.down = false
+    keys.left = false
+    keys.right = false
+  }
+}
+
+function exitGame() {
+  emit('exit')
 }
 
 function updateCamera() {
@@ -188,6 +223,8 @@ function updateCamera() {
 }
 
 function shootFromPlayer() {
+  if (isPaused.value) return
+
   const weapon = selectedWeapon.value
   const { dx, dy } = aimDelta.value
   const aimLength = Math.hypot(dx, dy)
@@ -240,26 +277,15 @@ function updateBullets(dt: number) {
   }
 }
 
-function updateAutoShoot(dt: number) {
-  if (!mouseScreen.active || !mouse.down) {
-    shootAccumulator = 0
-    return
-  }
-
-  const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
-  const shotInterval = 1 / shotsPerSecond
-
-  shootAccumulator += dt
-  while (shootAccumulator >= shotInterval) {
-    shootAccumulator -= shotInterval
-    shootFromPlayer()
-  }
-}
-
 function loop(ts: number) {
   if (!lastTime) lastTime = ts
   const dt = (ts - lastTime) / 1000
   lastTime = ts
+
+  if (isPaused.value) {
+    rafId = requestAnimationFrame(loop)
+    return
+  }
 
   let vx = 0
   let vy = 0
@@ -277,7 +303,6 @@ function loop(ts: number) {
     clampPlayer()
   }
 
-  updateAutoShoot(dt)
   updateBullets(dt)
   updateCamera()
 
@@ -289,7 +314,6 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mousedown', onMouseDown)
-  window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('mouseleave', onMouseLeave)
   rafId = requestAnimationFrame(loop)
 })
@@ -299,7 +323,6 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mousedown', onMouseDown)
-  window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('mouseleave', onMouseLeave)
   if (rafId) cancelAnimationFrame(rafId)
 })
@@ -330,6 +353,59 @@ onUnmounted(() => {
   color: #ffffff;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.hud-actions {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+}
+
+.hud-button {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 22, 35, 0.92);
+  color: #ffffff;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hud-button-secondary {
+  background: rgba(84, 13, 13, 0.92);
+}
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.pause-card {
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(9, 14, 22, 0.9);
+  color: #ffffff;
+  text-align: center;
+  max-width: 320px;
+}
+
+.pause-title,
+.pause-text {
+  margin: 0;
+}
+
+.pause-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
 }
 
 .hud-title,
