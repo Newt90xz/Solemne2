@@ -108,3 +108,13 @@ Opcionales:
 Historia del Juego(Digital Void):
 
 seremos un virus y nuestros enemigos seran antivirus, el objetivo es sobrevivir el mayor tiempo posible y eliminar a los antivirus para ganar experiencia y mejorar tus habilidades. A medida que avanzas, te enfrentaras a jefes cada vez mas dificiles y enemigos con habilidades unicas, abra un jefe unico y sera el firewall de este jefe solo se podra escapar NO derrotar, los ataques de este seran que nos intentara detener con muros y si nos toca nos mata(el firewall intentara atraparnos) . El juego se desarrolla en un entorno digital, con gráficos pixel art y una banda sonora retro.
+
+Descripcion de armas:
+
+- El Ransomware: "El Cripto-Martillo" (Arma Pesada/Bloqueo).
+- El Troyano: "El Caballo de Troya" (Arma de Sigilo/Engaño).
+- El Gusano: "El Nanobot Contagioso" (Arma de Área/Propagación).
+- Spyware/Keylogger: "El Ojo Digital" (Arma de Apoyo/Información).
+- DDoS (Distributed Denial of Service): "La Tormenta de Paquetes" (Arma de Área/Caos).
+- Virus de Accion Directa: "La Carga Explosiva" (Daño Directo). ---> Arma Basica.
+
