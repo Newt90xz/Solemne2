@@ -5,7 +5,7 @@ import Instrucciones from './Instrucciones.vue'
 import Configuración from './Configuración.vue'
 import GameScene from './GameScene.vue'
 import { ref, onMounted } from 'vue'
-import { useGameStore } from '../stores/game'
+import { useGameStore, type GameSettings } from '../stores/game'
 
 const currentView = ref<'menu' | 'instructions' | 'settings' | 'game'>('menu')
 
@@ -31,8 +31,8 @@ onMounted(() => {
   gameStore.loadFromLocal()
 })
 
-function handleSaveSettings(payload: Record<string, unknown>) {
-  gameStore.setSettings(payload as any)
+function handleSaveSettings(payload: GameSettings) {
+  gameStore.setSettings(payload)
   gameStore.saveToLocal()
   currentView.value = 'menu'
 }
