@@ -27,7 +27,25 @@
 
       <div class="aim-line" :style="aimLineStyle"></div>
 
-      <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
+      <div v-if="nearestBuilding && hintVisible" class="capture-hint">
+        <div class="hint-icon">{{ nearestBuilding.b.icon }}</div>
+        <div>Presiona <strong>E</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
+      </div>
+
+      <div v-for="b in buildings" :key="'area-'+b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
+
+      <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
+        <div class="building-icon">{{ b.icon }}</div>
+        <div class="building-label">{{ b.name }}</div>
+        <div v-if="b.captured" class="building-captured">Capturado</div>
+      </div>
+
+      <div
+        v-for="bullet in bullets"
+        :key="bullet.id"
+        class="bullet"
+        :style="bulletStyle(bullet)"
+      ></div>
 
       <div class="player" :style="playerStyle"></div>
     </div>
@@ -37,12 +55,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import escenarioImg from '../assets/Escenario_Principal.png'
-import {
-  DEFAULT_WEAPON_ID,
-  WEAPON_CATALOG,
-  WEAPON_ORDER,
-  type WeaponId,
-} from '../game/weapons'
+import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
 
 interface Bullet {
@@ -57,6 +70,23 @@ interface Bullet {
   color: string
 }
 
+interface Building {
+  id: number
+  x: number
+  y: number
+  size: number
+  name: string
+  captured: boolean
+  buff: {
+    type: 'speed' | 'damage'
+    value: number
+    duration: number
+  }
+  areaRadius?: number
+  icon?: string
+  buffText?: string
+}
+
 const emit = defineEmits<{
   (e: 'exit'): void
 }>()
@@ -67,11 +97,18 @@ const gameStore = useGameStore()
 
 const player = reactive({ x: 500, y: 500, size: 26 })
 const camera = reactive({ x: 0, y: 0 })
-const speed = 320 // pixels per second
+const baseSpeed = 320 // base pixels per second
+const speedMultiplier = ref(1)
 
 const mouseScreen = reactive({ x: 0, y: 0, active: false })
+const mouse = reactive({ down: false })
 
 const worldSize = { width: 5000, height: 5000 }
+
+const buildings = reactive<Building[]>([])
+let nextBuildingId = 1
+const captureRange = 48
+const activeBuffTimers: number[] = []
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
@@ -128,9 +165,116 @@ const aimLineStyle = computed(() => {
   }
 })
 
+const nearestBuilding = computed(() => {
+  let nearest: Building | null = null
+  let bestDist = Infinity
+  const px = player.x + player.size / 2
+  const py = player.y + player.size / 2
+  for (const b of buildings) {
+    const d = Math.hypot(b.x - px, b.y - py)
+    if (d < bestDist) {
+      bestDist = d
+      nearest = b
+    }
+  }
+  if (!nearest) return null
+  return { b: nearest, dist: bestDist }
+})
+
+const hintVisible = computed(() => {
+  if (!nearestBuilding.value) return false
+  const b = nearestBuilding.value.b
+  const r = b.areaRadius ?? captureRange
+  return nearestBuilding.value.dist <= r + 8 && !b.captured
+})
+
 let rafId: number | null = null
 let lastTime = 0
 let nextBulletId = 1
+let shootAccumulator = 0
+
+function randRange(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function spawnBuildings(count = 8) {
+  buildings.length = 0
+  let attempts = 0
+  while (buildings.length < count && attempts < count * 50) {
+    attempts++
+    const size = randRange(48, 96)
+    const x = randRange(size, worldSize.width - size)
+    const y = randRange(size, worldSize.height - size)
+
+    // avoid spawning too close to player
+    const dx = x - player.x
+    const dy = y - player.y
+    if (Math.hypot(dx, dy) < 240) continue
+
+    // avoid overlap with other buildings
+    let collides = false
+    for (const b of buildings) {
+      const ddx = b.x - x
+      const ddy = b.y - y
+      if (Math.hypot(ddx, ddy) < (b.size + size) * 0.7) {
+        collides = true
+        break
+      }
+    }
+    if (collides) continue
+
+    const type: 'speed' | 'damage' =
+      buildings.length % 3 === 0 ? 'speed' : buildings.length % 3 === 1 ? 'damage' : 'speed'
+    const buff =
+      type === 'speed'
+        ? { type: 'speed' as const, value: 1.35, duration: 12 }
+        : { type: 'damage' as const, value: 1.25, duration: 10 }
+
+    const icon = type === 'speed' ? '⚡' : '🔥'
+    const buffText = type === 'speed' ? 'Velocidad +35% (12s)' : 'Daño +25% (10s)'
+    const areaRadius = Math.floor(size * 1.6)
+
+    buildings.push({
+      id: nextBuildingId++,
+      x,
+      y,
+      size,
+      name: `Edificio ${buildings.length + 1}`,
+      captured: false,
+      buff,
+      areaRadius,
+      icon,
+      buffText,
+    })
+  }
+}
+
+function buildingAreaStyle(b: Building) {
+  const r = b.areaRadius || Math.round(b.size * 1.6)
+  return {
+    width: `${r * 2}px`,
+    height: `${r * 2}px`,
+    transform: `translate(${Math.round(b.x - camera.x - r)}px, ${Math.round(b.y - camera.y - r)}px)`,
+    background: b.captured ? 'rgba(120,200,120,0.12)' : 'rgba(60,120,220,0.08)',
+    border: b.captured ? '2px solid rgba(80,200,120,0.25)' : '1px dashed rgba(120,140,200,0.12)',
+    borderRadius: '999px',
+    zIndex: 1,
+  }
+}
+
+function buildingStyle(b: Building) {
+  const color = b.captured ? 'rgba(120,200,120,0.95)' : 'rgba(200,120,255,0.95)'
+  return {
+    width: `${b.size}px`,
+    height: `${b.size}px`,
+    transform: `translate(${Math.round(b.x - camera.x - b.size / 2)}px, ${Math.round(b.y - camera.y - b.size / 2)}px)`,
+    background: color,
+    border: '2px solid rgba(0,0,0,0.35)',
+    boxShadow: b.captured ? '0 0 18px rgba(80,200,120,0.45)' : '0 0 10px rgba(180,120,220,0.25)',
+    borderRadius: '6px',
+    zIndex: 5,
+  }
+}
 
 function bulletStyle(bullet: Bullet) {
   return {
@@ -161,6 +305,10 @@ function onKeyDown(e: KeyboardEvent) {
       selectedWeaponId.value = id
     }
   }
+
+  if (e.key === 'e' || e.key === 'E') {
+    tryCapture()
+  }
 }
 
 function onKeyUp(e: KeyboardEvent) {
@@ -183,7 +331,15 @@ function onMouseDown(e: MouseEvent) {
   if (e.button !== 0) return
   if (isPaused.value) return
   onMouseMove(e)
+  // start hold-to-fire + immediate shot
+  mouse.down = true
   shootFromPlayer()
+}
+
+function onMouseUp(e: MouseEvent) {
+  if (e.button !== 0) return
+  mouse.down = false
+  shootAccumulator = 0
 }
 
 function onMouseLeave() {
@@ -255,6 +411,58 @@ function shootFromPlayer() {
   }
 }
 
+function tryCapture() {
+  // find nearest uncaptured building within range (world coords)
+  const px = player.x + player.size / 2
+  const py = player.y + player.size / 2
+  let nearest: Building | null = null
+  let bestDist = Infinity
+  for (const b of buildings) {
+    if (b.captured) continue
+    const d = Math.hypot(b.x - px, b.y - py)
+    if (d < bestDist) {
+      bestDist = d
+      nearest = b
+    }
+  }
+  if (!nearest) return
+  const effectiveRadius = nearest.areaRadius ?? captureRange
+  if (bestDist > effectiveRadius) return
+
+  // capture
+  nearest.captured = true
+  applyBuff(nearest.buff)
+}
+
+function applyBuff(buff: { type: 'speed' | 'damage'; value: number; duration: number }) {
+  if (buff.type === 'speed') {
+    speedMultiplier.value = buff.value
+    const t = window.setTimeout(() => {
+      speedMultiplier.value = 1
+    }, buff.duration * 1000)
+    activeBuffTimers.push(t)
+  }
+  if (buff.type === 'damage') {
+    // For now, reflect as visual pulse — damage system not implemented yet
+    // Keep placeholder: could set a damageMultiplier state later
+    const t = window.setTimeout(() => {
+      // nothing to revert yet
+    }, buff.duration * 1000)
+    activeBuffTimers.push(t)
+  }
+}
+
+function updateAutoShoot(dt: number) {
+  if (!mouse.down || !mouseScreen.active || isPaused.value) return
+  const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
+  const shotInterval = 1 / shotsPerSecond
+  shootAccumulator += dt
+  while (shootAccumulator >= shotInterval) {
+    shootAccumulator -= shotInterval
+    shootFromPlayer()
+  }
+}
+
 function updateBullets(dt: number) {
   const margin = 200
   for (let i = bullets.length - 1; i >= 0; i -= 1) {
@@ -287,6 +495,7 @@ function loop(ts: number) {
     return
   }
 
+  const speed = baseSpeed * speedMultiplier.value
   let vx = 0
   let vy = 0
   if (keys.up) vy -= 1
@@ -302,7 +511,7 @@ function loop(ts: number) {
     player.y += vy * dt
     clampPlayer()
   }
-
+  updateAutoShoot(dt)
   updateBullets(dt)
   updateCamera()
 
@@ -314,7 +523,9 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mousedown', onMouseDown)
+  window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('mouseleave', onMouseLeave)
+  spawnBuildings(10)
   rafId = requestAnimationFrame(loop)
 })
 
@@ -323,7 +534,10 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mousedown', onMouseDown)
+  window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('mouseleave', onMouseLeave)
+  // clear buff timers
+  for (const t of activeBuffTimers) clearTimeout(t)
   if (rafId) cancelAnimationFrame(rafId)
 })
 </script>
@@ -453,6 +667,69 @@ onUnmounted(() => {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 4;
+}
+
+.building {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  color: #07111f;
+  font-weight: 800;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.building-label {
+  font-size: 11px;
+  color: rgba(8, 12, 16, 0.85);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.building-area {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.building-icon {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 18px;
+}
+
+.building-captured {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 11px;
+  background: rgba(255,255,255,0.12);
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+
+.capture-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 22;
+  padding: 10px 14px;
+  background: rgba(6, 12, 20, 0.9);
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.hint-icon {
+  font-size: 18px;
 }
 
 .player {

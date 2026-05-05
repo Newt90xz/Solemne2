@@ -7,9 +7,7 @@
       <header class="config-header">
         <p class="eyebrow">Digital Void</p>
         <h2>Configuración del juego</h2>
-        <p class="subtitle">
-          Ajusta tu partida antes de entrar al vacío digital.
-        </p>
+        <p class="subtitle">Ajusta tu partida antes de entrar al vacío digital.</p>
       </header>
 
       <form class="config-form" @submit.prevent="apply">
