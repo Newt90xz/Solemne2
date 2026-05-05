@@ -10,11 +10,12 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import escenarioImg from '../assets/Escenario_Principal.png'
+import virusImg from '../assets/malware.png'
 
 const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 
-const player = reactive({ x: 500, y: 500, size: 26 })
+const player = reactive({ x: 500, y: 500, size: 24 })
 const camera = reactive ({x: 0, y: 0})
 const speed = 320 // pixels per second
 
@@ -36,8 +37,9 @@ const sceneStyle = computed(() => ({
 const playerStyle = computed(() => ({
   width: `${player.size}px`,
   height: `${player.size}px`,
+  backgroundImage: `url(${virusImg})`,
+  backgroundSize: 'contain',
   transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
-  transformOrigin: '50% 50%',
 }))
 
 const playerCenterScreen = computed(() => ({
@@ -169,6 +171,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  cursor: none;
 }
 
 .game-scene {
@@ -194,9 +197,7 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   top: 0;
-  background: rgb(255, 255, 0);
-  border-radius: 0px;
-  box-shadow: none;
+  border-radius: 0;
   will-change: transform;
   z-index: 3;
 }
