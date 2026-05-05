@@ -6,5 +6,4 @@ import Escenario from './components/scenario.vue';
 <template>
   <Escenario></Escenario>
 </template>
-
 <style scoped></style>
