@@ -1,6 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import malwareLogo from '../assets/malware.png'
 
 const emit = defineEmits<{
   (e: 'new-game'): void
@@ -110,7 +111,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="title-container">
-      <h1 class="title">DIGITAL VOID</h1>
+      <h1 class="title glitch" data-text="DIGITAL VOID">DIGITAL VOID</h1>
       <p class="subtitle">INFECTATE. EVOLUCIONA. SOBREVIVE.</p>
     </div>
 
@@ -125,7 +126,7 @@ onBeforeUnmount(() => {
 
       <section class="symbol-panel" aria-hidden="true">
         <div class="circle">
-          <span>☣</span>
+          <img :src="malwareLogo" alt="Malware logo" class="malware-logo" />
         </div>
       </section>
     </div>
@@ -294,6 +295,7 @@ onBeforeUnmount(() => {
   width: 10%;
   height: 100%;
   background: linear-gradient(90deg, #3dff9e, #13a85f);
+  animation: xpCharge 2.8s ease-in-out infinite;
 }
 
 .title-container {
@@ -314,6 +316,34 @@ onBeforeUnmount(() => {
   letter-spacing: 0.08em;
   line-height: 0.95;
   filter: contrast(120%);
+}
+
+.glitch {
+  position: relative;
+  animation: glitchSkew 2.4s infinite steps(1, end);
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glitch::before {
+  color: rgba(96, 255, 168, 0.7);
+  text-shadow: -2px 0 rgba(0, 255, 128, 0.7);
+  animation: glitchTop 1.8s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  color: rgba(144, 255, 196, 0.65);
+  text-shadow: 2px 0 rgba(136, 255, 190, 0.8);
+  animation: glitchBottom 2s infinite linear alternate-reverse;
 }
 
 .subtitle {
@@ -394,8 +424,16 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: clamp(4rem, 10vw, 7rem);
-  color: rgba(110, 255, 173, 0.84);
+  animation: circlePulse 4.5s ease-in-out infinite;
+}
+
+.malware-logo {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  filter: hue-rotate(90deg) saturate(1.2) brightness(1.15)
+    drop-shadow(0 0 14px rgba(91, 255, 164, 0.5));
+  animation: logoSpin 12s linear infinite;
 }
 
 .hud-bottom {
@@ -436,6 +474,10 @@ onBeforeUnmount(() => {
     rgba(22, 126, 74, 0.9) 6px,
     rgba(22, 126, 74, 0.9) 10px
   );
+  background-size: 20px 100%;
+  animation:
+    warningPulse 2.2s ease-in-out infinite,
+    progressShift 1s linear infinite;
 }
 
 .corner {
@@ -469,6 +511,112 @@ onBeforeUnmount(() => {
   right: 1rem;
   bottom: 1rem;
   border-width: 0 2px 2px 0;
+}
+
+@keyframes glitchTop {
+  0% {
+    clip-path: inset(0 0 85% 0);
+    transform: translate(-1px, -1px);
+  }
+  30% {
+    clip-path: inset(20% 0 60% 0);
+    transform: translate(1px, 0);
+  }
+  60% {
+    clip-path: inset(62% 0 20% 0);
+    transform: translate(-2px, 1px);
+  }
+  100% {
+    clip-path: inset(78% 0 2% 0);
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes glitchBottom {
+  0% {
+    clip-path: inset(82% 0 2% 0);
+    transform: translate(1px, 1px);
+  }
+  35% {
+    clip-path: inset(52% 0 28% 0);
+    transform: translate(-1px, 0);
+  }
+  70% {
+    clip-path: inset(12% 0 68% 0);
+    transform: translate(2px, -1px);
+  }
+  100% {
+    clip-path: inset(0 0 85% 0);
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes glitchSkew {
+  0%,
+  90%,
+  100% {
+    transform: skew(0deg);
+  }
+  92% {
+    transform: skew(-2deg);
+  }
+  96% {
+    transform: skew(2deg);
+  }
+}
+
+@keyframes xpCharge {
+  0%,
+  100% {
+    width: 10%;
+    opacity: 0.85;
+  }
+  50% {
+    width: 24%;
+    opacity: 1;
+  }
+}
+
+@keyframes progressShift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
+}
+
+@keyframes warningPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes logoSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes circlePulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(0, 255, 136, 0.2),
+      inset 0 0 24px rgba(0, 255, 136, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(0, 255, 136, 0.38),
+      inset 0 0 32px rgba(0, 255, 136, 0.2);
+  }
 }
 
 @media (max-width: 900px) {
