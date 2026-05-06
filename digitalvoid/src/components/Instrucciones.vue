@@ -1,127 +1,334 @@
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+
 const emit = defineEmits<{
-	(e: 'go-back'): void
+  (e: 'go-back'): void
 }>()
 
 const handleBack = () => {
-	emit('go-back')
+  emit('go-back')
 }
+
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
+const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const fontSize = 16
+let columns = 0
+let drops: number[] = []
+let animationInterval: number | null = null
+
+function updateColumns() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  columns = canvas.width / fontSize
+  drops = Array.from({ length: Math.ceil(columns) }).fill(1)
+}
+
+function resizeCanvas() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+}
+
+function draw() {
+  const canvas = canvasRef.value
+  if (!canvas || !ctx) return
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.06)'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  ctx.fillStyle = '#00ff9c'
+  ctx.font = `${fontSize}px monospace`
+
+  for (let i = 0; i < drops.length; i++) {
+    const text = letters[Math.floor(Math.random() * letters.length)]
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize)
+
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0
+    }
+
+    drops[i]++
+  }
+}
+
+onMounted(() => {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  ctx = canvas.getContext('2d')
+  resizeCanvas()
+  updateColumns()
+  window.addEventListener('resize', resizeCanvas)
+  window.addEventListener('resize', updateColumns)
+  animationInterval = window.setInterval(draw, 33)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeCanvas)
+  window.removeEventListener('resize', updateColumns)
+  if (animationInterval) {
+    clearInterval(animationInterval)
+    animationInterval = null
+  }
+})
 </script>
 
 <template>
-	<section class="instructions-view">
-		<header class="instructions-header">
-			<h1>Instrucciones</h1>
-			<p>Aprende a sobrevivir en Digital Void.</p>
-		</header>
+  <section class="instructions-view">
+    <canvas ref="canvasRef" class="matrix-canvas" />
+    <div class="scanlines" />
+    <div class="vignette" />
 
-		<div class="instructions-content">
-			<article class="panel">
-				<h2>Controles del jugador</h2>
-				<ul>
-					<li><strong>W / A / S / D</strong>: movimiento arriba, izquierda, abajo y derecha.</li>
-					<li><strong>Shift</strong>: correr por unos segundos para esquivar amenazas.</li>
-					<li><strong>E</strong>: interactuar con objetos y terminales.</li>
-					<li><strong>Espacio</strong>: acción principal (ataque o habilidad, según equipo).</li>
-					<li><strong>Esc</strong>: pausar y abrir menú rápido.</li>
-				</ul>
-			</article>
+    <header class="hud-top">
+      <div class="hud-box">
+        <p>&gt; MODULO ABIERTO: MANUAL DEL VIRUS</p>
+        <p>&gt; ESTADO: CONSULTA SEGURA</p>
+      </div>
+      <div class="hud-box compact">
+        <p>USUARIO: VIRUS_23A</p>
+        <p>NIVEL 1</p>
+      </div>
+    </header>
 
-			<article class="panel">
-				<h2>Lore del juego</h2>
-				<p>
-					Eres un virus tratando de escapar del sistema, mas conocido como  <strong>Digital Void</strong>. Eres uno de los últimos virus capaces
-                    de sobrevivir en este entorno hostil, y tu misión es encontrar una forma de salir antes de que el sistema te elimine por completo.
-				</p>
-				<p>
-					Cada sector del vacío guarda secretos sobre el origen de la caída. Mientras avanzas,
-					descubrirás que no solo estás intentando salvar la ciudad: también estás reconstruyendo
-					tu propia identidad.
-				</p>
-			</article>
-		</div>
+    <div class="title-wrap">
+      <h1 class="title">MANUAL DEL VIRUS</h1>
+      <p class="subtitle">PROTOCOLOS DE SUPERVIVENCIA EN DIGITAL VOID</p>
+    </div>
 
-		<footer class="instructions-footer">
-			<button class="back-button" @click="handleBack">Volver al menú</button>
-		</footer>
-	</section>
+    <div class="instructions-content">
+      <article class="panel">
+        <h2>Controles del jugador</h2>
+        <ul>
+          <li><strong>W / A / S / D</strong>: movimiento arriba, izquierda, abajo y derecha.</li>
+          <li><strong>Shift</strong>: correr por unos segundos para esquivar amenazas.</li>
+          <li><strong>E</strong>: interactuar con objetos y terminales.</li>
+          <li><strong>Espacio</strong>: accion principal (ataque o habilidad, segun equipo).</li>
+          <li><strong>Esc</strong>: pausar y abrir menu rapido.</li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <h2>Lore del juego</h2>
+        <p>
+          Eres un virus tratando de escapar del sistema, mas conocido como
+          <strong>Digital Void</strong>. Eres uno de los ultimos virus capaces de sobrevivir en este
+          entorno hostil.
+        </p>
+        <p>
+          Cada sector del vacio guarda secretos sobre el origen de la caida. Mientras avanzas,
+          descubriras que no solo estas intentando salvarte: tambien reconstruyes tu identidad.
+        </p>
+      </article>
+    </div>
+
+    <footer class="instructions-footer">
+      <button class="menu-button" @click="handleBack">&gt;_ VOLVER AL MENU</button>
+    </footer>
+
+    <div class="corner tl" />
+    <div class="corner tr" />
+    <div class="corner bl" />
+    <div class="corner br" />
+  </section>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
 .instructions-view {
-	min-height: 100vh;
-	width: 100%;
-	padding: 32px;
-	display: flex;
-	flex-direction: column;
-	gap: 24px;
-	background: radial-gradient(circle at 10% 10%, #17384f 0%, #0e1726 55%, #090d16 100%);
-	color: #e8f7ff;
-	box-sizing: border-box;
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 1rem;
+  position: relative;
+  overflow: hidden;
+  padding: 1.4rem 2rem;
+  box-sizing: border-box;
+  color: #7bffb5;
+  font-family: 'Share Tech Mono', monospace;
 }
 
-.instructions-header h1 {
-	margin: 0;
-	font-size: clamp(2rem, 4vw, 3rem);
-	letter-spacing: 1px;
-	color: #5be0ff;
+.matrix-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: black;
+  pointer-events: none;
 }
 
-.instructions-header p {
-	margin: 8px 0 0;
-	color: #bdd7e6;
+.scanlines,
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scanlines {
+  z-index: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(40, 255, 145, 0.04) 0,
+    rgba(40, 255, 145, 0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+.vignette {
+  z-index: 1;
+  background: radial-gradient(circle at center, transparent 45%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+.hud-top,
+.title-wrap,
+.instructions-content,
+.instructions-footer,
+.corner {
+  z-index: 2;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hud-box {
+  border: 1px solid rgba(50, 255, 150, 0.45);
+  box-shadow: inset 0 0 18px rgba(0, 255, 136, 0.15);
+  background: rgba(3, 20, 12, 0.5);
+  padding: 0.7rem 1rem;
+}
+
+.hud-box p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.compact {
+  min-width: 200px;
+  text-align: right;
+}
+
+.title-wrap {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.2rem, 7vw, 4.4rem);
+  letter-spacing: 0.08em;
+  color: #72ffad;
+  text-shadow: 0 0 8px rgba(50, 255, 150, 0.8);
+}
+
+.subtitle {
+  margin: 0.4rem 0 0;
+  color: rgba(136, 255, 182, 0.95);
+  letter-spacing: 0.06em;
 }
 
 .instructions-content {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
 }
 
 .panel {
-	background: rgba(20, 40, 60, 0.7);
-	border: 1px solid rgba(91, 224, 255, 0.3);
-	border-radius: 14px;
-	padding: 18px;
-	backdrop-filter: blur(4px);
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.46);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.14);
+  padding: 1rem;
 }
 
 .panel h2 {
-	margin-top: 0;
-	color: #8becff;
+  margin-top: 0;
+  color: #9affc5;
+  letter-spacing: 0.04em;
+}
+
+.panel p,
+.panel li {
+  color: rgba(188, 255, 217, 0.9);
+  line-height: 1.55;
 }
 
 .panel ul {
-	margin: 0;
-	padding-left: 20px;
-	line-height: 1.55;
-}
-
-.panel p {
-	margin-top: 0;
-	line-height: 1.6;
-	color: #d4ecf8;
+  margin: 0;
+  padding-left: 1.2rem;
 }
 
 .instructions-footer {
-	margin-top: auto;
+  display: flex;
+  justify-content: flex-start;
 }
 
-.back-button {
-	padding: 12px 20px;
-	border-radius: 8px;
-	border: 1px solid #5be0ff;
-	background: rgba(91, 224, 255, 0.12);
-	color: #e8f7ff;
-	cursor: pointer;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	transition: all 0.2s ease;
+.menu-button {
+  text-align: left;
+  padding: 0.72rem 1rem;
+  font-size: 1.05rem;
+  font-family: 'Share Tech Mono', monospace;
+  color: #031e0f;
+  background: linear-gradient(90deg, rgba(115, 255, 176, 0.95), rgba(62, 224, 135, 0.9));
+  border: 1px solid rgba(112, 255, 178, 0.9);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 16px rgba(83, 255, 165, 0.6);
 }
 
-.back-button:hover {
-	transform: translateY(-1px);
-	background: rgba(91, 224, 255, 0.25);
-	box-shadow: 0 8px 20px rgba(91, 224, 255, 0.18);
+.menu-button:hover {
+  filter: brightness(1.08);
+}
+
+.corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #46ff9f;
+  border-style: solid;
+  opacity: 0.8;
+}
+
+.tl {
+  top: 1rem;
+  left: 1rem;
+  border-width: 2px 0 0 2px;
+}
+
+.tr {
+  top: 1rem;
+  right: 1rem;
+  border-width: 2px 2px 0 0;
+}
+
+.bl {
+  bottom: 1rem;
+  left: 1rem;
+  border-width: 0 0 2px 2px;
+}
+
+.br {
+  right: 1rem;
+  bottom: 1rem;
+  border-width: 0 2px 2px 0;
+}
+
+@media (max-width: 900px) {
+  .instructions-view {
+    padding: 1rem;
+  }
+
+  .hud-top {
+    flex-direction: column;
+  }
+
+  .compact {
+    text-align: left;
+  }
 }
 </style>

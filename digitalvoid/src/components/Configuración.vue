@@ -1,11 +1,13 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <section class="config-shell">
-    <div class="config-ornament config-ornament-left"></div>
-    <div class="config-ornament config-ornament-right"></div>
+    <canvas ref="canvasRef" class="matrix-canvas" />
+    <div class="scanlines" />
+    <div class="vignette" />
 
     <div class="config-card">
       <header class="config-header">
-        <p class="eyebrow">Digital Void</p>
+        <p class="eyebrow">SISTEMA DIGITAL VOID</p>
         <h2>Configuración del juego</h2>
         <p class="subtitle">Ajusta tu partida antes de entrar al vacío digital.</p>
       </header>
@@ -56,11 +58,16 @@
         </div>
       </form>
     </div>
+
+    <div class="corner tl" />
+    <div class="corner tr" />
+    <div class="corner bl" />
+    <div class="corner br" />
   </section>
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useGameStore } from '../stores/game'
 
 type Difficulty = 'facil' | 'medio' | 'dificil'
@@ -91,9 +98,71 @@ const settings = reactive<GameSettings>({ ...defaultSettings })
 
 const gameStore = useGameStore()
 
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
+const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const fontSize = 16
+let columns = 0
+let drops: number[] = []
+let animationInterval: number | null = null
+
+function updateColumns() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  columns = canvas.width / fontSize
+  drops = Array.from({ length: Math.ceil(columns) }).fill(1)
+}
+
+function resizeCanvas() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+}
+
+function draw() {
+  const canvas = canvasRef.value
+  if (!canvas || !ctx) return
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.06)'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  ctx.fillStyle = '#00FF9C'
+  ctx.font = `${fontSize}px monospace`
+
+  for (let i = 0; i < drops.length; i++) {
+    const text = letters[Math.floor(Math.random() * letters.length)]
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize)
+
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0
+    }
+
+    drops[i]++
+  }
+}
+
 onMounted(() => {
   gameStore.loadFromLocal()
   Object.assign(settings, gameStore.settings)
+
+  const canvas = canvasRef.value
+  if (!canvas) return
+  ctx = canvas.getContext('2d')
+  resizeCanvas()
+  updateColumns()
+  window.addEventListener('resize', resizeCanvas)
+  window.addEventListener('resize', updateColumns)
+  animationInterval = window.setInterval(draw, 33)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeCanvas)
+  window.removeEventListener('resize', updateColumns)
+  if (animationInterval) {
+    clearInterval(animationInterval)
+    animationInterval = null
+  }
 })
 
 function apply() {
@@ -112,55 +181,65 @@ function goBack() {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
 .config-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 28px 16px;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(121, 255, 209, 0.18), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(255, 80, 80, 0.18), transparent 28%),
-    linear-gradient(160deg, #07111f 0%, #0c1628 48%, #03070f 100%);
+  font-family: 'Share Tech Mono', monospace;
+  color: #7bffb5;
 }
 
-.config-ornament {
+.matrix-canvas {
   position: absolute;
-  border-radius: 999px;
-  filter: blur(8px);
-  opacity: 0.85;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background: black;
+}
+
+.scanlines,
+.vignette {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
-.config-ornament-left {
-  width: 220px;
-  height: 220px;
-  left: -70px;
-  top: 8%;
-  background: rgba(31, 196, 176, 0.16);
+.scanlines {
+  z-index: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(40, 255, 145, 0.04) 0,
+    rgba(40, 255, 145, 0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
 }
 
-.config-ornament-right {
-  width: 280px;
-  height: 280px;
-  right: -90px;
-  bottom: 6%;
-  background: rgba(255, 104, 104, 0.14);
+.vignette {
+  z-index: 1;
+  background: radial-gradient(circle at center, transparent 45%, rgba(0, 0, 0, 0.7) 100%);
 }
 
 .config-card {
   width: min(100%, 760px);
   position: relative;
-  z-index: 1;
+  z-index: 2;
   padding: 28px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, rgba(15, 24, 41, 0.94), rgba(7, 12, 20, 0.96));
+  border-radius: 0;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.46);
   box-shadow:
-    0 30px 90px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  color: #f5f7fa;
+    0 0 20px rgba(0, 255, 136, 0.14),
+    inset 0 0 18px rgba(0, 255, 136, 0.1);
+  color: #7bffb5;
 }
 
 .config-header {
@@ -172,7 +251,7 @@ function goBack() {
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-size: 12px;
-  color: #71f5d0;
+  color: #9affc5;
 }
 
 .config-header h2 {
@@ -184,7 +263,7 @@ function goBack() {
 .subtitle {
   margin: 10px 0 0;
   max-width: 54ch;
-  color: rgba(232, 238, 246, 0.8);
+  color: rgba(188, 255, 217, 0.85);
 }
 
 .config-form {
@@ -206,13 +285,13 @@ function goBack() {
 .field label {
   font-weight: 700;
   font-size: 0.95rem;
-  color: #ffffff;
+  color: #9affc5;
 }
 
 .field-hint {
   margin: -2px 0 0;
   font-size: 0.88rem;
-  color: rgba(232, 238, 246, 0.7);
+  color: rgba(188, 255, 217, 0.75);
 }
 
 .field input[type='text'],
@@ -220,10 +299,10 @@ function goBack() {
 .field select {
   width: 100%;
   padding: 13px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  border-radius: 0;
+  background: rgba(2, 26, 12, 0.55);
+  color: #d0ffe9;
   outline: none;
   transition:
     border-color 0.18s ease,
@@ -232,20 +311,21 @@ function goBack() {
 }
 
 .field input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(188, 255, 217, 0.45);
 }
 
 .field input:focus,
 .field select:focus {
-  border-color: rgba(113, 245, 208, 0.7);
-  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(112, 255, 178, 0.9);
+  background: rgba(5, 34, 18, 0.75);
 }
 
 .toggle-field {
   margin-top: 4px;
   padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.4);
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -269,7 +349,7 @@ function goBack() {
   width: 54px;
   height: 30px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(2, 26, 12, 0.8);
   position: relative;
   transition: background 0.18s ease;
 }
@@ -282,12 +362,12 @@ function goBack() {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ffffff;
+  background: #d0ffe9;
   transition: transform 0.18s ease;
 }
 
 .toggle input:checked + .toggle-track {
-  background: linear-gradient(135deg, #2de2b6, #6ee7ff);
+  background: linear-gradient(135deg, #2de2b6, #5fff9d);
 }
 
 .toggle input:checked + .toggle-track::after {
@@ -303,10 +383,10 @@ function goBack() {
 
 .actions button {
   padding: 12px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  border-radius: 0;
+  background: rgba(0, 18, 8, 0.65);
+  color: #7bffb5;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -318,23 +398,58 @@ function goBack() {
 .actions button:hover,
 .actions button:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(112, 255, 178, 0.9);
+  background: rgba(5, 34, 18, 0.85);
+  box-shadow: 0 0 16px rgba(83, 255, 165, 0.4);
 }
 
 .actions .primary {
-  background: linear-gradient(135deg, #39e6b3, #1ea7ff);
-  color: #06111f;
-  border-color: transparent;
+  background: linear-gradient(90deg, rgba(115, 255, 176, 0.95), rgba(62, 224, 135, 0.9));
+  color: #031e0f;
+  border-color: rgba(112, 255, 178, 0.9);
 }
 
 .actions .primary:hover,
 .actions .primary:focus-visible {
-  background: linear-gradient(135deg, #4ef0be, #3bb3ff);
+  background: linear-gradient(90deg, rgba(145, 255, 194, 0.95), rgba(84, 235, 153, 0.92));
 }
 
 .actions .ghost {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 18, 8, 0.35);
+}
+
+.corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #46ff9f;
+  border-style: solid;
+  opacity: 0.8;
+  z-index: 2;
+}
+
+.tl {
+  top: 1rem;
+  left: 1rem;
+  border-width: 2px 0 0 2px;
+}
+
+.tr {
+  top: 1rem;
+  right: 1rem;
+  border-width: 2px 2px 0 0;
+}
+
+.bl {
+  bottom: 1rem;
+  left: 1rem;
+  border-width: 0 0 2px 2px;
+}
+
+.br {
+  right: 1rem;
+  bottom: 1rem;
+  border-width: 0 2px 2px 0;
 }
 
 @media (max-width: 640px) {
