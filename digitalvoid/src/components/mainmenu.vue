@@ -1,7 +1,8 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import malwareLogo from '../assets/malware.png'
+import { useGameStore } from '../stores/game'
 
 const emit = defineEmits<{
   (e: 'new-game'): void
@@ -20,6 +21,9 @@ const handleLoadGame = () => {
 const handleSettings = () => {
   emit('open-settings')
 }
+
+const gameStore = useGameStore()
+const displayUserName = computed(() => gameStore.settings.playerName.trim() || 'VIRUS_23A')
 
 // Matrix background
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -66,6 +70,8 @@ function draw() {
 }
 
 onMounted(() => {
+  gameStore.loadFromLocal()
+
   const canvas = canvasRef.value
   if (!canvas) return
   ctx = canvas.getContext('2d')
@@ -101,7 +107,7 @@ onBeforeUnmount(() => {
         <p class="alert">&gt; ESTADO: AMENAZA DETECTADA</p>
       </div>
       <div class="hud-box hud-right">
-        <p>USUARIO: VIRUS_23A</p>
+        <p>USUARIO: {{ displayUserName }}</p>
         <div class="xp-line">
           <span>NIVEL 1</span>
           <span>0 / 100 XP</span>
