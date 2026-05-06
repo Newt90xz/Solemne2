@@ -1,6 +1,8 @@
 <template>
   <div class="game-viewpoint" ref="viewportRef">
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
+      <PlayerHub />
+
       <div class="hud-panel">
         <p class="hud-title">Arma actual</p>
         <p class="hud-name">{{ selectedWeapon.name }}</p>
@@ -32,7 +34,12 @@
         <div>Presiona <strong>E</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
       </div>
 
-      <div v-for="b in buildings" :key="'area-'+b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
+      <div
+        v-for="b in buildings"
+        :key="'area-' + b.id"
+        class="building-area"
+        :style="buildingAreaStyle(b)"
+      ></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
         <div class="building-icon">{{ b.icon }}</div>
@@ -57,6 +64,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import escenarioImg from '../assets/Escenario_Principal.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
+import PlayerHub from './PlayerHub.vue'
 
 interface Bullet {
   id: number
@@ -99,7 +107,6 @@ const gameStore = useGameStore()
 const player = reactive({ x: 500, y: 500, size: 26 })
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320 // base pixels per second
-const speedMultiplier = ref(1)
 
 const mouseScreen = reactive({ x: 0, y: 0, active: false })
 const mouse = reactive({ down: false })
@@ -109,7 +116,6 @@ const worldSize = { width: 5000, height: 5000 }
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
 const captureRange = 48
-const activeBuffTimers: number[] = []
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
@@ -437,21 +443,7 @@ function tryCapture() {
 }
 
 function applyBuff(buff: { type: 'speed' | 'damage'; value: number; duration: number }) {
-  if (buff.type === 'speed') {
-    speedMultiplier.value = buff.value
-    const t = window.setTimeout(() => {
-      speedMultiplier.value = 1
-    }, buff.duration * 1000)
-    activeBuffTimers.push(t)
-  }
-  if (buff.type === 'damage') {
-    // For now, reflect as visual pulse — damage system not implemented yet
-    // Keep placeholder: could set a damageMultiplier state later
-    const t = window.setTimeout(() => {
-      // nothing to revert yet
-    }, buff.duration * 1000)
-    activeBuffTimers.push(t)
-  }
+  gameStore.addBuff(buff)
 }
 
 function updateAutoShoot(dt: number) {
@@ -497,7 +489,10 @@ function loop(ts: number) {
     return
   }
 
-  const speed = baseSpeed * speedMultiplier.value
+  // Update game store buffs
+  gameStore.updateBuffs(dt)
+
+  const speed = baseSpeed * gameStore.playerStats.speedMultiplier
   let vx = 0
   let vy = 0
   if (keys.up) vy -= 1
@@ -521,6 +516,7 @@ function loop(ts: number) {
 }
 
 onMounted(() => {
+  gameStore.resetPlayerStats()
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('mousemove', onMouseMove)
@@ -538,8 +534,6 @@ onUnmounted(() => {
   window.removeEventListener('mousedown', onMouseDown)
   window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('mouseleave', onMouseLeave)
-  // clear buff timers
-  for (const t of activeBuffTimers) clearTimeout(t)
   if (rafId) cancelAnimationFrame(rafId)
 })
 </script>
@@ -562,7 +556,7 @@ onUnmounted(() => {
 .hud-panel {
   position: absolute;
   left: 12px;
-  top: 12px;
+  bottom: 12px;
   z-index: 15;
   padding: 10px 12px;
   background: rgba(0, 0, 0, 0.6);
@@ -710,7 +704,7 @@ onUnmounted(() => {
   bottom: 6px;
   left: 6px;
   font-size: 11px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   padding: 4px 6px;
   border-radius: 8px;
 }
@@ -728,7 +722,7 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   align-items: center;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .hint-icon {

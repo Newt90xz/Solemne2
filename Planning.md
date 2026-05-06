@@ -11,6 +11,7 @@ Semana 2, 4 de mayo - 8 de mayo:
 - Desarrollo de personajes + sus funciones basicas. (cursor) 30%
 - Definir propiedades de las armas y objetos. 40%
 - Pruebas de movimiento y controles basicos. 60%
+- desarrollar hub para player( hud para armas, vida, etc). 50%
 
 Semana 3, 11 de mayo - 15 de mayo:
 
@@ -20,7 +21,6 @@ Semana 3, 11 de mayo - 15 de mayo:
 - Desarrollar colisiones basicas.
 - Desarrollo de zonas de mejoras.
 - Pruebas de movimiento y controles avanzados.
-
 
 semana 4, 25 de mayo - 28 de mayo:
 
