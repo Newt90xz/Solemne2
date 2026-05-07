@@ -8,7 +8,7 @@
         <p class="hud-name">{{ selectedWeapon.name }}</p>
         <p class="hud-alias">{{ selectedWeapon.alias }}</p>
         <p class="hud-role">{{ selectedWeapon.role }}</p>
-        <p class="hud-help">Cambiar: 1-6</p>
+        <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
       </div>
 
       <div class="hud-actions">
@@ -29,7 +29,7 @@
 
       <div v-if="nearestBuilding && hintVisible" class="capture-hint">
         <div class="hint-icon">{{ nearestBuilding.b.icon }}</div>
-        <div>Presiona <strong>E</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
+        <div>Presiona <strong>F</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
       </div>
 
       <div
@@ -52,6 +52,13 @@
         :style="bulletStyle(bullet)"
       ></div>
 
+      <div
+        v-for="exp in explosions"
+        :key="exp.id"
+        class="explosion"
+        :style="explosionStyle(exp)"
+      ></div>
+
       <div class="player" :style="playerStyle"></div>
 
       <div class="custom-cursor" :style="customCursorStyle"></div>
@@ -67,7 +74,6 @@ import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
 import virusImg from '../assets/malware.png'
 import cursorImg from '../assets/cursorfire.png'
-
 interface Bullet {
   id: number
   x: number
@@ -76,8 +82,27 @@ interface Bullet {
   vy: number
   size: number
   ttl: number
+  maxTtl: number
   damage: number
   color: string
+  type: 'normal' | 'orbiting' | 'explosive'
+  orbitPhase?: number
+  orbitRadius?: number
+  orbitTimeElapsed?: number
+  orbitSpeed?: number
+  initialVx?: number
+  initialVy?: number
+  explosiveDeceleration?: number
+}
+
+interface Explosion {
+  id: number
+  x: number
+  y: number
+  radius: number
+  maxRadius: number
+  ttl: number
+  maxTtl: number
 }
 
 interface Building {
@@ -108,9 +133,10 @@ const gameStore = useGameStore()
 
 const player = reactive({ x: 500, y: 500, size: 30 })
 const camera = reactive({ x: 0, y: 0 })
-const baseSpeed = 320 // base pixels per second
+const baseSpeed = 320
 
 const mouseScreen = reactive({ x: 0, y: 0, active: false })
+const mouseWorld = reactive({ x: 500, y: 500 })
 const mouse = reactive({ down: false })
 
 const worldSize = { width: 5000, height: 5000 }
@@ -121,10 +147,19 @@ const captureRange = 48
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
+const explosions = reactive<Explosion[]>([])
 const isPaused = ref(false)
 
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
+
+const ORBIT_APPROACH_TIME = 1.0
+const ORBIT_HOLD_TIME = 5.0
+const ORBIT_RADIUS = 72
+const ORBIT_ANGULAR_SPEED = Math.PI * 2.2
+const EXPLOSIVE_DECEL = 280
+const EXPLOSION_MAX_RADIUS = 80
+const EXPLOSION_DURATION = 0.45
 
 const sceneStyle = computed(() => ({
   backgroundImage: `url(${escenarioImg})`,
@@ -196,7 +231,14 @@ const hintVisible = computed(() => {
 let rafId: number | null = null
 let lastTime = 0
 let nextBulletId = 1
+let nextExplosionId = 1
 let shootAccumulator = 0
+
+function cycleWeapon(dir: 1 | -1) {
+  const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
+  const next = (idx + dir + WEAPON_ORDER.length) % WEAPON_ORDER.length
+  selectedWeaponId.value = WEAPON_ORDER[next]
+}
 
 function randRange(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min
@@ -211,12 +253,10 @@ function spawnBuildings(count = 8) {
     const x = randRange(size, worldSize.width - size)
     const y = randRange(size, worldSize.height - size)
 
-    // avoid spawning too close to player
     const dx = x - player.x
     const dy = y - player.y
     if (Math.hypot(dx, dy) < 240) continue
 
-    // avoid overlap with other buildings
     let collides = false
     for (const b of buildings) {
       const ddx = b.x - x
@@ -282,13 +322,55 @@ function buildingStyle(b: Building) {
 }
 
 function bulletStyle(bullet: Bullet) {
+  const screenX = Math.round(bullet.x - camera.x - bullet.size / 2)
+  const screenY = Math.round(bullet.y - camera.y - bullet.size / 2)
+
+  if (bullet.type === 'orbiting') {
+    return {
+      width: `${bullet.size}px`,
+      height: `${bullet.size}px`,
+      background: bullet.color,
+      borderRadius: '2px',
+      transform: `translate(${screenX}px, ${screenY}px)`,
+      boxShadow: `0 0 8px ${bullet.color}`,
+    }
+  }
+
+  if (bullet.type === 'explosive') {
+    const speed = Math.hypot(bullet.vx, bullet.vy)
+    const maxSpeed = bullet.explosiveDeceleration! * 1.5
+    const glow = Math.round((speed / maxSpeed) * 14)
+    return {
+      width: `${bullet.size}px`,
+      height: `${bullet.size}px`,
+      background: bullet.color,
+      borderRadius: '99px',
+      transform: `translate(${screenX}px, ${screenY}px)`,
+      boxShadow: `0 0 ${glow}px rgba(168,218,220,0.85)`,
+    }
+  }
+
   return {
     width: `${bullet.size}px`,
     height: `${bullet.size}px`,
     background: bullet.color,
-    transform: `translate(${Math.round(bullet.x - camera.x - bullet.size / 2)}px, ${Math.round(
-      bullet.y - camera.y - bullet.size / 2,
-    )}px)`,
+    borderRadius: '99px',
+    transform: `translate(${screenX}px, ${screenY}px)`,
+  }
+}
+
+function explosionStyle(exp: Explosion) {
+  const progress = 1 - exp.ttl / exp.maxTtl
+  const r = exp.radius
+  const opacity = (1 - progress).toString()
+  return {
+    width: `${r * 2}px`,
+    height: `${r * 2}px`,
+    transform: `translate(${Math.round(exp.x - camera.x - r)}px, ${Math.round(exp.y - camera.y - r)}px)`,
+    opacity,
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(255,200,80,0.9) 0%, rgba(255,100,30,0.6) 40%, rgba(255,60,0,0) 100%)',
+    boxShadow: `0 0 ${Math.round(r * 0.6)}px rgba(255,160,40,0.7)`,
   }
 }
 
@@ -303,17 +385,16 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true
 
-  if (e.key >= '1' && e.key <= '6') {
+  if (e.key >= '1' && e.key <= '5') {
     const index = Number(e.key) - 1
     const id = WEAPON_ORDER[index]
-    if (id) {
-      selectedWeaponId.value = id
-    }
+    if (id) selectedWeaponId.value = id
   }
 
-  if (e.key === 'e' || e.key === 'E') {
-    tryCapture()
-  }
+  if (e.key === 'q' || e.key === 'Q') cycleWeapon(-1)
+  if (e.key === 'e' || e.key === 'E') cycleWeapon(1)
+
+  if (e.key === 'f' || e.key === 'F') tryCapture()
 }
 
 function onKeyUp(e: KeyboardEvent) {
@@ -330,13 +411,14 @@ function onMouseMove(e: MouseEvent) {
   mouseScreen.x = e.clientX - rect.left
   mouseScreen.y = e.clientY - rect.top
   mouseScreen.active = true
+  mouseWorld.x = mouseScreen.x + camera.x
+  mouseWorld.y = mouseScreen.y + camera.y
 }
 
 function onMouseDown(e: MouseEvent) {
   if (e.button !== 0) return
   if (isPaused.value) return
   onMouseMove(e)
-  // start hold-to-fire + immediate shot
   mouse.down = true
   shootFromPlayer()
 }
@@ -349,6 +431,12 @@ function onMouseUp(e: MouseEvent) {
 
 function onMouseLeave() {
   mouseScreen.active = false
+}
+
+function onWheel(e: WheelEvent) {
+  if (isPaused.value) return
+  e.preventDefault()
+  cycleWeapon(e.deltaY > 0 ? 1 : -1)
 }
 
 function clampPlayer() {
@@ -372,13 +460,10 @@ function exitGame() {
 
 function updateCamera() {
   if (!sceneRef.value) return
-
   const vw = sceneRef.value.clientWidth
   const vh = sceneRef.value.clientHeight
-
   const targetX = player.x - vw / 2 + player.size / 2
   const targetY = player.y - vh / 2 + player.size / 2
-
   camera.x += (targetX - camera.x) * 0.1
   camera.y += (targetY - camera.y) * 0.1
 }
@@ -400,24 +485,169 @@ function shootFromPlayer() {
   for (let i = 0; i < pelletCount; i += 1) {
     const spreadFactor = pelletCount === 1 ? 0 : i / (pelletCount - 1) - 0.5
     const shotAngle = baseAngle + spreadFactor * spreadRad
+    const vx = Math.cos(shotAngle) * weapon.projectileSpeed
+    const vy = Math.sin(shotAngle) * weapon.projectileSpeed
 
-    bullets.push({
-      id: nextBulletId,
-      x: startX,
-      y: startY,
-      vx: Math.cos(shotAngle) * weapon.projectileSpeed,
-      vy: Math.sin(shotAngle) * weapon.projectileSpeed,
-      size: weapon.projectileSize,
-      ttl: weapon.projectileLifetime,
-      damage: weapon.damage,
-      color: weapon.projectileColor,
-    })
-    nextBulletId += 1
+    if (weapon.orbiting) {
+      bullets.push({
+        id: nextBulletId++,
+        x: startX,
+        y: startY,
+        vx,
+        vy,
+        size: weapon.projectileSize,
+        ttl: weapon.projectileLifetime,
+        maxTtl: weapon.projectileLifetime,
+        damage: weapon.damage,
+        color: weapon.projectileColor,
+        type: 'orbiting',
+        orbitPhase: Math.random() * Math.PI * 2,
+        orbitRadius: ORBIT_RADIUS,
+        orbitTimeElapsed: 0,
+        orbitSpeed: ORBIT_ANGULAR_SPEED,
+        initialVx: vx,
+        initialVy: vy,
+      })
+    } else if (weapon.explosive) {
+      bullets.push({
+        id: nextBulletId++,
+        x: startX,
+        y: startY,
+        vx,
+        vy,
+        size: weapon.projectileSize,
+        ttl: weapon.projectileLifetime,
+        maxTtl: weapon.projectileLifetime,
+        damage: weapon.damage,
+        color: weapon.projectileColor,
+        type: 'explosive',
+        explosiveDeceleration: EXPLOSIVE_DECEL,
+      })
+    } else {
+      bullets.push({
+        id: nextBulletId++,
+        x: startX,
+        y: startY,
+        vx,
+        vy,
+        size: weapon.projectileSize,
+        ttl: weapon.projectileLifetime,
+        maxTtl: weapon.projectileLifetime,
+        damage: weapon.damage,
+        color: weapon.projectileColor,
+        type: 'normal',
+      })
+    }
+  }
+}
+
+function spawnExplosion(x: number, y: number) {
+  explosions.push({
+    id: nextExplosionId++,
+    x,
+    y,
+    radius: 4,
+    maxRadius: EXPLOSION_MAX_RADIUS,
+    ttl: EXPLOSION_DURATION,
+    maxTtl: EXPLOSION_DURATION,
+  })
+}
+
+function updateBullets(dt: number) {
+  const margin = 200
+
+  for (let i = bullets.length - 1; i >= 0; i -= 1) {
+    const bullet = bullets[i]
+    if (!bullet) continue
+
+    bullet.ttl -= dt
+
+    if (bullet.type === 'orbiting') {
+      bullet.orbitTimeElapsed! += dt
+      const elapsed = bullet.orbitTimeElapsed!
+
+      if (elapsed < ORBIT_APPROACH_TIME) {
+        const t = elapsed / ORBIT_APPROACH_TIME
+        const eased = t * t * (3 - 2 * t)
+        const targetX = mouseWorld.x
+        const targetY = mouseWorld.y
+        bullet.x += bullet.initialVx! * dt * (1 - eased) + (targetX - bullet.x) * eased * dt * 4
+        bullet.y += bullet.initialVy! * dt * (1 - eased) + (targetY - bullet.y) * eased * dt * 4
+      } else if (elapsed < ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME) {
+        const orbitElapsed = elapsed - ORBIT_APPROACH_TIME
+        const angle = bullet.orbitPhase! + orbitElapsed * bullet.orbitSpeed!
+        bullet.x = mouseWorld.x + Math.cos(angle) * bullet.orbitRadius!
+        bullet.y = mouseWorld.y + Math.sin(angle) * bullet.orbitRadius!
+        bullet.vx = 0
+        bullet.vy = 0
+      } else {
+        const orbitElapsed = elapsed - ORBIT_APPROACH_TIME
+        const angle = bullet.orbitPhase! + orbitElapsed * bullet.orbitSpeed!
+        if (bullet.vx === 0 && bullet.vy === 0) {
+          bullet.vx = -Math.sin(angle) * bullet.orbitSpeed! * bullet.orbitRadius! * 0.5
+          bullet.vy = Math.cos(angle) * bullet.orbitSpeed! * bullet.orbitRadius! * 0.5
+        }
+        bullet.x += bullet.vx * dt
+        bullet.y += bullet.vy * dt
+      }
+    } else if (bullet.type === 'explosive') {
+      const speed = Math.hypot(bullet.vx, bullet.vy)
+      if (speed > 0) {
+        const decel = Math.min(speed, bullet.explosiveDeceleration! * dt)
+        const factor = (speed - decel) / speed
+        bullet.vx *= factor
+        bullet.vy *= factor
+      }
+      bullet.x += bullet.vx * dt
+      bullet.y += bullet.vy * dt
+
+      if (speed < 5 || bullet.ttl <= 0) {
+        spawnExplosion(bullet.x, bullet.y)
+        bullets.splice(i, 1)
+        continue
+      }
+    } else {
+      bullet.x += bullet.vx * dt
+      bullet.y += bullet.vy * dt
+    }
+
+    const outOfWorld =
+      bullet.x < -margin ||
+      bullet.y < -margin ||
+      bullet.x > worldSize.width + margin ||
+      bullet.y > worldSize.height + margin
+
+    if (bullet.ttl <= 0 || outOfWorld) {
+      bullets.splice(i, 1)
+    }
+  }
+}
+
+function updateExplosions(dt: number) {
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const exp = explosions[i]
+    if (!exp) continue
+    exp.ttl -= dt
+    const progress = 1 - exp.ttl / exp.maxTtl
+    exp.radius = 4 + (exp.maxRadius - 4) * progress
+    if (exp.ttl <= 0) {
+      explosions.splice(i, 1)
+    }
+  }
+}
+
+function updateAutoShoot(dt: number) {
+  if (!mouse.down || !mouseScreen.active || isPaused.value) return
+  const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
+  const shotInterval = 1 / shotsPerSecond
+  shootAccumulator += dt
+  while (shootAccumulator >= shotInterval) {
+    shootAccumulator -= shotInterval
+    shootFromPlayer()
   }
 }
 
 function tryCapture() {
-  // find nearest uncaptured building within range (world coords)
   const px = player.x + player.size / 2
   const py = player.y + player.size / 2
   let nearest: Building | null = null
@@ -433,47 +663,12 @@ function tryCapture() {
   if (!nearest) return
   const effectiveRadius = nearest.areaRadius ?? captureRange
   if (bestDist > effectiveRadius) return
-
-  // capture
   nearest.captured = true
   applyBuff(nearest.buff)
 }
 
 function applyBuff(buff: { type: 'speed' | 'damage'; value: number; duration: number }) {
   gameStore.addBuff(buff)
-}
-
-function updateAutoShoot(dt: number) {
-  if (!mouse.down || !mouseScreen.active || isPaused.value) return
-  const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
-  const shotInterval = 1 / shotsPerSecond
-  shootAccumulator += dt
-  while (shootAccumulator >= shotInterval) {
-    shootAccumulator -= shotInterval
-    shootFromPlayer()
-  }
-}
-
-function updateBullets(dt: number) {
-  const margin = 200
-  for (let i = bullets.length - 1; i >= 0; i -= 1) {
-    const bullet = bullets[i]
-    if (!bullet) continue
-
-    bullet.x += bullet.vx * dt
-    bullet.y += bullet.vy * dt
-    bullet.ttl -= dt
-
-    const outOfWorld =
-      bullet.x < -margin ||
-      bullet.y < -margin ||
-      bullet.x > worldSize.width + margin ||
-      bullet.y > worldSize.height + margin
-
-    if (bullet.ttl <= 0 || outOfWorld) {
-      bullets.splice(i, 1)
-    }
-  }
 }
 
 function loop(ts: number) {
@@ -486,7 +681,6 @@ function loop(ts: number) {
     return
   }
 
-  // Update game store buffs
   gameStore.updateBuffs(dt)
 
   const speed = baseSpeed * gameStore.playerStats.speedMultiplier
@@ -505,8 +699,10 @@ function loop(ts: number) {
     player.y += vy * dt
     clampPlayer()
   }
+
   updateAutoShoot(dt)
   updateBullets(dt)
+  updateExplosions(dt)
   updateCamera()
 
   rafId = requestAnimationFrame(loop)
@@ -520,6 +716,7 @@ onMounted(() => {
   window.addEventListener('mousedown', onMouseDown)
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('mouseleave', onMouseLeave)
+  window.addEventListener('wheel', onWheel, { passive: false })
   spawnBuildings(10)
   rafId = requestAnimationFrame(loop)
 })
@@ -531,6 +728,7 @@ onUnmounted(() => {
   window.removeEventListener('mousedown', onMouseDown)
   window.removeEventListener('mouseup', onMouseUp)
   window.removeEventListener('mouseleave', onMouseLeave)
+  window.removeEventListener('wheel', onWheel)
   if (rafId) cancelAnimationFrame(rafId)
 })
 </script>
@@ -641,10 +839,6 @@ onUnmounted(() => {
   opacity: 0.9;
 }
 
-.aim-line {
-  display: none;
-}
-
 .custom-cursor {
   position: absolute;
   left: 0;
@@ -660,18 +854,20 @@ onUnmounted(() => {
   translate: -50% -50%;
 }
 
-.player::after {
-  display: none;
-}
-
 .bullet {
   position: absolute;
   left: 0;
   top: 0;
-  border-radius: 99px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 4;
+}
+
+.explosion {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 6;
 }
 
 .building {

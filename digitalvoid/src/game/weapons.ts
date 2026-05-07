@@ -1,10 +1,9 @@
 export type WeaponId =
-  | 'virus_accion_directa'
+  | 'virus_troyano'
   | 'ransomware'
-  | 'troyano'
   | 'gusano'
-  | 'spyware'
-  | 'ddos'
+  | 'tormenta_anuncios'
+  | 'exploit_sivo'
 
 export interface WeaponDefinition {
   id: WeaponId
@@ -19,23 +18,25 @@ export interface WeaponDefinition {
   projectileColor: string
   pellets: number
   spreadDeg: number
+  piercing?: boolean
+  orbiting?: boolean
+  explosive?: boolean
 }
 
-export const DEFAULT_WEAPON_ID: WeaponId = 'virus_accion_directa'
+export const DEFAULT_WEAPON_ID: WeaponId = 'virus_troyano'
 
 export const WEAPON_ORDER: WeaponId[] = [
-  'virus_accion_directa',
+  'virus_troyano',
   'ransomware',
-  'troyano',
   'gusano',
-  'spyware',
-  'ddos',
+  'tormenta_anuncios',
+  'exploit_sivo',
 ]
 
 export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
-  virus_accion_directa: {
-    id: 'virus_accion_directa',
-    name: 'Virus de Accion Directa',
+  virus_troyano: {
+    id: 'virus_troyano',
+    name: 'Virus Troyano',
     alias: 'La Carga Explosiva',
     role: 'Arma basica de dano directo',
     fireRate: 5,
@@ -51,7 +52,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     id: 'ransomware',
     name: 'Ransomware',
     alias: 'El Cripto-Martillo',
-    role: 'Arma pesada y de bloqueo',
+    role: 'Arma pesada con perforacion de enemigos',
     fireRate: 1.6,
     damage: 48,
     projectileSpeed: 580,
@@ -60,20 +61,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     projectileColor: '#ef476f',
     pellets: 1,
     spreadDeg: 0,
-  },
-  troyano: {
-    id: 'troyano',
-    name: 'Troyano',
-    alias: 'El Caballo de Troya',
-    role: 'Arma de sigilo y engano',
-    fireRate: 4.5,
-    damage: 18,
-    projectileSpeed: 980,
-    projectileLifetime: 0.95,
-    projectileSize: 5,
-    projectileColor: '#90e0ef',
-    pellets: 1,
-    spreadDeg: 0,
+    piercing: true,
   },
   gusano: {
     id: 'gusano',
@@ -89,32 +77,34 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     pellets: 4,
     spreadDeg: 24,
   },
-  spyware: {
-    id: 'spyware',
-    name: 'Spyware/Keylogger',
-    alias: 'El Ojo Digital',
-    role: 'Arma de apoyo e informacion',
-    fireRate: 6,
-    damage: 8,
-    projectileSpeed: 930,
-    projectileLifetime: 1,
-    projectileSize: 4,
-    projectileColor: '#cdb4db',
+  tormenta_anuncios: {
+    id: 'tormenta_anuncios',
+    name: 'Tormenta de Anuncios',
+    alias: 'El Spam Orbital',
+    role: 'Balas que orbitan el cursor antes de liberarse',
+    fireRate: 3,
+    damage: 16,
+    projectileSpeed: 600,
+    projectileLifetime: 6.5,
+    projectileSize: 9,
+    projectileColor: '#ff6b35',
     pellets: 1,
     spreadDeg: 0,
+    orbiting: true,
   },
-  ddos: {
-    id: 'ddos',
-    name: 'DDoS',
-    alias: 'La Tormenta de Paquetes',
-    role: 'Arma de area y caos',
-    fireRate: 3,
-    damage: 9,
-    projectileSpeed: 760,
-    projectileLifetime: 0.9,
-    projectileSize: 4,
-    projectileColor: '#f4a261',
-    pellets: 7,
-    spreadDeg: 34,
+  exploit_sivo: {
+    id: 'exploit_sivo',
+    name: 'Exploit-sivo',
+    alias: 'El Zero-Day',
+    role: 'Balas lentas que explotan al detenerse',
+    fireRate: 4,
+    damage: 8,
+    projectileSpeed: 420,
+    projectileLifetime: 3.5,
+    projectileSize: 7,
+    projectileColor: '#a8dadc',
+    pellets: 1,
+    spreadDeg: 0,
+    explosive: true,
   },
 }
