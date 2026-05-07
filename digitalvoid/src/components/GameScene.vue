@@ -1,44 +1,110 @@
 <template>
   <div class="game-viewpoint" ref="viewportRef">
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
-      <PlayerHub />
+      <div class="hud-stack hud-stack-left">
+        <PlayerHub />
 
-      <div class="hud-rail">
-        <div class="hud-panel">
-          <div class="weapon-visual">
-            <img :src="selectedWeapon.image" :alt="selectedWeapon.name" class="weapon-image" />
+        <section class="neon-card objective-panel">
+          <div class="panel-heading">
+            <span class="panel-mark">⌬</span>
+            <p class="panel-title">OBJETIVO</p>
           </div>
-
-          <div class="weapon-copy">
-            <p class="hud-title">Arma actual</p>
-            <p class="hud-name">{{ selectedWeapon.name }}</p>
-            <p class="hud-alias">{{ selectedWeapon.alias }}</p>
-            <p class="hud-role">{{ selectedWeapon.role }}</p>
-            <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
-          </div>
-        </div>
-
-        <label class="music-slider">
-          <span class="music-slider-label">Música</span>
-          <input
-            v-model="musicVolume"
-            class="music-slider-input"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            aria-label="Volumen de la música"
-          />
-          <span class="music-slider-value">{{ musicVolumePercent }}%</span>
-        </label>
+          <p class="objective-copy">{{ objectiveText }}</p>
+        </section>
       </div>
 
+      <section class="neon-card weapon-panel">
+        <div class="weapon-visual">
+          <img :src="selectedWeapon.image" :alt="selectedWeapon.name" class="weapon-image" />
+        </div>
+
+        <div class="weapon-copy">
+          <div class="panel-heading">
+            <span class="panel-mark">➤</span>
+            <p class="panel-title">ARMA ACTUAL</p>
+          </div>
+          <p class="hud-name">{{ selectedWeapon.name }}</p>
+          <p class="hud-alias">{{ selectedWeapon.alias }}</p>
+          <p class="hud-role">{{ selectedWeapon.role }}</p>
+
+          <div class="weapon-hints">
+            <span class="hint-chip">1-5</span>
+            <span class="hint-chip">Q/E</span>
+            <span class="hint-chip">Rueda</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="neon-card abilities-panel">
+        <div class="panel-heading">
+          <span class="panel-mark">✦</span>
+          <p class="panel-title">HABILIDADES</p>
+        </div>
+
+        <div class="ability-grid">
+          <div
+            v-for="slot in abilitySlots"
+            :key="slot.key"
+            class="ability-slot"
+            :class="{ 'ability-slot-active': slot.active, 'ability-slot-locked': slot.locked }"
+          >
+            <div class="ability-icon">{{ slot.icon }}</div>
+            <div class="ability-key">{{ slot.key }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="neon-card music-panel">
+        <div class="panel-heading music-heading">
+          <span class="panel-mark">♬</span>
+          <p class="panel-title">MÚSICA</p>
+          <button
+            class="music-toggle"
+            type="button"
+            :aria-label="gameStore.settings.sound ? 'Silenciar música' : 'Activar música'"
+            @click="toggleSound"
+          >
+            {{ gameStore.settings.sound ? '⏸' : '▶' }}
+          </button>
+        </div>
+
+        <div class="music-wave" aria-hidden="true">
+          <span
+            v-for="(bar, index) in musicWaveBars"
+            :key="index"
+            class="music-wave-bar"
+            :style="{ height: `${bar}px` }"
+          />
+        </div>
+
+        <div class="music-controls">
+          <button class="music-control" type="button" aria-label="Bajar volumen" @click="nudgeMusicVolume(-0.1)">
+            ◀
+          </button>
+          <div class="music-slider-wrap">
+            <input
+              v-model="musicVolume"
+              class="music-slider-input"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              aria-label="Volumen de la música"
+            />
+            <span class="music-slider-value">{{ musicVolumePercent }}%</span>
+          </div>
+          <button class="music-control" type="button" aria-label="Subir volumen" @click="nudgeMusicVolume(0.1)">
+            ▶
+          </button>
+        </div>
+      </section>
+
       <div class="hud-actions">
-        <button class="hud-button" type="button" @click="togglePause">
-          {{ isPaused ? 'Reanudar' : 'Pausar' }}
+        <button class="hud-button" type="button" :aria-label="isPaused ? 'Reanudar' : 'Pausar'" @click="togglePause">
+          {{ isPaused ? '⏵' : '⏸' }}
         </button>
-        <button class="hud-button hud-button-secondary" type="button" @click="exitGame">
-          Salir
+        <button class="hud-button hud-button-secondary" type="button" aria-label="Salir" @click="exitGame">
+          ⎋
         </button>
       </div>
 
@@ -181,6 +247,14 @@ let isMoving = false
 
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
+const objectiveText = 'Sobrevive el mayor tiempo posible.'
+const abilitySlots = [
+  { key: '1', icon: '✦', active: true, locked: false },
+  { key: '2', icon: '🔒', active: false, locked: true },
+  { key: '3', icon: '🔒', active: false, locked: true },
+  { key: '4', icon: '🔒', active: false, locked: true },
+]
+const musicWaveBars = [12, 18, 8, 24, 16, 28, 14, 20, 10, 26, 18, 30, 12, 22, 14, 18]
 const musicVolume = computed({
   get: () => gameStore.settings.musicVolume,
   set: (value: number) => {
@@ -190,6 +264,16 @@ const musicVolume = computed({
   },
 })
 const musicVolumePercent = computed(() => Math.round(musicVolume.value * 100))
+
+function toggleSound() {
+  gameStore.setSettings({ sound: !gameStore.settings.sound })
+  gameStore.saveToLocal()
+}
+
+function nudgeMusicVolume(delta: number) {
+  const next = Math.min(1, Math.max(0, musicVolume.value + delta))
+  musicVolume.value = next
+}
 
 const ORBIT_APPROACH_TIME = 1.0
 const ORBIT_HOLD_TIME = 5.0
@@ -816,112 +900,35 @@ onUnmounted(() => {
   display: block;
 }
 
-.hud-rail {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 15;
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.hud-panel {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.weapon-visual {
-  flex: 0 0 74px;
-  width: 74px;
-  height: 74px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  border: 1px solid rgba(120, 200, 255, 0.18);
-  background: radial-gradient(circle at center, rgba(120, 200, 255, 0.1), rgba(0, 0, 0, 0.22));
-  overflow: hidden;
-}
-
-.weapon-image {
-  width: 90%;
-  height: 90%;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-.weapon-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.music-slider {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 6px;
-  justify-content: center;
-  min-width: 180px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(120, 200, 255, 0.35);
-  background: rgba(10, 18, 34, 0.9);
-  color: #ffffff;
-  text-align: left;
-}
-
-.music-slider-label {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.75;
-}
-
-.music-slider-input {
-  width: 100%;
-  accent-color: #78c8ff;
-}
-
-.music-slider-value {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.music-slider:hover {
-  border-color: rgba(120, 200, 255, 0.65);
-  background: rgba(15, 25, 44, 0.98);
-}
-
 .hud-actions {
   position: absolute;
   right: 12px;
   top: 12px;
   z-index: 20;
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .hud-button {
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(14, 22, 35, 0.92);
-  color: #ffffff;
-  padding: 9px 14px;
-  border-radius: 999px;
-  font-weight: 700;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(198, 94, 255, 0.55);
+  background: rgba(19, 8, 32, 0.92);
+  color: #f5d3ff;
+  padding: 0;
+  border-radius: 14px;
+  font-size: 1.2rem;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 18px rgba(189, 77, 255, 0.18);
 }
 
 .hud-button-secondary {
-  background: rgba(84, 13, 13, 0.92);
+  background: rgba(32, 12, 56, 0.94);
 }
 
 .pause-overlay {
@@ -936,11 +943,12 @@ onUnmounted(() => {
 
 .pause-card {
   padding: 18px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(9, 14, 22, 0.9);
+  border: 1px solid rgba(207, 84, 255, 0.45);
+  background: rgba(11, 7, 24, 0.92);
   color: #ffffff;
   text-align: center;
   max-width: 320px;
+  box-shadow: 0 0 20px rgba(206, 89, 255, 0.22);
 }
 
 .pause-title,
@@ -954,16 +962,11 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
-.hud-title,
 .hud-name,
 .hud-alias,
 .hud-role,
 .hud-help {
   margin: 0;
-}
-
-.hud-title {
-  opacity: 0.8;
 }
 
 .hud-name {
@@ -977,6 +980,271 @@ onUnmounted(() => {
 .hud-help {
   margin-top: 6px;
   opacity: 0.9;
+}
+
+.hud-stack {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud-stack-left {
+  width: min(370px, calc(100vw - 28px));
+}
+
+.neon-card {
+  position: relative;
+  color: #f2e9ff;
+  background:
+    linear-gradient(180deg, rgba(18, 9, 34, 0.94), rgba(10, 6, 22, 0.92)),
+    rgba(10, 6, 22, 0.88);
+  border: 1px solid rgba(208, 92, 255, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 24px rgba(202, 82, 255, 0.18),
+    0 0 42px rgba(108, 51, 255, 0.08);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+
+.neon-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-mark {
+  color: #ff79ff;
+  font-size: 0.9rem;
+  text-shadow: 0 0 10px rgba(255, 121, 255, 0.55);
+}
+
+.panel-title {
+  margin: 0;
+  color: #dcb6ff;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.objective-panel {
+  width: 210px;
+  padding: 16px 18px 14px;
+}
+
+.objective-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(246, 235, 255, 0.92);
+}
+
+.weapon-panel {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(510px, calc(100vw - 28px));
+  padding: 14px;
+}
+
+.weapon-visual {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(208, 92, 255, 0.24);
+  background:
+    radial-gradient(circle at center, rgba(150, 92, 255, 0.18), rgba(0, 0, 0, 0.3)),
+    linear-gradient(180deg, rgba(30, 15, 48, 0.95), rgba(13, 8, 28, 0.95));
+  overflow: hidden;
+}
+
+.weapon-image {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.weapon-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.weapon-hints {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hint-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(194, 120, 255, 0.4);
+  background: rgba(32, 15, 53, 0.9);
+  color: #f2e9ff;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.abilities-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 15;
+  width: min(430px, calc(100vw - 28px));
+  padding: 14px 16px 16px;
+  transform: translateX(-50%);
+}
+
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ability-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 120, 255, 0.28);
+  background: rgba(22, 10, 40, 0.86);
+}
+
+.ability-slot-active {
+  border-color: rgba(105, 210, 255, 0.8);
+  box-shadow: 0 0 18px rgba(94, 189, 255, 0.22);
+}
+
+.ability-slot-locked {
+  opacity: 0.7;
+}
+
+.ability-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(44, 17, 72, 0.98), rgba(18, 8, 31, 0.98));
+  color: #9edcff;
+  font-size: 1.1rem;
+}
+
+.ability-slot-locked .ability-icon {
+  color: #d9b8ff;
+}
+
+.ability-key {
+  color: #f0e3ff;
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+}
+
+.music-panel {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 15;
+  width: min(360px, calc(100vw - 28px));
+  padding: 14px 16px 16px;
+}
+
+.music-heading {
+  justify-content: space-between;
+}
+
+.music-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(218, 120, 255, 0.55);
+  background: rgba(32, 12, 56, 0.95);
+  color: #f7ddff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(202, 82, 255, 0.2);
+}
+
+.music-wave {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 44px;
+  margin-bottom: 12px;
+}
+
+.music-wave-bar {
+  width: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff7bff, #8c5bff);
+  box-shadow: 0 0 10px rgba(214, 112, 255, 0.35);
+  opacity: 0.95;
+}
+
+.music-controls {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+
+.music-control {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(218, 120, 255, 0.36);
+  background: rgba(24, 11, 42, 0.95);
+  color: #f8e8ff;
+  cursor: pointer;
+}
+
+.music-slider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.music-slider-input {
+  width: 100%;
+  accent-color: #c65eff;
+}
+
+.music-slider-value {
+  color: rgba(246, 232, 255, 0.9);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-align: right;
 }
 
 .custom-cursor {
