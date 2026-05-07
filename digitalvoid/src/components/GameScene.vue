@@ -3,12 +3,28 @@
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
       <PlayerHub />
 
-      <div class="hud-panel">
-        <p class="hud-title">Arma actual</p>
-        <p class="hud-name">{{ selectedWeapon.name }}</p>
-        <p class="hud-alias">{{ selectedWeapon.alias }}</p>
-        <p class="hud-role">{{ selectedWeapon.role }}</p>
-        <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
+      <div class="hud-rail">
+        <div class="hud-panel">
+          <p class="hud-title">Arma actual</p>
+          <p class="hud-name">{{ selectedWeapon.name }}</p>
+          <p class="hud-alias">{{ selectedWeapon.alias }}</p>
+          <p class="hud-role">{{ selectedWeapon.role }}</p>
+          <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
+        </div>
+
+        <label class="music-slider">
+          <span class="music-slider-label">Música</span>
+          <input
+            v-model="musicVolume"
+            class="music-slider-input"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            aria-label="Volumen de la música"
+          />
+          <span class="music-slider-value">{{ musicVolumePercent }}%</span>
+        </label>
       </div>
 
       <div class="hud-actions">
@@ -126,7 +142,6 @@ const emit = defineEmits<{
   (e: 'exit'): void
 }>()
 
-
 const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
@@ -152,6 +167,15 @@ const isPaused = ref(false)
 
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
+const musicVolume = computed({
+  get: () => gameStore.settings.musicVolume,
+  set: (value: number) => {
+    const clamped = Math.min(1, Math.max(0, value))
+    gameStore.setSettings({ musicVolume: clamped })
+    gameStore.saveToLocal()
+  },
+})
+const musicVolumePercent = computed(() => Math.round(musicVolume.value * 100))
 
 const ORBIT_APPROACH_TIME = 1.0
 const ORBIT_HOLD_TIME = 5.0
@@ -237,7 +261,10 @@ let shootAccumulator = 0
 function cycleWeapon(dir: 1 | -1) {
   const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
   const next = (idx + dir + WEAPON_ORDER.length) % WEAPON_ORDER.length
-  selectedWeaponId.value = WEAPON_ORDER[next]
+  const nextWeapon = WEAPON_ORDER[next]
+  if (nextWeapon) {
+    selectedWeaponId.value = nextWeapon
+  }
 }
 
 function randRange(min: number, max: number) {
@@ -369,7 +396,8 @@ function explosionStyle(exp: Explosion) {
     transform: `translate(${Math.round(exp.x - camera.x - r)}px, ${Math.round(exp.y - camera.y - r)}px)`,
     opacity,
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(255,200,80,0.9) 0%, rgba(255,100,30,0.6) 40%, rgba(255,60,0,0) 100%)',
+    background:
+      'radial-gradient(circle, rgba(255,200,80,0.9) 0%, rgba(255,100,30,0.6) 40%, rgba(255,60,0,0) 100%)',
     boxShadow: `0 0 ${Math.round(r * 0.6)}px rgba(255,160,40,0.7)`,
   }
 }
@@ -748,17 +776,59 @@ onUnmounted(() => {
   display: block;
 }
 
-.hud-panel {
+.hud-rail {
   position: absolute;
   left: 12px;
   bottom: 12px;
   z-index: 15;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.hud-panel {
   padding: 10px 12px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.music-slider {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  min-width: 180px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(120, 200, 255, 0.35);
+  background: rgba(10, 18, 34, 0.9);
+  color: #ffffff;
+  text-align: left;
+}
+
+.music-slider-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.music-slider-input {
+  width: 100%;
+  accent-color: #78c8ff;
+}
+
+.music-slider-value {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.music-slider:hover {
+  border-color: rgba(120, 200, 255, 0.65);
+  background: rgba(15, 25, 44, 0.98);
 }
 
 .hud-actions {

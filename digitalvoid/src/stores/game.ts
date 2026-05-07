@@ -10,6 +10,7 @@ export interface GameSettings {
   mode: Mode
   timeLimit: number
   sound: boolean
+  musicVolume: number
 }
 
 export interface PlayerStats {
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   mode: 'solitario',
   timeLimit: 60,
   sound: true,
+  musicVolume: 0.7,
 }
 
 const DEFAULT_PLAYER_STATS: PlayerStats = {
@@ -140,8 +142,21 @@ export const useGameStore = defineStore('game', () => {
     try {
       const raw = localStorage.getItem('gameSettings')
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<GameSettings>
-        settings.value = { ...DEFAULT_SETTINGS, ...parsed }
+        const parsed = JSON.parse(raw) as Partial<GameSettings> & {
+          musicVolumeMode?: 'low' | 'high'
+        }
+
+        const legacyMusicVolume =
+          parsed.musicVolumeMode === 'low' ? 0.25 : parsed.musicVolumeMode === 'high' ? 0.7 : undefined
+
+        settings.value = {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          musicVolume:
+            typeof parsed.musicVolume === 'number'
+              ? Math.min(1, Math.max(0, parsed.musicVolume))
+              : legacyMusicVolume ?? DEFAULT_SETTINGS.musicVolume,
+        }
       }
     } catch (e) {
       // ignore

@@ -79,6 +79,7 @@ interface GameSettings {
   mode: Mode
   timeLimit: number
   sound: boolean
+  musicVolume: number
 }
 
 const emit = defineEmits<{
@@ -92,6 +93,7 @@ const defaultSettings: GameSettings = {
   mode: 'solitario',
   timeLimit: 60,
   sound: true,
+  musicVolume: 0.7,
 }
 
 const settings = reactive<GameSettings>({ ...defaultSettings })

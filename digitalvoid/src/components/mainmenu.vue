@@ -123,9 +123,15 @@ onBeforeUnmount(() => {
 
     <div class="menu-layout">
       <nav class="buttons-container">
-        <button class="menu-button active" @click="handleNewGame">&gt;_ INICIAR INFECCION</button>
-        <button class="menu-button" @click="handleLoadGame">&gt;_ MANUAL DEL VIRUS</button>
-        <button class="menu-button" @click="handleSettings">&gt;_ AJUSTES DEL SISTEMA</button>
+        <button class="menu-button active" type="button" @click="handleNewGame">
+          &gt;_ INICIAR INFECCION
+        </button>
+        <button class="menu-button" type="button" @click="handleLoadGame">
+          &gt;_ MANUAL DEL VIRUS
+        </button>
+        <button class="menu-button" type="button" @click="handleSettings">
+          &gt;_ AJUSTES DEL SISTEMA
+        </button>
       </nav>
 
       <section class="symbol-panel" aria-hidden="true">
