@@ -89,7 +89,9 @@ import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '
 import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
 import virusImg from '../assets/malware.png'
+import spritesheetImg from '../assets/New_Piskel.png'
 import cursorImg from '../assets/cursorfire.png'
+
 interface Bullet {
   id: number
   x: number
@@ -165,6 +167,12 @@ const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
 const isPaused = ref(false)
 
+const SPRITE_FRAMES = 4
+const SPRITE_FPS = 8
+const playerFrame = ref(0)
+let spriteAccumulator = 0
+let isMoving = false
+
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
 const musicVolume = computed({
@@ -194,13 +202,28 @@ const sceneStyle = computed(() => ({
   height: '100vh',
 }))
 
-const playerStyle = computed(() => ({
-  width: `${player.size}px`,
-  height: `${player.size}px`,
-  backgroundImage: `url(${virusImg})`,
-  backgroundSize: 'contain',
-  transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
-}))
+const playerStyle = computed(() => {
+  if (isMoving) {
+    return {
+      width: `${player.size}px`,
+      height: `${player.size}px`,
+      backgroundImage: `url(${spritesheetImg})`,
+      backgroundSize: `${player.size}px ${player.size * SPRITE_FRAMES}px`,
+      backgroundPosition: `0px ${-playerFrame.value * player.size}px`,
+      backgroundRepeat: 'no-repeat',
+      transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
+    }
+  }
+  return {
+    width: `${player.size}px`,
+    height: `${player.size}px`,
+    backgroundImage: `url(${virusImg})`,
+    backgroundSize: 'contain',
+    backgroundPosition: '0 0',
+    backgroundRepeat: 'no-repeat',
+    transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
+  }
+})
 
 const playerCenterScreen = computed(() => ({
   x: player.x - camera.x + player.size / 2,
@@ -719,13 +742,24 @@ function loop(ts: number) {
   if (keys.left) vx -= 1
   if (keys.right) vx += 1
 
-  if (vx !== 0 || vy !== 0) {
+  const moving = vx !== 0 || vy !== 0
+  isMoving = moving
+
+  if (moving) {
     const len = Math.hypot(vx, vy) || 1
     vx = (vx / len) * speed
     vy = (vy / len) * speed
     player.x += vx * dt
     player.y += vy * dt
     clampPlayer()
+
+    spriteAccumulator += dt
+    if (spriteAccumulator >= 1 / SPRITE_FPS) {
+      spriteAccumulator -= 1 / SPRITE_FPS
+      playerFrame.value = (playerFrame.value + 1) % SPRITE_FRAMES
+    }
+  } else {
+    spriteAccumulator = 0
   }
 
   updateAutoShoot(dt)
