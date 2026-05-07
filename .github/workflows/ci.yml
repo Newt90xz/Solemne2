@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-lint-build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: ["20.19.0"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        working-directory: ./digitalvoid
+        run: npm install
+
+      - name: Type checking
+        working-directory: ./digitalvoid
+        run: npm run type-check
+
+      - name: Linting
+        working-directory: ./digitalvoid
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: ./digitalvoid
+        run: npm run test:unit
+
+      - name: Build
+        working-directory: ./digitalvoid
+        run: npm run build
