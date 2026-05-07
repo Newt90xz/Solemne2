@@ -41,7 +41,9 @@ const gameStore = useGameStore()
 const playerStats = computed(() => gameStore.playerStats)
 const formattedLevel = computed(() => String(playerStats.value.level).padStart(2, '0'))
 const healthText = computed(() => `${playerStats.value.health} / ${playerStats.value.maxHealth}`)
-const expText = computed(() => `${playerStats.value.experience} / ${playerStats.value.experienceToLevel}`)
+const expText = computed(
+  () => `${playerStats.value.experience} / ${playerStats.value.experienceToLevel}`,
+)
 
 const expBarStyle = computed(() => {
   const percentage = (playerStats.value.experience / playerStats.value.experienceToLevel) * 100
@@ -61,17 +63,42 @@ const healthBarStyle = computed(() => {
 <style scoped>
 .player-hub {
   width: 100%;
-  padding: 16px 18px 18px;
+  padding: 12px 14px 14px;
+  background:
+    linear-gradient(180deg, rgba(8, 16, 36, 0.96), rgba(6, 10, 24, 0.94)), rgba(6, 10, 24, 0.9);
+  border: 1px solid rgba(73, 163, 255, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 18px rgba(56, 132, 255, 0.16),
+    0 0 34px rgba(140, 66, 255, 0.06);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 20px) 0,
+    100% 20px,
+    100% 100%,
+    20px 100%,
+    0 calc(100% - 20px)
+  );
+  position: relative;
+}
+
+.player-hub::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  pointer-events: none;
 }
 
 .hub-heading {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .hub-grid {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 16px;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
   align-items: start;
 }
 
@@ -82,49 +109,49 @@ const healthBarStyle = computed(() => {
 }
 
 .level-value {
-  color: #f7e6ff;
-  font-size: 2.1rem;
+  color: #8fd7ff;
+  font-size: 1.45rem;
   line-height: 1;
   letter-spacing: 0.03em;
-  text-shadow: 0 0 16px rgba(255, 115, 255, 0.32);
+  text-shadow: 0 0 14px rgba(111, 199, 255, 0.34);
 }
 
 .label {
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  color: #dcb6ff;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: #7dc8ff;
   text-transform: uppercase;
 }
 
 .bars-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .stat-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
 }
 
 .track {
   position: relative;
-  height: 12px;
+  height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(19, 8, 34, 0.95);
-  border: 1px solid rgba(196, 102, 255, 0.3);
+  background: rgba(8, 14, 30, 0.95);
+  border: 1px solid rgba(97, 182, 255, 0.3);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .track-health {
-  min-width: 220px;
+  min-width: 128px;
 }
 
 .track-exp {
-  min-width: 220px;
+  min-width: 128px;
 }
 
 .fill {
@@ -139,15 +166,15 @@ const healthBarStyle = computed(() => {
 }
 
 .fill-exp {
-  background: linear-gradient(90deg, #64c8ff, #8f6bff);
-  box-shadow: 0 0 12px rgba(118, 170, 255, 0.45);
+  background: linear-gradient(90deg, #4bb0ff, #7e78ff);
+  box-shadow: 0 0 12px rgba(95, 163, 255, 0.42);
 }
 
 .bar-text {
-  color: rgba(255, 236, 255, 0.9);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  min-width: 72px;
+  color: rgba(221, 239, 255, 0.92);
+  font-size: 0.55rem;
+  letter-spacing: 0.07em;
+  min-width: 52px;
   text-align: right;
 }
 </style>

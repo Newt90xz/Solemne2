@@ -78,7 +78,12 @@
         </div>
 
         <div class="music-controls">
-          <button class="music-control" type="button" aria-label="Bajar volumen" @click="nudgeMusicVolume(-0.1)">
+          <button
+            class="music-control"
+            type="button"
+            aria-label="Bajar volumen"
+            @click="nudgeMusicVolume(-0.1)"
+          >
             ◀
           </button>
           <div class="music-slider-wrap">
@@ -93,17 +98,32 @@
             />
             <span class="music-slider-value">{{ musicVolumePercent }}%</span>
           </div>
-          <button class="music-control" type="button" aria-label="Subir volumen" @click="nudgeMusicVolume(0.1)">
+          <button
+            class="music-control"
+            type="button"
+            aria-label="Subir volumen"
+            @click="nudgeMusicVolume(0.1)"
+          >
             ▶
           </button>
         </div>
       </section>
 
       <div class="hud-actions">
-        <button class="hud-button" type="button" :aria-label="isPaused ? 'Reanudar' : 'Pausar'" @click="togglePause">
+        <button
+          class="hud-button"
+          type="button"
+          :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
+          @click="togglePause"
+        >
           {{ isPaused ? '⏵' : '⏸' }}
         </button>
-        <button class="hud-button hud-button-secondary" type="button" aria-label="Salir" @click="exitGame">
+        <button
+          class="hud-button hud-button-secondary"
+          type="button"
+          aria-label="Salir"
+          @click="exitGame"
+        >
           ⎋
         </button>
       </div>
@@ -984,30 +1004,36 @@ onUnmounted(() => {
 
 .hud-stack {
   position: absolute;
-  left: 14px;
-  top: 14px;
+  left: 10px;
+  top: 10px;
   z-index: 15;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .hud-stack-left {
-  width: min(370px, calc(100vw - 28px));
+  width: min(300px, calc(100vw - 20px));
 }
 
 .neon-card {
   position: relative;
   color: #f2e9ff;
   background:
-    linear-gradient(180deg, rgba(18, 9, 34, 0.94), rgba(10, 6, 22, 0.92)),
-    rgba(10, 6, 22, 0.88);
+    linear-gradient(180deg, rgba(18, 9, 34, 0.94), rgba(10, 6, 22, 0.92)), rgba(10, 6, 22, 0.88);
   border: 1px solid rgba(208, 92, 255, 0.55);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 0 24px rgba(202, 82, 255, 0.18),
     0 0 42px rgba(108, 51, 255, 0.08);
-  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    18px 100%,
+    0 calc(100% - 18px)
+  );
 }
 
 .neon-card::before {
@@ -1022,8 +1048,8 @@ onUnmounted(() => {
 .panel-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .panel-mark {
@@ -1035,42 +1061,42 @@ onUnmounted(() => {
 .panel-title {
   margin: 0;
   color: #dcb6ff;
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .objective-panel {
-  width: 210px;
-  padding: 16px 18px 14px;
+  width: 170px;
+  padding: 12px 14px 10px;
 }
 
 .objective-copy {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.35;
   color: rgba(246, 235, 255, 0.92);
 }
 
 .weapon-panel {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
+  left: 10px;
+  bottom: 10px;
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 14px;
-  width: min(510px, calc(100vw - 28px));
-  padding: 14px;
+  gap: 10px;
+  width: min(400px, calc(100vw - 20px));
+  padding: 10px 12px;
 }
 
 .weapon-visual {
-  flex: 0 0 120px;
-  width: 120px;
-  height: 120px;
+  flex: 0 0 86px;
+  width: 86px;
+  height: 86px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(208, 92, 255, 0.24);
   background:
     radial-gradient(circle at center, rgba(150, 92, 255, 0.18), rgba(0, 0, 0, 0.3)),
@@ -1079,8 +1105,8 @@ onUnmounted(() => {
 }
 
 .weapon-image {
-  width: 80%;
-  height: 80%;
+  width: 76%;
+  height: 76%;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -1088,54 +1114,54 @@ onUnmounted(() => {
 .weapon-copy {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .weapon-hints {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .hint-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  padding: 5px 8px;
+  min-width: 30px;
+  padding: 4px 7px;
   border-radius: 999px;
   border: 1px solid rgba(194, 120, 255, 0.4);
   background: rgba(32, 15, 53, 0.9);
   color: #f2e9ff;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   letter-spacing: 0.08em;
 }
 
 .abilities-panel {
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: 10px;
   z-index: 15;
-  width: min(430px, calc(100vw - 28px));
-  padding: 14px 16px 16px;
+  width: min(320px, calc(100vw - 20px));
+  padding: 10px 12px 12px;
   transform: translateX(-50%);
 }
 
 .ability-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .ability-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 12px 8px 10px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 9px 6px 8px;
+  border-radius: 10px;
   border: 1px solid rgba(194, 120, 255, 0.28);
   background: rgba(22, 10, 40, 0.86);
 }
@@ -1150,14 +1176,14 @@ onUnmounted(() => {
 }
 
 .ability-icon {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 8px;
   background: linear-gradient(180deg, rgba(44, 17, 72, 0.98), rgba(18, 8, 31, 0.98));
   color: #9edcff;
-  font-size: 1.1rem;
+  font-size: 0.92rem;
 }
 
 .ability-slot-locked .ability-icon {
@@ -1166,17 +1192,17 @@ onUnmounted(() => {
 
 .ability-key {
   color: #f0e3ff;
-  font-size: 0.76rem;
+  font-size: 0.64rem;
   letter-spacing: 0.18em;
 }
 
 .music-panel {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
+  right: 10px;
+  bottom: 10px;
   z-index: 15;
-  width: min(360px, calc(100vw - 28px));
-  padding: 14px 16px 16px;
+  width: min(290px, calc(100vw - 20px));
+  padding: 10px 12px 12px;
 }
 
 .music-heading {
@@ -1184,8 +1210,8 @@ onUnmounted(() => {
 }
 
 .music-toggle {
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   border: 1px solid rgba(218, 120, 255, 0.55);
   background: rgba(32, 12, 56, 0.95);
@@ -1200,12 +1226,12 @@ onUnmounted(() => {
   align-items: flex-end;
   justify-content: center;
   gap: 4px;
-  height: 44px;
-  margin-bottom: 12px;
+  height: 30px;
+  margin-bottom: 8px;
 }
 
 .music-wave-bar {
-  width: 5px;
+  width: 4px;
   border-radius: 999px;
   background: linear-gradient(180deg, #ff7bff, #8c5bff);
   box-shadow: 0 0 10px rgba(214, 112, 255, 0.35);
@@ -1214,14 +1240,14 @@ onUnmounted(() => {
 
 .music-controls {
   display: grid;
-  grid-template-columns: 36px 1fr 36px;
+  grid-template-columns: 28px 1fr 28px;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .music-control {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid rgba(218, 120, 255, 0.36);
   background: rgba(24, 11, 42, 0.95);
@@ -1242,7 +1268,7 @@ onUnmounted(() => {
 
 .music-slider-value {
   color: rgba(246, 232, 255, 0.9);
-  font-size: 0.78rem;
+  font-size: 0.66rem;
   letter-spacing: 0.1em;
   text-align: right;
 }
