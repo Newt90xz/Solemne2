@@ -6,11 +6,11 @@ Semana 1, 27 de abril - 1 de mayo:
 
 Semana 2, 4 de mayo - 8 de mayo:
 
-- Desarrollo base del videojuego(scenarios). 50%
+- Desarrollo base del videojuego(scenarios). 70%
 - Desarrollo de paginas principales del juego(main menu, options, instructions, etc). 100%
-- Desarrollo de personajes + sus funciones basicas. (cursor) 50%
-- Definir propiedades de las armas y objetos. 40%
-- Pruebas de movimiento y controles basicos. 60%
+- Desarrollo de personajes + sus funciones basicas. (cursor) 80%
+- Definir propiedades de las armas y objetos. 80%
+- Pruebas de movimiento y controles basicos. 70%
 - desarrollar hub para player( hud para armas, vida, etc). 50%
 
 Semana 3, 11 de mayo - 15 de mayo:
