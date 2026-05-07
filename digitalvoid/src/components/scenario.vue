@@ -32,7 +32,7 @@ let gameMusic: HTMLAudioElement | null = null
 
 function getMusicVolume() {
   const volume = gameStore.settings.musicVolume
-  return typeof volume === 'number' ? Math.min(1, Math.max(0, volume)) : 0.7
+  return typeof volume === 'number' ? Math.min(1, Math.max(0, volume)) : 0.2
 }
 
 function ensureGameMusic() {
