@@ -27,8 +27,6 @@
         </div>
       </div>
 
-      <div class="aim-line" :style="aimLineStyle"></div>
-
       <div v-if="nearestBuilding && hintVisible" class="capture-hint">
         <div class="hint-icon">{{ nearestBuilding.b.icon }}</div>
         <div>Presiona <strong>E</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
@@ -55,6 +53,8 @@
       ></div>
 
       <div class="player" :style="playerStyle"></div>
+
+      <div class="custom-cursor" :style="customCursorStyle"></div>
     </div>
   </div>
 </template>
@@ -65,6 +65,8 @@ import escenarioImg from '../assets/Escenario_Principal.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
+import virusImg from '../assets/malware.png'
+import cursorImg from '../assets/cursorfire.png'
 
 interface Bullet {
   id: number
@@ -98,13 +100,13 @@ interface Building {
 const emit = defineEmits<{
   (e: 'exit'): void
 }>()
-import virusImg from '../assets/malware.png'
+
 
 const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
-const player = reactive({ x: 500, y: 500, size: 26 })
+const player = reactive({ x: 500, y: 500, size: 30 })
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320 // base pixels per second
 
@@ -162,16 +164,11 @@ const aimAngleDeg = computed(() => {
   return Math.atan2(dy, dx) * (180 / Math.PI)
 })
 
-const aimLineStyle = computed(() => {
-  const start = playerCenterScreen.value
-  const { dx, dy } = aimDelta.value
-  const length = Math.hypot(dx, dy)
-  return {
-    width: `${Math.max(0, Math.round(length))}px`,
-    transform: `translate(${Math.round(start.x)}px, ${Math.round(start.y)}px) rotate(${aimAngleDeg.value}deg)`,
-    opacity: mouseScreen.active ? '1' : '0.35',
-  }
-})
+const customCursorStyle = computed(() => ({
+  backgroundImage: `url(${cursorImg})`,
+  transform: `translate(${Math.round(mouseScreen.x)}px, ${Math.round(mouseScreen.y)}px)`,
+  opacity: mouseScreen.active ? '1' : '0',
+}))
 
 const nearestBuilding = computed(() => {
   let nearest: Building | null = null
@@ -645,15 +642,26 @@ onUnmounted(() => {
 }
 
 .aim-line {
+  display: none;
+}
+
+.custom-cursor {
   position: absolute;
   left: 0;
   top: 0;
-  height: 2px;
-  background: rgba(255, 70, 70, 0.95);
-  transform-origin: 0 50%;
-  box-shadow: 0 0 8px rgba(255, 70, 70, 0.6);
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   pointer-events: none;
-  z-index: 2;
+  z-index: 100;
+  transform-origin: 0 0;
+  translate: -50% -50%;
+}
+
+.player::after {
+  display: none;
 }
 
 .bullet {
@@ -736,17 +744,5 @@ onUnmounted(() => {
   border-radius: 0;
   will-change: transform;
   z-index: 3;
-}
-
-.player::after {
-  content: '';
-  position: absolute;
-  right: -8px;
-  top: 50%;
-  width: 10px;
-  height: 4px;
-  border-radius: 3px;
-  transform: translateY(-50%);
-  background: rgba(255, 70, 70, 0.95);
 }
 </style>

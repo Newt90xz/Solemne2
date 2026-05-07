@@ -118,7 +118,7 @@ onBeforeUnmount(() => {
 
     <div class="title-container">
       <h1 class="title glitch" data-text="DIGITAL VOID">DIGITAL VOID</h1>
-      <p class="subtitle">INFECTATE. EVOLUCIONA. SOBREVIVE.</p>
+      <p class="subtitle">INFECTA. EVOLUCIONA. SOBREVIVE.</p>
     </div>
 
     <div class="menu-layout">
