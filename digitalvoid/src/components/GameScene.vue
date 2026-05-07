@@ -131,7 +131,7 @@ const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
-const player = reactive({ x: 500, y: 500, size: 30 })
+const player = reactive({ x: 1000, y: 1000, size: 30 })
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320
 
@@ -139,7 +139,7 @@ const mouseScreen = reactive({ x: 0, y: 0, active: false })
 const mouseWorld = reactive({ x: 500, y: 500 })
 const mouse = reactive({ down: false })
 
-const worldSize = { width: 5000, height: 5000 }
+const worldSize = { width: 7000, height: 7000 }
 
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
