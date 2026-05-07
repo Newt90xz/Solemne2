@@ -114,6 +114,7 @@ export const useGameStore = defineStore('game', () => {
   function updateBuffs(dt: number) {
     for (let i = activeBuffs.length - 1; i >= 0; i--) {
       const buff = activeBuffs[i]
+      if (!buff) continue
       buff.remainingTime -= dt
 
       if (buff.remainingTime <= 0) {
@@ -158,7 +159,7 @@ export const useGameStore = defineStore('game', () => {
               : legacyMusicVolume ?? DEFAULT_SETTINGS.musicVolume,
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -166,7 +167,7 @@ export const useGameStore = defineStore('game', () => {
   function saveToLocal() {
     try {
       localStorage.setItem('gameSettings', JSON.stringify(settings.value))
-    } catch (e) {
+    } catch {
       // ignore
     }
   }

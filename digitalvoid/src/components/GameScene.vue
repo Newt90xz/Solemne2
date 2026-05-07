@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import escenarioImg from '../assets/Escenario_Principal.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
@@ -219,7 +219,7 @@ const sceneStyle = computed(() => ({
   width: '100%',
   height: '100vh',
   imageRendering: 'pixelated',
-}))
+}) as CSSProperties)
 
 const playerStyle = computed(() => {
   const currentFrame = isMoving ? playerFrame.value : 0
@@ -232,7 +232,7 @@ const playerStyle = computed(() => {
     backgroundPosition: `0px ${-currentFrame * player.size}px`,
     backgroundRepeat: 'no-repeat',
     transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
-  }
+  } as CSSProperties
 })
 
 const playerCenterScreen = computed(() => ({
@@ -260,7 +260,7 @@ const customCursorStyle = computed(() => ({
   backgroundImage: `url(${cursorImg})`,
   transform: `translate(${Math.round(mouseScreen.x)}px, ${Math.round(mouseScreen.y)}px)`,
   opacity: mouseScreen.active ? '1' : '0',
-}))
+}) as CSSProperties)
 
 const nearestBuilding = computed(() => {
   let nearest: Building | null = null
@@ -364,7 +364,7 @@ function buildingAreaStyle(b: Building) {
     border: b.captured ? '2px solid rgba(80,200,120,0.25)' : '1px dashed rgba(120,140,200,0.12)',
     borderRadius: '999px',
     zIndex: 1,
-  }
+  } as CSSProperties
 }
 
 function buildingStyle(b: Building) {
@@ -384,7 +384,7 @@ function buildingStyle(b: Building) {
       ? '0 0 18px rgba(80,200,120,0.45)' 
       : '0 0 10px rgba(180,120,220,0.25)',
     zIndex: 5,
-  }
+  } as CSSProperties
 }
 
 function bulletStyle(bullet: Bullet) {
@@ -399,7 +399,7 @@ function bulletStyle(bullet: Bullet) {
       borderRadius: '2px',
       transform: `translate(${screenX}px, ${screenY}px)`,
       boxShadow: `0 0 8px ${bullet.color}`,
-    }
+    } as CSSProperties
   }
 
   if (bullet.type === 'explosive') {
@@ -413,7 +413,7 @@ function bulletStyle(bullet: Bullet) {
       borderRadius: '99px',
       transform: `translate(${screenX}px, ${screenY}px)`,
       boxShadow: `0 0 ${glow}px rgba(168,218,220,0.85)`,
-    }
+    } as CSSProperties
   }
 
   return {
@@ -422,7 +422,7 @@ function bulletStyle(bullet: Bullet) {
     background: bullet.color,
     borderRadius: '99px',
     transform: `translate(${screenX}px, ${screenY}px)`,
-  }
+  } as CSSProperties
 }
 
 function explosionStyle(exp: Explosion) {
@@ -438,7 +438,7 @@ function explosionStyle(exp: Explosion) {
     background:
       'radial-gradient(circle, rgba(255,200,80,0.9) 0%, rgba(255,100,30,0.6) 40%, rgba(255,60,0,0) 100%)',
     boxShadow: `0 0 ${Math.round(r * 0.6)}px rgba(255,160,40,0.7)`,
-  }
+  } as CSSProperties
 }
 
 function onKeyDown(e: KeyboardEvent) {

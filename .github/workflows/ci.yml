@@ -9,6 +9,8 @@ on:
 jobs:
   test-lint-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     strategy:
       matrix:
