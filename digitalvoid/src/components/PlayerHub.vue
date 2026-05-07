@@ -64,8 +64,7 @@ const healthBarStyle = computed(() => {
 .player-hub {
   width: 100%;
   padding: 12px 14px 14px;
-  background:
-    linear-gradient(180deg, rgba(8, 16, 36, 0.96), rgba(6, 10, 24, 0.94)), rgba(6, 10, 24, 0.9);
+  background: transparent;
   border: 1px solid rgba(73, 163, 255, 0.55);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
@@ -87,12 +86,21 @@ const healthBarStyle = computed(() => {
   position: absolute;
   inset: 0;
   clip-path: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(121, 217, 255, 0.14);
+  pointer-events: none;
+}
+
+.player-hub::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: inherit;
+  border: 1px solid rgba(255, 115, 230, 0.08);
   pointer-events: none;
 }
 
 .hub-heading {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .hub-grid {
@@ -109,16 +117,16 @@ const healthBarStyle = computed(() => {
 }
 
 .level-value {
-  color: #8fd7ff;
-  font-size: 1.45rem;
+  color: #9fe3ff;
+  font-size: 1.4rem;
   line-height: 1;
   letter-spacing: 0.03em;
-  text-shadow: 0 0 14px rgba(111, 199, 255, 0.34);
+  text-shadow: 0 0 14px rgba(111, 199, 255, 0.38);
 }
 
 .label {
-  font-size: 0.58rem;
-  letter-spacing: 0.16em;
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
   color: #7dc8ff;
   text-transform: uppercase;
 }
@@ -143,7 +151,9 @@ const healthBarStyle = computed(() => {
   overflow: hidden;
   background: rgba(8, 14, 30, 0.95);
   border: 1px solid rgba(97, 182, 255, 0.3);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 14px rgba(79, 164, 255, 0.08);
 }
 
 .track-health {
@@ -161,19 +171,19 @@ const healthBarStyle = computed(() => {
 }
 
 .fill-health {
-  background: linear-gradient(90deg, #ff6fae, #ff4c8f);
-  box-shadow: 0 0 12px rgba(255, 95, 154, 0.5);
+  background: linear-gradient(90deg, #ff76b3, #ff3f8a);
+  box-shadow: 0 0 12px rgba(255, 95, 154, 0.6);
 }
 
 .fill-exp {
-  background: linear-gradient(90deg, #4bb0ff, #7e78ff);
-  box-shadow: 0 0 12px rgba(95, 163, 255, 0.42);
+  background: linear-gradient(90deg, #57c8ff, #8d7bff);
+  box-shadow: 0 0 12px rgba(95, 163, 255, 0.5);
 }
 
 .bar-text {
-  color: rgba(221, 239, 255, 0.92);
-  font-size: 0.55rem;
-  letter-spacing: 0.07em;
+  color: rgba(221, 239, 255, 0.9);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
   min-width: 52px;
   text-align: right;
 }

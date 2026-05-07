@@ -35,25 +35,6 @@
         </div>
       </section>
 
-      <section class="neon-card abilities-panel">
-        <div class="panel-heading">
-          <span class="panel-mark">✦</span>
-          <p class="panel-title">HABILIDADES</p>
-        </div>
-
-        <div class="ability-grid">
-          <div
-            v-for="slot in abilitySlots"
-            :key="slot.key"
-            class="ability-slot"
-            :class="{ 'ability-slot-active': slot.active, 'ability-slot-locked': slot.locked }"
-          >
-            <div class="ability-icon">{{ slot.icon }}</div>
-            <div class="ability-key">{{ slot.key }}</div>
-          </div>
-        </div>
-      </section>
-
       <section class="neon-card music-panel">
         <div class="panel-heading music-heading">
           <span class="panel-mark">♬</span>
@@ -268,12 +249,6 @@ let isMoving = false
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
-const abilitySlots = [
-  { key: '1', icon: '✦', active: true, locked: false },
-  { key: '2', icon: '🔒', active: false, locked: true },
-  { key: '3', icon: '🔒', active: false, locked: true },
-  { key: '4', icon: '🔒', active: false, locked: true },
-]
 const musicWaveBars = [12, 18, 8, 24, 16, 28, 14, 20, 10, 26, 18, 30, 12, 22, 14, 18]
 const musicVolume = computed({
   get: () => gameStore.settings.musicVolume,
@@ -983,15 +958,16 @@ onUnmounted(() => {
 
 .hud-name {
   font-weight: 700;
+  color: #f6e9ff;
 }
 
 .hud-alias {
-  color: #ffd166;
+  color: #ff7de9;
 }
 
 .hud-help {
   margin-top: 6px;
-  opacity: 0.9;
+  color: rgba(180, 229, 255, 0.86);
 }
 
 .hud-stack {
@@ -1012,19 +988,21 @@ onUnmounted(() => {
   position: relative;
   color: #f2e9ff;
   background:
-    linear-gradient(180deg, rgba(18, 9, 34, 0.94), rgba(10, 6, 22, 0.92)), rgba(10, 6, 22, 0.88);
-  border: 1px solid rgba(208, 92, 255, 0.55);
+    linear-gradient(180deg, rgba(14, 8, 28, 0.92), rgba(7, 8, 18, 0.9)), rgba(7, 8, 18, 0.86);
+  border: 1px solid rgba(224, 92, 255, 0.72);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 0 24px rgba(202, 82, 255, 0.18),
-    0 0 42px rgba(108, 51, 255, 0.08);
+    0 0 22px rgba(202, 82, 255, 0.26),
+    0 0 38px rgba(108, 51, 255, 0.1);
   clip-path: polygon(
-    0 0,
-    calc(100% - 18px) 0,
-    100% 18px,
-    100% 100%,
-    18px 100%,
-    0 calc(100% - 18px)
+    0 12px,
+    12px 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    16px 100%,
+    0 calc(100% - 16px)
   );
 }
 
@@ -1033,7 +1011,16 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   clip-path: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 121, 255, 0.18);
+  pointer-events: none;
+}
+
+.neon-card::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: inherit;
+  border: 1px solid rgba(99, 209, 255, 0.08);
   pointer-events: none;
 }
 
@@ -1045,22 +1032,25 @@ onUnmounted(() => {
 }
 
 .panel-mark {
-  color: #ff79ff;
-  font-size: 0.9rem;
-  text-shadow: 0 0 10px rgba(255, 121, 255, 0.55);
+  color: #ff82ff;
+  font-size: 0.85rem;
+  text-shadow: 0 0 12px rgba(255, 121, 255, 0.72);
 }
 
 .panel-title {
   margin: 0;
-  color: #dcb6ff;
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
+  color: #f0d9ff;
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .objective-panel {
   width: 170px;
   padding: 12px 14px 10px;
+  background:
+    linear-gradient(180deg, rgba(10, 9, 28, 0.94), rgba(7, 7, 18, 0.92)), rgba(7, 7, 18, 0.88);
+  border-color: rgba(89, 132, 255, 0.55);
 }
 
 .objective-copy {
@@ -1080,6 +1070,8 @@ onUnmounted(() => {
   gap: 10px;
   width: min(400px, calc(100vw - 20px));
   padding: 10px 12px;
+  background: transparent;
+  border-color: rgba(255, 109, 245, 0.7);
 }
 
 .weapon-visual {
@@ -1089,11 +1081,12 @@ onUnmounted(() => {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  border: 1px solid rgba(208, 92, 255, 0.24);
+  border: 1px solid rgba(255, 109, 245, 0.32);
   background:
-    radial-gradient(circle at center, rgba(150, 92, 255, 0.18), rgba(0, 0, 0, 0.3)),
-    linear-gradient(180deg, rgba(30, 15, 48, 0.95), rgba(13, 8, 28, 0.95));
+    radial-gradient(circle at center, rgba(255, 88, 220, 0.2), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(30, 14, 52, 0.96), rgba(10, 8, 22, 0.96));
   overflow: hidden;
+  box-shadow: 0 0 18px rgba(255, 109, 245, 0.12);
 }
 
 .weapon-image {
@@ -1125,67 +1118,10 @@ onUnmounted(() => {
   padding: 4px 7px;
   border-radius: 999px;
   border: 1px solid rgba(194, 120, 255, 0.4);
-  background: rgba(32, 15, 53, 0.9);
-  color: #f2e9ff;
+  background: rgba(16, 22, 42, 0.92);
+  color: #bcecff;
   font-size: 0.62rem;
   letter-spacing: 0.08em;
-}
-
-.abilities-panel {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  z-index: 15;
-  width: min(320px, calc(100vw - 20px));
-  padding: 10px 12px 12px;
-  transform: translateX(-50%);
-}
-
-.ability-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.ability-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 6px 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(194, 120, 255, 0.28);
-  background: rgba(22, 10, 40, 0.86);
-}
-
-.ability-slot-active {
-  border-color: rgba(105, 210, 255, 0.8);
-  box-shadow: 0 0 18px rgba(94, 189, 255, 0.22);
-}
-
-.ability-slot-locked {
-  opacity: 0.7;
-}
-
-.ability-icon {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(44, 17, 72, 0.98), rgba(18, 8, 31, 0.98));
-  color: #9edcff;
-  font-size: 0.92rem;
-}
-
-.ability-slot-locked .ability-icon {
-  color: #d9b8ff;
-}
-
-.ability-key {
-  color: #f0e3ff;
-  font-size: 0.64rem;
-  letter-spacing: 0.18em;
 }
 
 .music-panel {
@@ -1195,6 +1131,9 @@ onUnmounted(() => {
   z-index: 15;
   width: min(290px, calc(100vw - 20px));
   padding: 10px 12px 12px;
+  background:
+    linear-gradient(180deg, rgba(12, 8, 26, 0.94), rgba(8, 7, 18, 0.92)), rgba(8, 7, 18, 0.88);
+  border-color: rgba(255, 111, 211, 0.72);
 }
 
 .music-heading {
@@ -1205,12 +1144,12 @@ onUnmounted(() => {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid rgba(218, 120, 255, 0.55);
-  background: rgba(32, 12, 56, 0.95);
-  color: #f7ddff;
+  border: 1px solid rgba(255, 111, 211, 0.58);
+  background: rgba(33, 11, 46, 0.95);
+  color: #ffd6f7;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(202, 82, 255, 0.2);
+  box-shadow: 0 0 18px rgba(255, 111, 211, 0.22);
 }
 
 .music-wave {
