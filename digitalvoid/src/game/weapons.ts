@@ -10,6 +10,7 @@ export interface WeaponDefinition {
   name: string
   alias: string
   role: string
+  image: string
   fireRate: number
   damage: number
   projectileSpeed: number
@@ -22,6 +23,12 @@ export interface WeaponDefinition {
   orbiting?: boolean
   explosive?: boolean
 }
+
+import arma1 from '../assets/Arma_1.png'
+import arma2 from '../assets/Arma_2.png'
+import arma3 from '../assets/Arma_3.png'
+import arma4 from '../assets/Arma_4.png'
+import arma5 from '../assets/Arma_5.png'
 
 export const DEFAULT_WEAPON_ID: WeaponId = 'virus_troyano'
 
@@ -39,6 +46,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     name: 'Virus Troyano',
     alias: 'La Carga Explosiva',
     role: 'Arma basica de dano directo',
+    image: arma1,
     fireRate: 5,
     damage: 14,
     projectileSpeed: 860,
@@ -53,6 +61,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     name: 'Ransomware',
     alias: 'El Cripto-Martillo',
     role: 'Arma pesada con perforacion de enemigos',
+    image: arma2,
     fireRate: 1.6,
     damage: 48,
     projectileSpeed: 580,
@@ -68,6 +77,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     name: 'Gusano',
     alias: 'El Nanobot Contagioso',
     role: 'Arma de area y propagacion',
+    image: arma3,
     fireRate: 2.4,
     damage: 11,
     projectileSpeed: 720,
@@ -82,6 +92,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     name: 'Tormenta de Anuncios',
     alias: 'El Spam Orbital',
     role: 'Balas que orbitan el cursor antes de liberarse',
+    image: arma4,
     fireRate: 3,
     damage: 16,
     projectileSpeed: 600,
@@ -97,6 +108,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     name: 'Exploit-sivo',
     alias: 'El Zero-Day',
     role: 'Balas lentas que explotan al detenerse',
+    image: arma5,
     fireRate: 4,
     damage: 8,
     projectileSpeed: 420,
