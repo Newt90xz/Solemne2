@@ -4,8 +4,8 @@ Titulo beta: Digital Void
 
 #### Mockup
 
-<img src="mockup1.jpeg" alt="mockup 1" width="400" height="300">
-<img src="mockup2.jpeg" alt="mockup 2" width="400" height="300">
+<img src="digitalvoid/mockup/mockup1.jpeg" alt="mockup 1" width="400" height="300">
+<img src="digitalvoid/mockup/mockup2.jpeg" alt="mockup 2" width="400" height="300">
 
 ## Descripción del juego
 

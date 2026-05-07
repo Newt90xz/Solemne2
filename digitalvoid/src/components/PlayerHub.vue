@@ -1,7 +1,7 @@
 <template>
   <section class="player-hub">
     <div class="panel-heading hub-heading">
-      <p class="panel-title">NIVEL</p>
+      <p class="panel-title">-----</p>
     </div>
 
     <div class="hub-grid">

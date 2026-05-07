@@ -1,28 +1,124 @@
-Semana 1, 27 de abril - 1 de mayo:
+# Work Planning
+## Semana 1, 27 de abril - 1 de mayo:
 
-- Definicion de genero del videojuego.
-- Definir tecnologias a usar.
-- Desarrollar mockups(dibujados a mano).
+- [X] Videogame genre definition
+- [X] Define technologies to use.
+- [X] Develop mockup.
 
-Semana 2, 4 de mayo - 8 de mayo:
+## Semana 2, 4 de mayo - 8 de mayo:
 
-- Desarrollo base del videojuego(scenarios). 70%
-- Desarrollo de paginas principales del juego(main menu, options, instructions, etc). 100%
-- Desarrollo de personajes + sus funciones basicas. (cursor) 80%
-- Definir propiedades de las armas y objetos. 80%
-- Pruebas de movimiento y controles basicos. 70%
-- desarrollar hub para player( hud para armas, vida, etc). 50%
+- [X] Base Game Development
+    - [X] File Structure
+    - [X] Pause/Exit
+    - [X] Map
+        - [X] Loop
+    - [X] Building Implementation
+        - [X] Capture Buildings
+        - [X] Buffs
+- [X] Desarrollo de paginas principales del juego.
+    - [X] Main Menu
+    - [X] Options
+    - [X] UI
+    - [X] Manual
+- [X] Player Development 
+    - [X] Moovement
+    - [X] Cursor Fire
+    - [X] Exp System Structure
+    - [X] Animations
+- [X] Definir propiedades de las armas y objetos. 
+    - [X] Weapon Design
+    - [X] Weapon Properties
+- [X] Principal
+        - [X] Piercing
+        - [X] Shotgun
+        - [X] Orbital
+        - [X] Explosives
+    - [ ] Bullet Textures
+        - [ ] Principal
+        - [ ] Piercing
+        - [ ] Shotgun
+        - [ ] Orbital
+        - [ ] Explosives
+- [X] Player Hud
+    - [X] Player State
+        - [X] Life
+        - [X] Exp/Level
+    - [X] Weapon Icons
+            - [X] Main
+            - [X] Piercing
+            - [X] Shotgun
+            - [X] Orbital
+            - [X] Explosives
+-   [X] Movement and control tests.
 
-Semana 3, 11 de mayo - 15 de mayo:
+## Semana 3, 11 de mayo - 15 de mayo:
 
-- Desarrollo de jefes(funciones basicas).
-- Desarrollo de enemigos(funciones basicas).
-- Desarrollo de sistema de combate(funciones basicas).
-- Desarrollar colisiones basicas.
-- Desarrollo de zonas de mejoras.
-- Pruebas de movimiento y controles avanzados.
+- [ ] Enemy Development/System.
+    - [ ] Spawn
+        - [ ] Spawning fuction.
+        - [ ] Off-screen spawn.
+        - [ ] Randomizing.
+    - [ ] Tracking Player.
+    - [ ] Enemie Design.
+        - [ ] Neutral.
+        - [ ] Shooters
+        - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
+        - [ ] Big Tank
 
-semana 4, 25 de mayo - 28 de mayo:
+- [ ] Combat System.
+    - [ ] Hitboxes.
+        - [ ] Player hitbox.
+        - [ ] Enemy hitbox.
+        - [ ] Boss hitbox.
+    - [ ] Collitions.
+        - [ ] Bullet collition.
+        - [ ] Obstacles.
+            - [ ] Random obstacle generation
+            - [ ] Physical wall
+        - [ ] Destroyed buildings 
 
-- Implementar musica y efectos de sonido(basicos).
-- testing y correccion de errores basicos.
+- Upgrade zones (aka Buildings).
+    - [ ] Upgrades
+        - [ ] Akimbo
+        - [ ] Dash
+        - [ ] Health up
+    - [ ] Icon
+        - [ ] Akimbo
+        - [ ] Dash
+        - [ ] Health up
+
+- [ ] Tweaks
+    - [ ] Weapon balance adjustments
+    - [ ] Score and Score Board (Score = Damage delt throughout)
+    - [ ] Building Randomizer
+
+- [] Movement and function tests
+    - [ ] BugDash
+    - [ ] Building capture buff
+
+
+
+## Semana 4, 25 de mayo - 28 de mayo:
+
+- [ ] Music and Sound Effects
+    - [ ] Main music
+    - PLayer sounds
+    - [ ] Weapon sounds
+        - [] Hitmarker sounds
+        - [] Explotions
+- [ ] Bosses
+        - [ ] Spawn Condition (Very important)
+        - [ ] Cloud Storage
+            - [ ] Lighting Shotgun Attack
+            - [ ] Dissapear then reappears elsewhere
+            - [ ] Difficult to hit
+        - [ ] Wifi
+            - [ ] Tornado attacks
+            - [ ] Expansive Bullets
+        - [ ] Firewall
+            - [ ] Inmortal (Must run/survive)
+            - [ ] Touches you, you die.
+            - [ ] Creates obstacules in front of player
+            - [ ] Bullets orbit around him
+
+- [] Error corrections and Quality of life changes.

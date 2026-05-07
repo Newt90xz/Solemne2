@@ -173,7 +173,7 @@ const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
-const player = reactive({ x: 1000, y: 1000, size: 36 })
+const player = reactive({ x: 2500, y: 2500, size: 48 })
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320
 
