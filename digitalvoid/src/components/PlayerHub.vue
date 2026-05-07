@@ -1,8 +1,7 @@
 <template>
-  <section class="player-hub neon-card">
+  <section class="player-hub">
     <div class="panel-heading hub-heading">
-      <span class="panel-mark">⌬</span>
-      <p class="panel-title">ESTADO</p>
+      <p class="panel-title">NIVEL</p>
     </div>
 
     <div class="hub-grid">
@@ -64,39 +63,16 @@ const healthBarStyle = computed(() => {
 .player-hub {
   width: 100%;
   padding: 12px 14px 14px;
-  background: transparent;
-  border: 1px solid rgba(73, 163, 255, 0.55);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 0 18px rgba(56, 132, 255, 0.16),
-    0 0 34px rgba(140, 66, 255, 0.06);
-  clip-path: polygon(
-    0 0,
-    calc(100% - 20px) 0,
-    100% 20px,
-    100% 100%,
-    20px 100%,
-    0 calc(100% - 20px)
-  );
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
   position: relative;
 }
 
-.player-hub::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  clip-path: inherit;
-  border: 1px solid rgba(121, 217, 255, 0.14);
-  pointer-events: none;
-}
-
+.player-hub::before,
 .player-hub::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  clip-path: inherit;
-  border: 1px solid rgba(255, 115, 230, 0.08);
-  pointer-events: none;
+  display: none !important;
 }
 
 .hub-heading {
@@ -118,7 +94,7 @@ const healthBarStyle = computed(() => {
 
 .level-value {
   color: #9fe3ff;
-  font-size: 1.4rem;
+  font-size: 2.4rem;
   line-height: 1;
   letter-spacing: 0.03em;
   text-shadow: 0 0 14px rgba(111, 199, 255, 0.38);

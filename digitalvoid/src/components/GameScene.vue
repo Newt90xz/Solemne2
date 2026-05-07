@@ -4,7 +4,7 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <section class="neon-card objective-panel">
+        <section v-if="showObjective" class="neon-card objective-panel">
           <div class="panel-heading">
             <span class="panel-mark">⌬</span>
             <p class="panel-title">OBJETIVO</p>
@@ -35,60 +35,13 @@
         </div>
       </section>
 
-      <section class="neon-card music-panel">
-        <div class="panel-heading music-heading">
-          <span class="panel-mark">♬</span>
-          <p class="panel-title">MÚSICA</p>
-          <button
-            class="music-toggle"
-            type="button"
-            :aria-label="gameStore.settings.sound ? 'Silenciar música' : 'Activar música'"
-            @click="toggleSound"
-          >
-            {{ gameStore.settings.sound ? '⏸' : '▶' }}
-          </button>
-        </div>
-
-        <div class="music-wave" aria-hidden="true">
-          <span
-            v-for="(bar, index) in musicWaveBars"
-            :key="index"
-            class="music-wave-bar"
-            :style="{ height: `${bar}px` }"
-          />
-        </div>
-
-        <div class="music-controls">
-          <button
-            class="music-control"
-            type="button"
-            aria-label="Bajar volumen"
-            @click="nudgeMusicVolume(-0.1)"
-          >
-            ◀
-          </button>
-          <div class="music-slider-wrap">
-            <input
-              v-model="musicVolume"
-              class="music-slider-input"
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              aria-label="Volumen de la música"
-            />
-            <span class="music-slider-value">{{ musicVolumePercent }}%</span>
-          </div>
-          <button
-            class="music-control"
-            type="button"
-            aria-label="Subir volumen"
-            @click="nudgeMusicVolume(0.1)"
-          >
-            ▶
-          </button>
-        </div>
-      </section>
+      <button
+        class="music-circle"
+        @click="togglePause"
+        :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
+      >
+        {{ isPaused ? '▶' : '⏸' }}
+      </button>
 
       <div class="hud-actions">
         <button
@@ -161,7 +114,6 @@ import escenarioImg from '../assets/Escenario_Principal.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
-import virusImg from '../assets/malware.png'
 import spritesheetImg from '../assets/New_Piskel.png'
 import cursorImg from '../assets/cursorfire.png'
 
@@ -249,26 +201,7 @@ let isMoving = false
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
-const musicWaveBars = [12, 18, 8, 24, 16, 28, 14, 20, 10, 26, 18, 30, 12, 22, 14, 18]
-const musicVolume = computed({
-  get: () => gameStore.settings.musicVolume,
-  set: (value: number) => {
-    const clamped = Math.min(1, Math.max(0, value))
-    gameStore.setSettings({ musicVolume: clamped })
-    gameStore.saveToLocal()
-  },
-})
-const musicVolumePercent = computed(() => Math.round(musicVolume.value * 100))
-
-function toggleSound() {
-  gameStore.setSettings({ sound: !gameStore.settings.sound })
-  gameStore.saveToLocal()
-}
-
-function nudgeMusicVolume(delta: number) {
-  const next = Math.min(1, Math.max(0, musicVolume.value + delta))
-  musicVolume.value = next
-}
+const showObjective = ref(false)
 
 const ORBIT_APPROACH_TIME = 1.0
 const ORBIT_HOLD_TIME = 5.0
@@ -857,6 +790,13 @@ onMounted(() => {
   window.addEventListener('mouseleave', onMouseLeave)
   window.addEventListener('wheel', onWheel, { passive: false })
   spawnBuildings(10)
+
+  // Show objective for 5 seconds
+  showObjective.value = true
+  setTimeout(() => {
+    showObjective.value = false
+  }, 5000)
+
   rafId = requestAnimationFrame(loop)
 })
 
@@ -973,7 +913,7 @@ onUnmounted(() => {
 .hud-stack {
   position: absolute;
   left: 10px;
-  top: 10px;
+  top: -35px;
   z-index: 15;
   display: flex;
   flex-direction: column;
@@ -1045,12 +985,24 @@ onUnmounted(() => {
   text-transform: uppercase;
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .objective-panel {
   width: 170px;
   padding: 12px 14px 10px;
   background:
     linear-gradient(180deg, rgba(10, 9, 28, 0.94), rgba(7, 7, 18, 0.92)), rgba(7, 7, 18, 0.88);
   border-color: rgba(89, 132, 255, 0.55);
+  animation: slideDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .objective-copy {
@@ -1071,7 +1023,12 @@ onUnmounted(() => {
   width: min(400px, calc(100vw - 20px));
   padding: 10px 12px;
   background: transparent;
-  border-color: rgba(255, 109, 245, 0.7);
+  border: none;
+}
+
+.weapon-panel::before,
+.weapon-panel::after {
+  display: none;
 }
 
 .weapon-visual {
@@ -1124,84 +1081,28 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
 }
 
-.music-panel {
+.music-circle {
   position: absolute;
   right: 10px;
   bottom: 10px;
   z-index: 15;
-  width: min(290px, calc(100vw - 20px));
-  padding: 10px 12px 12px;
-  background:
-    linear-gradient(180deg, rgba(12, 8, 26, 0.94), rgba(8, 7, 18, 0.92)), rgba(8, 7, 18, 0.88);
-  border-color: rgba(255, 111, 211, 0.72);
-}
-
-.music-heading {
-  justify-content: space-between;
-}
-
-.music-toggle {
-  width: 30px;
-  height: 30px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 111, 211, 0.58);
-  background: rgba(33, 11, 46, 0.95);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 111, 211, 0.4);
   color: #ffd6f7;
-  font-size: 0.95rem;
+  font-size: 1.2rem;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(255, 111, 211, 0.22);
-}
-
-.music-wave {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 4px;
-  height: 30px;
-  margin-bottom: 8px;
-}
-
-.music-wave-bar {
-  width: 4px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ff7bff, #8c5bff);
-  box-shadow: 0 0 10px rgba(214, 112, 255, 0.35);
-  opacity: 0.95;
-}
-
-.music-controls {
   display: grid;
-  grid-template-columns: 28px 1fr 28px;
-  align-items: center;
-  gap: 8px;
+  place-items: center;
+  transition: all 0.2s ease;
 }
 
-.music-control {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(218, 120, 255, 0.36);
-  background: rgba(24, 11, 42, 0.95);
-  color: #f8e8ff;
-  cursor: pointer;
-}
-
-.music-slider-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.music-slider-input {
-  width: 100%;
-  accent-color: #c65eff;
-}
-
-.music-slider-value {
-  color: rgba(246, 232, 255, 0.9);
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
-  text-align: right;
+.music-circle:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 111, 211, 0.7);
+  box-shadow: 0 0 18px rgba(255, 111, 211, 0.3);
 }
 
 .custom-cursor {
