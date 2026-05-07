@@ -1,180 +1,153 @@
 <template>
-  <div class="player-hub">
-    <div class="hub-panel">
-      <!-- Icono Jugador -->
-      <div class="player-icon">🔴</div>
+  <section class="player-hub neon-card">
+    <div class="panel-heading hub-heading">
+      <span class="panel-mark">⌬</span>
+      <p class="panel-title">ESTADO</p>
+    </div>
 
-      <div class="hub-content">
-        <!-- Nivel -->
-        <div class="level-row">
-          <span class="label">NIVEL</span>
-          <span class="value">{{ playerStats ? playerStats.level : 1 }}</span>
-        </div>
+    <div class="hub-grid">
+      <div class="level-block">
+        <span class="label">NIVEL</span>
+        <strong class="level-value">{{ formattedLevel }}</strong>
+      </div>
 
-        <!-- Experiencia -->
-        <div class="exp-row">
-          <span class="label">EXP</span>
-          <div class="bar-wrapper">
-            <div class="bar">
-              <div class="bar-fill" :style="expBarStyle"></div>
-            </div>
-            <span class="bar-text"
-              >{{ playerStats ? playerStats.experience : 0 }}/{{
-                playerStats ? playerStats.experienceToLevel : 100
-              }}</span
-            >
-          </div>
-        </div>
-
-        <!-- Salud -->
-        <div class="health-row">
+      <div class="bars-block">
+        <div class="stat-row health-row">
           <span class="label">SALUD</span>
-          <div class="bar-wrapper">
-            <div class="bar">
-              <div class="bar-fill health" :style="healthBarStyle"></div>
-            </div>
-            <span class="bar-text"
-              >{{ playerStats ? playerStats.health : 0 }}/{{
-                playerStats ? playerStats.maxHealth : 100
-              }}</span
-            >
+          <div class="track track-health">
+            <div class="fill fill-health" :style="healthBarStyle"></div>
           </div>
+          <span class="bar-text">{{ healthText }}</span>
+        </div>
+
+        <div class="stat-row exp-row">
+          <span class="label">EXP</span>
+          <div class="track track-exp">
+            <div class="fill fill-exp" :style="expBarStyle"></div>
+          </div>
+          <span class="bar-text">{{ expText }}</span>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { computed, unref } from 'vue'
+import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const gameStore = useGameStore()
 
 const playerStats = computed(() => gameStore.playerStats)
-const activeBuffs = computed(() => gameStore.activeBuffs)
+const formattedLevel = computed(() => String(playerStats.value.level).padStart(2, '0'))
+const healthText = computed(() => `${playerStats.value.health} / ${playerStats.value.maxHealth}`)
+const expText = computed(() => `${playerStats.value.experience} / ${playerStats.value.experienceToLevel}`)
 
 const expBarStyle = computed(() => {
-  const ps = unref(playerStats)
-  if (!ps) return { width: '0%' }
-  const percentage = (ps.experience / ps.experienceToLevel) * 100
+  const percentage = (playerStats.value.experience / playerStats.value.experienceToLevel) * 100
   return {
     width: `${Math.min(percentage, 100)}%`,
   }
 })
 
 const healthBarStyle = computed(() => {
-  const ps = unref(playerStats)
-  if (!ps) return { width: '100%', backgroundColor: '#4ade80' }
-  const percentage = (ps.health / ps.maxHealth) * 100
-  const color = percentage > 50 ? '#4ade80' : percentage > 25 ? '#facc15' : '#ef4444'
+  const percentage = (playerStats.value.health / playerStats.value.maxHealth) * 100
   return {
     width: `${Math.max(percentage, 0)}%`,
-    backgroundColor: color,
   }
 })
-
-function buffProgress(buff: any): number {
-  // Assuming initial duration is stored or calculated
-  const totalDuration = buff.type === 'speed' ? 12 : 10
-  return (buff.remainingTime / totalDuration) * 100
-}
 </script>
 
 <style scoped>
 .player-hub {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 15;
-  width: 240px;
+  width: 100%;
+  padding: 16px 18px 18px;
+}
+
+.hub-heading {
+  margin-bottom: 12px;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.level-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-family: 'Courier New', monospace;
+  gap: 4px;
 }
 
-.hub-panel {
-  background: rgba(10, 15, 30, 0.85);
-  border: 2px solid rgba(99, 102, 241, 0.4);
-  border-radius: 6px;
-  padding: 10px 12px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  color: #ffffff;
-}
-
-.player-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-  min-width: 32px;
-  text-align: center;
-}
-
-.hub-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.level-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
+.level-value {
+  color: #f7e6ff;
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 16px rgba(255, 115, 255, 0.32);
 }
 
 .label {
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: #dcb6ff;
   text-transform: uppercase;
 }
 
-.value {
-  color: #60a5fa;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.exp-row,
-.health-row {
+.bars-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
+  gap: 10px;
 }
 
-.bar-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.stat-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
 }
 
-.bar {
-  height: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 2px;
+.track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
   overflow: hidden;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(19, 8, 34, 0.95);
+  border: 1px solid rgba(196, 102, 255, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.bar-fill {
+.track-health {
+  min-width: 220px;
+}
+
+.track-exp {
+  min-width: 220px;
+}
+
+.fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  transition: width 0.3s ease;
+  border-radius: inherit;
+  transition: width 0.25s ease;
 }
 
-.bar-fill.health {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
+.fill-health {
+  background: linear-gradient(90deg, #ff6fae, #ff4c8f);
+  box-shadow: 0 0 12px rgba(255, 95, 154, 0.5);
+}
+
+.fill-exp {
+  background: linear-gradient(90deg, #64c8ff, #8f6bff);
+  box-shadow: 0 0 12px rgba(118, 170, 255, 0.45);
 }
 
 .bar-text {
-  font-size: 8px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 236, 255, 0.9);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  min-width: 72px;
   text-align: right;
 }
 </style>
