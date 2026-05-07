@@ -82,9 +82,9 @@
       ></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
-        <div class="building-icon">{{ b.icon }}</div>
+        <!--<div class="building-icon">{{ b.icon }}</div>
         <div class="building-label">{{ b.name }}</div>
-        <div v-if="b.captured" class="building-captured">Capturado</div>
+        <div v-if="b.captured" class="building-captured">Capturado</div>-->
       </div>
 
       <div
@@ -116,7 +116,7 @@ import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
 import spritesheetImg from '../assets/New_Piskel.png'
 import cursorImg from '../assets/cursorfire.png'
-
+import buildingSpritesheet from '../assets/buildings.png'
 interface Bullet {
   id: number
   x: number
@@ -181,7 +181,7 @@ const mouseScreen = reactive({ x: 0, y: 0, active: false })
 const mouseWorld = reactive({ x: 500, y: 500 })
 const mouse = reactive({ down: false })
 
-const worldSize = { width: 7000, height: 7000 }
+const worldSize = { width: 7500, height: 7500 }
 
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
@@ -213,11 +213,12 @@ const EXPLOSION_DURATION = 0.45
 
 const sceneStyle = computed(() => ({
   backgroundImage: `url(${escenarioImg})`,
-  backgroundSize: 'cover',
+  backgroundSize: '2500px 2500px',
   backgroundPosition: `${-camera.x}px ${-camera.y}px`,
   backgroundRepeat: 'repeat',
   width: '100%',
   height: '100vh',
+  imageRendering: 'pixelated',
 }))
 
 const playerStyle = computed(() => {
@@ -367,15 +368,21 @@ function buildingAreaStyle(b: Building) {
 }
 
 function buildingStyle(b: Building) {
-  const color = b.captured ? 'rgba(120,200,120,0.95)' : 'rgba(200,120,255,0.95)'
+  const frameOffset = b.captured ? '100%' : '0%';
   return {
     width: `${b.size}px`,
     height: `${b.size}px`,
     transform: `translate(${Math.round(b.x - camera.x - b.size / 2)}px, ${Math.round(b.y - camera.y - b.size / 2)}px)`,
-    background: color,
-    border: '2px solid rgba(0,0,0,0.35)',
-    boxShadow: b.captured ? '0 0 18px rgba(80,200,120,0.45)' : '0 0 10px rgba(180,120,220,0.25)',
-    borderRadius: '6px',
+    
+    backgroundImage: `url(${buildingSpritesheet})`,
+    backgroundSize: '200% 100%', 
+    backgroundPosition: `${frameOffset} 0%`,
+    backgroundRepeat: 'no-repeat',
+    imageRendering: 'pixelated', 
+    
+    boxShadow: b.captured 
+      ? '0 0 18px rgba(80,200,120,0.45)' 
+      : '0 0 10px rgba(180,120,220,0.25)',
     zIndex: 5,
   }
 }
