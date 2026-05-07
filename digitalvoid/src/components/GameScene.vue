@@ -154,7 +154,7 @@ const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
-const player = reactive({ x: 1000, y: 1000, size: 30 })
+const player = reactive({ x: 1000, y: 1000, size: 36 })
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320
 
@@ -209,23 +209,14 @@ const sceneStyle = computed(() => ({
 }))
 
 const playerStyle = computed(() => {
-  if (isMoving) {
-    return {
-      width: `${player.size}px`,
-      height: `${player.size}px`,
-      backgroundImage: `url(${spritesheetImg})`,
-      backgroundSize: `${player.size}px ${player.size * SPRITE_FRAMES}px`,
-      backgroundPosition: `0px ${-playerFrame.value * player.size}px`,
-      backgroundRepeat: 'no-repeat',
-      transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
-    }
-  }
+  const currentFrame = isMoving ? playerFrame.value : 0
+
   return {
     width: `${player.size}px`,
     height: `${player.size}px`,
-    backgroundImage: `url(${virusImg})`,
-    backgroundSize: 'contain',
-    backgroundPosition: '0 0',
+    backgroundImage: `url(${spritesheetImg})`,
+    backgroundSize: `${player.size}px ${player.size * SPRITE_FRAMES}px`,
+    backgroundPosition: `0px ${-currentFrame * player.size}px`,
     backgroundRepeat: 'no-repeat',
     transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
   }
@@ -766,6 +757,7 @@ function loop(ts: number) {
     }
   } else {
     spriteAccumulator = 0
+    playerFrame.value = 0
   }
 
   updateAutoShoot(dt)
