@@ -5,11 +5,17 @@
 
       <div class="hud-rail">
         <div class="hud-panel">
-          <p class="hud-title">Arma actual</p>
-          <p class="hud-name">{{ selectedWeapon.name }}</p>
-          <p class="hud-alias">{{ selectedWeapon.alias }}</p>
-          <p class="hud-role">{{ selectedWeapon.role }}</p>
-          <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
+          <div class="weapon-visual">
+            <img :src="selectedWeapon.image" :alt="selectedWeapon.name" class="weapon-image" />
+          </div>
+
+          <div class="weapon-copy">
+            <p class="hud-title">Arma actual</p>
+            <p class="hud-name">{{ selectedWeapon.name }}</p>
+            <p class="hud-alias">{{ selectedWeapon.alias }}</p>
+            <p class="hud-role">{{ selectedWeapon.role }}</p>
+            <p class="hud-help">Cambiar: 1-5 · Q/E · Rueda</p>
+          </div>
         </div>
 
         <label class="music-slider">
@@ -821,12 +827,42 @@ onUnmounted(() => {
 }
 
 .hud-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   padding: 10px 12px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.weapon-visual {
+  flex: 0 0 74px;
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 200, 255, 0.18);
+  background: radial-gradient(circle at center, rgba(120, 200, 255, 0.1), rgba(0, 0, 0, 0.22));
+  overflow: hidden;
+}
+
+.weapon-image {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.weapon-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .music-slider {
