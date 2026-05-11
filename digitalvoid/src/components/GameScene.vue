@@ -94,12 +94,16 @@
         :style="bulletStyle(bullet)"
       ></div>
 
-      <div
-        v-for="e in enemies"
-        :key="'enemy-' + e.id"
-        class="enemy"
-        :style="enemyStyle(e)"
-      ></div>
+      <div v-for="e in enemies" :key="'enemy-' + e.id" class="enemy" :style="enemyStyle(e)"></div>
+
+      <template v-if="showHitboxes">
+        <div
+          v-for="e in enemies"
+          :key="'enemy-hitbox-' + e.id"
+          class="hitbox hitbox-enemy"
+          :style="enemyHitboxStyle(e)"
+        ></div>
+      </template>
 
       <div
         v-for="exp in explosions"
@@ -109,6 +113,8 @@
       ></div>
 
       <div class="player" :style="playerStyle"></div>
+
+      <div v-if="showHitboxes" class="hitbox hitbox-player" :style="playerHitboxStyle"></div>
 
       <div class="custom-cursor" :style="customCursorStyle"></div>
     </div>
@@ -184,6 +190,12 @@ interface Enemy {
   type: 'grunt' | 'runner' | 'tank'
 }
 
+interface CircleHitbox {
+  x: number
+  y: number
+  radius: number
+}
+
 const emit = defineEmits<{
   (e: 'exit'): void
 }>()
@@ -211,6 +223,7 @@ const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
+const showHitboxes = ref(true)
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
@@ -230,16 +243,21 @@ const ORBIT_ANGULAR_SPEED = Math.PI * 2.2
 const EXPLOSIVE_DECEL = 280
 const EXPLOSION_MAX_RADIUS = 80
 const EXPLOSION_DURATION = 0.45
+const PLAYER_HITBOX_SCALE = 0.25
+const ENEMY_HITBOX_SCALE = 0.34
 
-const sceneStyle = computed(() => ({
-  backgroundImage: `url(${escenarioImg})`,
-  backgroundSize: '2500px 2500px',
-  backgroundPosition: `${-camera.x}px ${-camera.y}px`,
-  backgroundRepeat: 'repeat',
-  width: '100%',
-  height: '100vh',
-  imageRendering: 'pixelated',
-}) as CSSProperties)
+const sceneStyle = computed(
+  () =>
+    ({
+      backgroundImage: `url(${escenarioImg})`,
+      backgroundSize: '2500px 2500px',
+      backgroundPosition: `${-camera.x}px ${-camera.y}px`,
+      backgroundRepeat: 'repeat',
+      width: '100%',
+      height: '100vh',
+      imageRendering: 'pixelated',
+    }) as CSSProperties,
+)
 
 const playerStyle = computed(() => {
   const currentFrame = isMoving ? playerFrame.value : 0
@@ -276,11 +294,14 @@ const aimAngleDeg = computed(() => {
   return Math.atan2(dy, dx) * (180 / Math.PI)
 })
 
-const customCursorStyle = computed(() => ({
-  backgroundImage: `url(${cursorImg})`,
-  transform: `translate(${Math.round(mouseScreen.x)}px, ${Math.round(mouseScreen.y)}px)`,
-  opacity: mouseScreen.active ? '1' : '0',
-}) as CSSProperties)
+const customCursorStyle = computed(
+  () =>
+    ({
+      backgroundImage: `url(${cursorImg})`,
+      transform: `translate(${Math.round(mouseScreen.x)}px, ${Math.round(mouseScreen.y)}px)`,
+      opacity: mouseScreen.active ? '1' : '0',
+    }) as CSSProperties,
+)
 
 const nearestBuilding = computed(() => {
   let nearest: Building | null = null
@@ -361,12 +382,13 @@ function spawnOffscreenPosition(minDistFromPlayer = 600) {
 }
 
 function spawnEnemy(opts?: Partial<Enemy>) {
+  const offscreen = spawnOffscreenPosition()
   const typeRoll = randRange(0, 100)
   const type: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
   const base: Enemy = {
     id: nextEnemyId++,
-    x: opts?.x ?? spawnOffscreenPosition().x,
-    y: opts?.y ?? spawnOffscreenPosition().y,
+    x: opts?.x ?? offscreen.x,
+    y: opts?.y ?? offscreen.y,
     size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : 40),
     speed: opts?.speed ?? (type === 'runner' ? 420 : type === 'tank' ? 90 : 160),
     hp: opts?.hp ?? (type === 'tank' ? 8 : type === 'runner' ? 2 : 4),
@@ -376,6 +398,54 @@ function spawnEnemy(opts?: Partial<Enemy>) {
   }
   enemies.push(base)
   return base
+}
+
+function getPlayerHitbox(): CircleHitbox {
+  return {
+    x: player.x + player.size / 2.5,
+    y: player.y + player.size / 2,
+    radius: player.size * PLAYER_HITBOX_SCALE,
+  }
+}
+
+function getEnemyHitbox(enemy: Enemy): CircleHitbox {
+  return {
+    x: enemy.x,
+    y: enemy.y,
+    radius: enemy.size * ENEMY_HITBOX_SCALE,
+  }
+}
+
+function circlesOverlap(a: CircleHitbox, b: CircleHitbox) {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const dist = Math.hypot(dx, dy)
+  const minDist = a.radius + b.radius
+  return {
+    overlapping: dist < minDist,
+    dist,
+    minDist,
+    dx,
+    dy,
+  }
+}
+
+const playerHitboxStyle = computed(() => {
+  const hb = getPlayerHitbox()
+  return {
+    width: `${hb.radius * 2}px`,
+    height: `${hb.radius * 2}px`,
+    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(hb.y - camera.y - hb.radius)}px)`,
+  } as CSSProperties
+})
+
+function enemyHitboxStyle(enemy: Enemy) {
+  const hb = getEnemyHitbox(enemy)
+  return {
+    width: `${hb.radius * 2}px`,
+    height: `${hb.radius * 2}px`,
+    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(hb.y - camera.y - hb.radius)}px)`,
+  } as CSSProperties
 }
 
 function spawnEnemies(count = 1) {
@@ -388,7 +458,7 @@ function enemyStyle(e: Enemy) {
   return {
     width: `${e.size}px`,
     height: `${e.size}px`,
-    transform: `translate(${screenX}px, ${screenY}px)` ,
+    transform: `translate(${screenX}px, ${screenY}px)`,
     borderRadius: '999px',
     background: e.color,
     boxShadow: '0 0 12px rgba(0,0,0,0.35)',
@@ -398,6 +468,8 @@ function enemyStyle(e: Enemy) {
 
 function updateEnemies(dt: number) {
   // simple AI: move towards player
+  const playerHitbox = getPlayerHitbox()
+
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i]
     const px = player.x + player.size / 2
@@ -411,6 +483,18 @@ function updateEnemies(dt: number) {
     const moveSpeed = e.speed
     e.x += nx * moveSpeed * dt
     e.y += ny * moveSpeed * dt
+
+    // Resolve overlap with player using circle hitboxes.
+    const enemyHitbox = getEnemyHitbox(e)
+    const overlap = circlesOverlap(playerHitbox, enemyHitbox)
+    if (overlap.overlapping) {
+      const safeDist = overlap.dist < 0.0001 ? 0.0001 : overlap.dist
+      const push = overlap.minDist - safeDist
+      const pushX = (overlap.dx / safeDist) * push
+      const pushY = (overlap.dy / safeDist) * push
+      e.x += pushX
+      e.y += pushY
+    }
 
     // check death
     if (e.hp <= 0) {
@@ -491,21 +575,19 @@ function buildingAreaStyle(b: Building) {
 }
 
 function buildingStyle(b: Building) {
-  const frameOffset = b.captured ? '100%' : '0%';
+  const frameOffset = b.captured ? '100%' : '0%'
   return {
     width: `${b.size}px`,
     height: `${b.size}px`,
     transform: `translate(${Math.round(b.x - camera.x - b.size / 2)}px, ${Math.round(b.y - camera.y - b.size / 2)}px)`,
-    
+
     backgroundImage: `url(${buildingSpritesheet})`,
-    backgroundSize: '200% 100%', 
+    backgroundSize: '200% 100%',
     backgroundPosition: `${frameOffset} 0%`,
     backgroundRepeat: 'no-repeat',
-    imageRendering: 'pixelated', 
-    
-    boxShadow: b.captured 
-      ? '0 0 18px rgba(80,200,120,0.45)' 
-      : '0 0 10px rgba(180,120,220,0.25)',
+    imageRendering: 'pixelated',
+
+    boxShadow: b.captured ? '0 0 18px rgba(80,200,120,0.45)' : '0 0 10px rgba(180,120,220,0.25)',
     zIndex: 5,
   } as CSSProperties
 }
@@ -1269,6 +1351,26 @@ onUnmounted(() => {
   left: 0;
   top: 0;
   pointer-events: none;
+}
+
+.hitbox {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.hitbox-player {
+  border: 2px solid rgba(110, 227, 255, 0.95);
+  box-shadow: 0 0 10px rgba(110, 227, 255, 0.45);
+  z-index: 11;
+}
+
+.hitbox-enemy {
+  border: 2px solid rgba(255, 93, 148, 0.9);
+  box-shadow: 0 0 8px rgba(255, 93, 148, 0.35);
+  z-index: 10;
 }
 
 .explosion {
