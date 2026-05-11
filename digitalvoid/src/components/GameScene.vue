@@ -95,6 +95,13 @@
       ></div>
 
       <div
+        v-for="e in enemies"
+        :key="'enemy-' + e.id"
+        class="enemy"
+        :style="enemyStyle(e)"
+      ></div>
+
+      <div
         v-for="exp in explosions"
         :key="exp.id"
         class="explosion"
@@ -165,6 +172,18 @@ interface Building {
   buffText?: string
 }
 
+interface Enemy {
+  id: number
+  x: number
+  y: number
+  size: number
+  speed: number
+  hp: number
+  maxHp: number
+  color: string
+  type: 'grunt' | 'runner' | 'tank'
+}
+
 const emit = defineEmits<{
   (e: 'exit'): void
 }>()
@@ -190,6 +209,7 @@ const captureRange = 48
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
+const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
 
 const SPRITE_FRAMES = 4
@@ -289,7 +309,9 @@ let rafId: number | null = null
 let lastTime = 0
 let nextBulletId = 1
 let nextExplosionId = 1
+let nextEnemyId = 1
 let shootAccumulator = 0
+let enemySpawnInterval: number | null = null
 
 function cycleWeapon(dir: 1 | -1) {
   const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
@@ -302,6 +324,107 @@ function cycleWeapon(dir: 1 | -1) {
 
 function randRange(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function spawnOffscreenPosition(minDistFromPlayer = 600) {
+  // spawn somewhere outside the player's vicinity (off-screen)
+  // choose a side: top, bottom, left, right
+  const side = randRange(0, 3)
+  let x = 0
+  let y = 0
+  const margin = 200
+  if (side === 0) {
+    // top
+    x = randRange(-margin, worldSize.width + margin)
+    y = -randRange(margin, margin + 400)
+  } else if (side === 1) {
+    // bottom
+    x = randRange(-margin, worldSize.width + margin)
+    y = worldSize.height + randRange(margin, margin + 400)
+  } else if (side === 2) {
+    // left
+    x = -randRange(margin, margin + 400)
+    y = randRange(-margin, worldSize.height + margin)
+  } else {
+    // right
+    x = worldSize.width + randRange(margin, margin + 400)
+    y = randRange(-margin, worldSize.height + margin)
+  }
+
+  // ensure sufficiently far from player
+  const dx = x - player.x
+  const dy = y - player.y
+  if (Math.hypot(dx, dy) < minDistFromPlayer) {
+    return spawnOffscreenPosition(minDistFromPlayer)
+  }
+  return { x, y }
+}
+
+function spawnEnemy(opts?: Partial<Enemy>) {
+  const typeRoll = randRange(0, 100)
+  const type: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  const base: Enemy = {
+    id: nextEnemyId++,
+    x: opts?.x ?? spawnOffscreenPosition().x,
+    y: opts?.y ?? spawnOffscreenPosition().y,
+    size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : 40),
+    speed: opts?.speed ?? (type === 'runner' ? 420 : type === 'tank' ? 90 : 160),
+    hp: opts?.hp ?? (type === 'tank' ? 8 : type === 'runner' ? 2 : 4),
+    maxHp: opts?.maxHp ?? (type === 'tank' ? 8 : type === 'runner' ? 2 : 4),
+    color: opts?.color ?? (type === 'tank' ? '#ff8c66' : type === 'runner' ? '#ffd36b' : '#ff6b9a'),
+    type,
+  }
+  enemies.push(base)
+  return base
+}
+
+function spawnEnemies(count = 1) {
+  for (let i = 0; i < count; i++) spawnEnemy()
+}
+
+function enemyStyle(e: Enemy) {
+  const screenX = Math.round(e.x - camera.x - e.size / 2)
+  const screenY = Math.round(e.y - camera.y - e.size / 2)
+  return {
+    width: `${e.size}px`,
+    height: `${e.size}px`,
+    transform: `translate(${screenX}px, ${screenY}px)` ,
+    borderRadius: '999px',
+    background: e.color,
+    boxShadow: '0 0 12px rgba(0,0,0,0.35)',
+    zIndex: 7,
+  } as CSSProperties
+}
+
+function updateEnemies(dt: number) {
+  // simple AI: move towards player
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i]
+    const px = player.x + player.size / 2
+    const py = player.y + player.size / 2
+    const dx = px - e.x
+    const dy = py - e.y
+    const dist = Math.hypot(dx, dy) || 1
+    const nx = dx / dist
+    const ny = dy / dist
+
+    const moveSpeed = e.speed
+    e.x += nx * moveSpeed * dt
+    e.y += ny * moveSpeed * dt
+
+    // check death
+    if (e.hp <= 0) {
+      enemies.splice(i, 1)
+      continue
+    }
+
+    // clamp to world
+    if (e.x < -200 || e.y < -200 || e.x > worldSize.width + 200 || e.y > worldSize.height + 200) {
+      // if it wandered too far, respawn
+      enemies.splice(i, 1)
+      continue
+    }
+  }
 }
 
 function spawnBuildings(count = 8) {
@@ -782,6 +905,7 @@ function loop(ts: number) {
   updateAutoShoot(dt)
   updateBullets(dt)
   updateExplosions(dt)
+  updateEnemies(dt)
   updateCamera()
 
   rafId = requestAnimationFrame(loop)
@@ -797,6 +921,10 @@ onMounted(() => {
   window.addEventListener('mouseleave', onMouseLeave)
   window.addEventListener('wheel', onWheel, { passive: false })
   spawnBuildings(10)
+  // initial enemies
+  spawnEnemies(6)
+  // spawn one enemy every 5 seconds
+  enemySpawnInterval = window.setInterval(() => spawnEnemies(1), 5000)
 
   // Show objective for 5 seconds
   showObjective.value = true
@@ -816,6 +944,7 @@ onUnmounted(() => {
   window.removeEventListener('mouseleave', onMouseLeave)
   window.removeEventListener('wheel', onWheel)
   if (rafId) cancelAnimationFrame(rafId)
+  if (enemySpawnInterval) clearInterval(enemySpawnInterval)
 })
 </script>
 
@@ -1133,6 +1262,13 @@ onUnmounted(() => {
   top: 0;
   pointer-events: none;
   z-index: 4;
+}
+
+.enemy {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
 }
 
 .explosion {
