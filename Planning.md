@@ -33,12 +33,6 @@
         - [X] Shotgun
         - [X] Orbital
         - [X] Explosives
-    - [ ] Bullet Textures
-        - [ ] Principal
-        - [ ] Piercing
-        - [ ] Shotgun
-        - [ ] Orbital
-        - [ ] Explosives
 - [X] Player Hud
     - [X] Player State
         - [X] Life
@@ -53,22 +47,22 @@
 
 ## Semana 3, 11 de mayo - 15 de mayo:
 
-- [ ] Enemy Development/System.
-    - [ ] Spawn
-        - [ ] Spawning fuction.
-        - [ ] Off-screen spawn.
-        - [ ] Randomizing.
-    - [ ] Tracking Player.
-    - [ ] Enemie Design.
-        - [ ] Neutral.
+- [X] Enemy Development/System.
+    - [X] Spawn
+        - [X] Spawning fuction.
+        - [X] Off-screen spawn.
+        - [X] Randomizing.
+    - [X] Tracking Player.
+    - [] Enemie Design.
+        - [] Neutral.
         - [ ] Shooters
         - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
         - [ ] Big Tank
 
 - [ ] Combat System.
-    - [ ] Hitboxes.
-        - [ ] Player hitbox.
-        - [ ] Enemy hitbox.
+    - [X] Hitboxes.
+        - [X] Player hitbox.
+        - [X] Enemy hitbox.
         - [ ] Boss hitbox.
     - [ ] Collitions.
         - [ ] Bullet collition.

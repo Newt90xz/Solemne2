@@ -23,6 +23,10 @@ export interface PlayerStats {
   speedMultiplier: number
   kills: number
   score: number
+  currentdashes: number
+  maxdashes: number
+  isAkimbo: boolean       
+  akimboTimer: number
 }
 
 export interface ActiveBuff {
@@ -50,6 +54,10 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
   speedMultiplier: 1,
   kills: 0,
   score: 0,
+  currentdashes: 1,
+  maxdashes: 1,
+  isAkimbo: false,
+  akimboTimer: 0,
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -121,6 +129,14 @@ export const useGameStore = defineStore('game', () => {
         activeBuffs.splice(i, 1)
       }
     }
+    
+    if (playerStats.isAkimbo) {
+      playerStats.akimboTimer -= dt
+      if (playerStats.akimboTimer <= 0) {
+        playerStats.isAkimbo = false
+        playerStats.akimboTimer = 0
+      }
+    }
 
     // Recalculate multipliers based on active buffs
     playerStats.speedMultiplier = 1
@@ -137,6 +153,19 @@ export const useGameStore = defineStore('game', () => {
 
   function incrementKills() {
     playerStats.kills += 1
+  }
+
+  function applyUpgrade(type: 'akimbo' | 'dash' | 'health_up') {
+    if (type === 'health_up') {
+      playerStats.maxHealth += 30
+      playerStats.health = playerStats.maxHealth
+    } else if (type === 'dash') {
+      playerStats.maxdashes += 1
+      playerStats.currentdashes = playerStats.maxdashes
+    } else if (type === 'akimbo') {
+      playerStats.isAkimbo = true
+      playerStats.akimboTimer = 15
+    }
   }
 
   function loadFromLocal() {
@@ -186,6 +215,7 @@ export const useGameStore = defineStore('game', () => {
     addBuff,
     updateBuffs,
     incrementKills,
+    applyUpgrade,
     loadFromLocal,
     saveToLocal,
   }
