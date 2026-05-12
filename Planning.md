@@ -64,12 +64,12 @@
         - [X] Player hitbox.
         - [X] Enemy hitbox.
         - [ ] Boss hitbox.
-    - [ ] Collitions.
-        - [ ] Bullet collition.
-        - [ ] Obstacles.
-            - [ ] Random obstacle generation
-            - [ ] Physical wall
-        - [ ] Destroyed buildings 
+    - [X] Collitions.
+        - [X] Bullet collition.
+        - [X] Obstacles.
+            - [X] Random obstacle generation
+            - [x] Physical wall
+            - [ ] Destroyed buildings 
 
 - Upgrade zones (aka Buildings).
     - [ ] Upgrades
@@ -85,6 +85,7 @@
     - [ ] Weapon balance adjustments
     - [ ] Score and Score Board (Score = Damage delt throughout)
     - [ ] Building Randomizer
+    - [ ] defined color palettes
 
 - [] Movement and function tests
     - [ ] BugDash

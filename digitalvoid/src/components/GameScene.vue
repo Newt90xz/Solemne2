@@ -3,7 +3,6 @@
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
-        
 
         <section v-if="showObjective" class="neon-card objective-panel">
           <div class="panel-heading">
@@ -89,6 +88,13 @@
       </div>
 
       <div
+        v-for="o in obstacles"
+        :key="'obstacle-' + o.id"
+        class="obstacle"
+        :style="obstacleStyle(o)"
+      ></div>
+
+      <div
         v-for="bullet in bullets"
         :key="bullet.id"
         class="bullet"
@@ -152,6 +158,8 @@ interface Bullet {
   initialVx?: number
   initialVy?: number
   explosiveDeceleration?: number
+  piercing?: boolean
+  bouncesLeft?: number
 }
 
 interface Explosion {
@@ -179,6 +187,14 @@ interface Building {
   areaRadius?: number
   icon?: string
   buffText?: string
+}
+
+interface Obstacle {
+  id: number
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 interface Enemy {
@@ -220,6 +236,8 @@ const worldSize = { width: 7500, height: 7500 }
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
 const captureRange = 48
+const obstacles = reactive<Obstacle[]>([])
+let nextObstacleId = 1
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
@@ -229,13 +247,12 @@ const isPaused = ref(false)
 const showHitboxes = ref(true)
 
 const isDashing = ref(false)
-const dashDuration = 0.15 
+const dashDuration = 0.15
 const dashForce = 1500
 let dashTimeLeft = 0
 const dashDirection = { x: 0, y: 0 }
-const dashCooldown = 2       
+const dashCooldown = 2
 let dashRechargeTimer = 0
-
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
@@ -345,6 +362,10 @@ let nextExplosionId = 1
 let nextEnemyId = 1
 let shootAccumulator = 0
 let enemySpawnInterval: number | null = null
+const ENEMY_SPAWN_INTERVAL_MS = 1800
+const MIN_ACTIVE_ENEMIES = 10
+const MAX_ACTIVE_ENEMIES = 28
+const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank']
 
 function cycleWeapon(dir: 1 | -1) {
   const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
@@ -417,7 +438,8 @@ function startDash() {
 function spawnEnemy(opts?: Partial<Enemy>) {
   const offscreen = spawnOffscreenPosition()
   const typeRoll = randRange(0, 100)
-  const type: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  const randomType: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  const type = opts?.type ?? randomType
   const base: Enemy = {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
@@ -446,6 +468,52 @@ function getEnemyHitbox(enemy: Enemy): CircleHitbox {
     x: enemy.x,
     y: enemy.y,
     radius: enemy.size * ENEMY_HITBOX_SCALE,
+  }
+}
+
+function getObstacleRect(o: Obstacle) {
+  return {
+    left: o.x - o.w / 2,
+    right: o.x + o.w / 2,
+    top: o.y - o.h / 2,
+    bottom: o.y + o.h / 2,
+  }
+}
+
+function circleRectOverlap(
+  circle: CircleHitbox,
+  rectObj: { left: number; right: number; top: number; bottom: number },
+) {
+  const nearestX = Math.max(rectObj.left, Math.min(circle.x, rectObj.right))
+  const nearestY = Math.max(rectObj.top, Math.min(circle.y, rectObj.bottom))
+  const dx = circle.x - nearestX
+  const dy = circle.y - nearestY
+  const dist = Math.hypot(dx, dy)
+  const overlapping = dist < circle.radius
+  return {
+    overlapping,
+    dist,
+    dx,
+    dy,
+    nearestX,
+    nearestY,
+    penetration: overlapping ? circle.radius - dist : 0,
+  }
+}
+
+function getBuildingHitbox(b: Building): CircleHitbox {
+  return {
+    x: b.x,
+    y: b.y,
+    radius: Math.max(8, b.size * 0.5),
+  }
+}
+
+function getBulletHitbox(bullet: Bullet): CircleHitbox {
+  return {
+    x: bullet.x,
+    y: bullet.y,
+    radius: Math.max(2, bullet.size * 0.5),
   }
 }
 
@@ -485,6 +553,38 @@ function spawnEnemies(count = 1) {
   for (let i = 0; i < count; i++) spawnEnemy()
 }
 
+function spawnEnemyTick() {
+  if (isPaused.value) return
+
+  const missingTypes = ENEMY_TYPES.filter((type) => !enemies.some((enemy) => enemy.type === type))
+
+  if (enemies.length < MIN_ACTIVE_ENEMIES) {
+    const missing = MIN_ACTIVE_ENEMIES - enemies.length
+    const spawnCount = Math.min(4, missing)
+    for (let i = 0; i < spawnCount; i += 1) {
+      const forcedType = missingTypes.shift()
+      if (forcedType) {
+        spawnEnemy({ type: forcedType })
+      } else {
+        spawnEnemy()
+      }
+    }
+    return
+  }
+
+  if (missingTypes.length > 0 && enemies.length < MAX_ACTIVE_ENEMIES) {
+    const forcedType = missingTypes[randRange(0, missingTypes.length - 1)]
+    if (forcedType) {
+      spawnEnemy({ type: forcedType })
+      return
+    }
+  }
+
+  if (enemies.length < MAX_ACTIVE_ENEMIES && Math.random() < 0.5) {
+    spawnEnemy()
+  }
+}
+
 function enemyStyle(e: Enemy) {
   const screenX = Math.round(e.x - camera.x - e.size / 2)
   const screenY = Math.round(e.y - camera.y - e.size / 2)
@@ -505,6 +605,7 @@ function updateEnemies(dt: number) {
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i]
+    if (!e) continue
     const px = player.x + player.size / 2
     const py = player.y + player.size / 2
     const dx = px - e.x
@@ -516,6 +617,35 @@ function updateEnemies(dt: number) {
     const moveSpeed = e.speed
     e.x += nx * moveSpeed * dt
     e.y += ny * moveSpeed * dt
+
+    // Resolve overlap with buildings
+    const enemyHit = getEnemyHitbox(e)
+    for (let bi = 0; bi < buildings.length; bi++) {
+      const b = buildings[bi]
+      if (!b) continue
+      const overlapB = circlesOverlap(enemyHit, getBuildingHitbox(b!))
+      if (!overlapB.overlapping) continue
+      const safeDist = overlapB.dist < 0.0001 ? 0.0001 : overlapB.dist
+      const push = overlapB.minDist - safeDist
+      const pushX = (overlapB.dx / safeDist) * push
+      const pushY = (overlapB.dy / safeDist) * push
+      e.x -= pushX
+      e.y -= pushY
+    }
+
+    // Resolve overlap with obstacles (rectangles)
+    for (let oi = 0; oi < obstacles.length; oi++) {
+      const o = obstacles[oi]
+      if (!o) continue
+      const rect = getObstacleRect(o!)
+      const overlapO = circleRectOverlap(enemyHit, rect)
+      if (!overlapO.overlapping) continue
+      const safeDistO = overlapO.dist < 0.0001 ? 0.0001 : overlapO.dist
+      const nx = (enemyHit.x - overlapO.nearestX) / safeDistO
+      const ny = (enemyHit.y - overlapO.nearestY) / safeDistO
+      e.x += nx * (overlapO.penetration + 1)
+      e.y += ny * (overlapO.penetration + 1)
+    }
 
     // Resolve overlap with player using circle hitboxes.
     const enemyHitbox = getEnemyHitbox(e)
@@ -625,6 +755,60 @@ function buildingStyle(b: Building) {
   } as CSSProperties
 }
 
+function obstacleStyle(o: Obstacle) {
+  const screenX = Math.round(o.x - camera.x - o.w / 2)
+  const screenY = Math.round(o.y - camera.y - o.h / 2)
+  return {
+    width: `${o.w}px`,
+    height: `${o.h}px`,
+    transform: `translate(${screenX}px, ${screenY}px)`,
+    background: 'linear-gradient(180deg,#2b2b3a,#1b1b22)',
+    border: '2px solid rgba(120,120,140,0.6)',
+    boxShadow: '0 0 18px rgba(0,0,0,0.45)',
+    zIndex: 4,
+  } as CSSProperties
+}
+
+function spawnObstacles(count = 6) {
+  let attempts = 0
+  while (obstacles.length < count && attempts < count * 50) {
+    attempts++
+    const w = randRange(48, 220)
+    const h = randRange(24, 160)
+    const x = randRange(w / 2, worldSize.width - w / 2)
+    const y = randRange(h / 2, worldSize.height - h / 2)
+
+    const dx = x - player.x
+    const dy = y - player.y
+    if (Math.hypot(dx, dy) < 240) continue
+
+    let collides = false
+    const rect = { left: x - w / 2, right: x + w / 2, top: y - h / 2, bottom: y + h / 2 }
+    for (const b of buildings) {
+      const bb = {
+        left: b.x - b.size / 2,
+        right: b.x + b.size / 2,
+        top: b.y - b.size / 2,
+        bottom: b.y + b.size / 2,
+      }
+      if (
+        !(
+          rect.right < bb.left ||
+          rect.left > bb.right ||
+          rect.bottom < bb.top ||
+          rect.top > bb.bottom
+        )
+      ) {
+        collides = true
+        break
+      }
+    }
+    if (collides) continue
+
+    obstacles.push({ id: nextObstacleId++, x, y, w, h })
+  }
+}
+
 function bulletStyle(bullet: Bullet) {
   const screenX = Math.round(bullet.x - camera.x - bullet.size / 2)
   const screenY = Math.round(bullet.y - camera.y - bullet.size / 2)
@@ -731,11 +915,11 @@ function onMouseMove(e: MouseEvent) {
 function onMouseDown(e: MouseEvent) {
   if (isPaused.value) return
   onMouseMove(e)
-  
-  if (e.button === 0) { 
+
+  if (e.button === 0) {
     mouse.down = true
     shootFromPlayer()
-  } else if (e.button === 2) { 
+  } else if (e.button === 2) {
     startDash()
   }
 }
@@ -759,6 +943,40 @@ function onWheel(e: WheelEvent) {
 function clampPlayer() {
   player.x = Math.max(0, Math.min(player.x, worldSize.width - player.size))
   player.y = Math.max(0, Math.min(player.y, worldSize.height - player.size))
+}
+
+function resolvePlayerBuildingCollisions() {
+  const ph = getPlayerHitbox()
+  for (let i = 0; i < buildings.length; i++) {
+    const b = buildings[i]
+    const overlap = circlesOverlap(ph, getBuildingHitbox(b!))
+    if (!overlap.overlapping) continue
+    const safeDist = overlap.dist < 0.0001 ? 0.0001 : overlap.dist
+    const push = overlap.minDist - safeDist
+    const pushX = (overlap.dx / safeDist) * push
+    const pushY = (overlap.dy / safeDist) * push
+    player.x -= pushX
+    player.y -= pushY
+  }
+  clampPlayer()
+}
+
+function resolvePlayerObstacleCollisions() {
+  const ph = getPlayerHitbox()
+  for (let i = 0; i < obstacles.length; i++) {
+    const o = obstacles[i]
+    if (!o) continue
+    const rect = getObstacleRect(o!)
+    const overlap = circleRectOverlap(ph, rect)
+    if (!overlap.overlapping) continue
+    const safeDist = overlap.dist < 0.0001 ? 0.0001 : overlap.dist
+    const push = overlap.penetration
+    const nx = (ph.x - overlap.nearestX) / safeDist
+    const ny = (ph.y - overlap.nearestY) / safeDist
+    player.x += nx * (push + 1)
+    player.y += ny * (push + 1)
+  }
+  clampPlayer()
 }
 
 function togglePause() {
@@ -824,6 +1042,8 @@ function shootFromPlayer() {
         orbitSpeed: ORBIT_ANGULAR_SPEED,
         initialVx: vx,
         initialVy: vy,
+        piercing: Boolean(weapon.piercing),
+        bouncesLeft: 2,
       })
     } else if (weapon.explosive) {
       bullets.push({
@@ -839,6 +1059,8 @@ function shootFromPlayer() {
         color: weapon.projectileColor,
         type: 'explosive',
         explosiveDeceleration: EXPLOSIVE_DECEL,
+        piercing: Boolean(weapon.piercing),
+        bouncesLeft: 2,
       })
     } else {
       bullets.push({
@@ -853,6 +1075,8 @@ function shootFromPlayer() {
         damage: weapon.damage,
         color: weapon.projectileColor,
         type: 'normal',
+        piercing: Boolean(weapon.piercing),
+        bouncesLeft: 2,
       })
     }
   }
@@ -934,7 +1158,71 @@ function updateBullets(dt: number) {
       bullet.x > worldSize.width + margin ||
       bullet.y > worldSize.height + margin
 
-    if (bullet.ttl <= 0 || outOfWorld) {
+    const bulletHitbox = getBulletHitbox(bullet)
+    let hitEnemy = false
+    for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex -= 1) {
+      const enemy = enemies[enemyIndex]
+      if (!enemy || enemy.hp <= 0) continue
+      const overlap = circlesOverlap(bulletHitbox, getEnemyHitbox(enemy))
+      if (!overlap.overlapping) continue
+
+      enemy.hp -= bullet.damage
+      hitEnemy = true
+
+      if (!bullet.piercing) {
+        if (bullet.type === 'explosive') {
+          spawnExplosion(bullet.x, bullet.y)
+        }
+        break
+      }
+    }
+
+    // bullets collide with buildings -> bounce or explode
+    for (let bi = 0; bi < buildings.length; bi++) {
+      const b = buildings[bi]
+      const overlapB = circlesOverlap(bulletHitbox, getBuildingHitbox(b!))
+      if (!overlapB.overlapping) continue
+
+      // skip orbiting bullets while held
+      if (bullet.type === 'orbiting') continue
+
+      const safeDist = overlapB.dist < 0.0001 ? 0.0001 : overlapB.dist
+
+      if (bullet.bouncesLeft && bullet.bouncesLeft > 0) {
+        // normal from building -> bullet
+        const nx = (bullet.x - b!.x) / safeDist
+        const ny = (bullet.y - b!.y) / safeDist
+
+        // reflect velocity: v' = v - 2*(v·n)*n
+        const dot = bullet.vx * nx + bullet.vy * ny
+        bullet.vx = bullet.vx - 2 * dot * nx
+        bullet.vy = bullet.vy - 2 * dot * ny
+
+        // push bullet out of penetration a bit
+        const penetration = overlapB.minDist - safeDist
+        bullet.x += nx * (penetration + 0.5)
+        bullet.y += ny * (penetration + 0.5)
+
+        // dampen speed and consume a bounce
+        bullet.vx *= 0.75
+        bullet.vy *= 0.75
+        bullet.bouncesLeft!--
+
+        // small ttl penalty to avoid infinite bouncing
+        bullet.ttl -= 0.04
+
+        // update hitbox after correction
+        // continue scanning (but break to avoid multi-resolve in same frame)
+        break
+      } else {
+        // no bounces left: behave like hitting a solid
+        hitEnemy = true
+        if (bullet.type === 'explosive') spawnExplosion(bullet.x, bullet.y)
+        break
+      }
+    }
+
+    if (bullet.ttl <= 0 || outOfWorld || (hitEnemy && !bullet.piercing)) {
       bullets.splice(i, 1)
     }
   }
@@ -965,7 +1253,7 @@ function updateAutoShoot(dt: number) {
 }
 
 function preventDefaultMenu(e: Event) {
-  e.preventDefault();
+  e.preventDefault()
 }
 
 function tryCapture() {
@@ -998,6 +1286,8 @@ function updateDash(dt: number) {
     player.x += dashDirection.x * dashForce * dt
     player.y += dashDirection.y * dashForce * dt
     clampPlayer()
+    resolvePlayerBuildingCollisions()
+    resolvePlayerObstacleCollisions()
 
     if (dashTimeLeft <= 0) {
       isDashing.value = false
@@ -1026,7 +1316,7 @@ function loop(ts: number) {
   }
 
   gameStore.updateBuffs(dt)
-  updateDash(dt)  
+  updateDash(dt)
 
   const speed = baseSpeed * gameStore.playerStats.speedMultiplier
   let vx = 0
@@ -1046,6 +1336,8 @@ function loop(ts: number) {
     player.x += vx * dt
     player.y += vy * dt
     clampPlayer()
+    resolvePlayerBuildingCollisions()
+    resolvePlayerObstacleCollisions()
 
     spriteAccumulator += dt
     if (spriteAccumulator >= 1 / SPRITE_FPS) {
@@ -1068,7 +1360,7 @@ function loop(ts: number) {
 
 onMounted(() => {
   gameStore.resetPlayerStats()
-  window.removeEventListener('contextmenu', preventDefaultMenu);
+  window.removeEventListener('contextmenu', preventDefaultMenu)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('mousemove', onMouseMove)
@@ -1077,14 +1369,16 @@ onMounted(() => {
   window.addEventListener('mouseleave', onMouseLeave)
   window.addEventListener('wheel', onWheel, { passive: false })
   spawnBuildings(10)
-  spawnEnemies(6)
-  enemySpawnInterval = window.setInterval(() => spawnEnemies(1), 5000)
+  spawnBuildings(10)
+  spawnObstacles(8)
+  spawnEnemies(MIN_ACTIVE_ENEMIES)
+  enemySpawnInterval = window.setInterval(spawnEnemyTick, ENEMY_SPAWN_INTERVAL_MS)
 
   showObjective.value = true
   setTimeout(() => {
     showObjective.value = false
   }, 5000)
-  window.addEventListener('contextmenu', preventDefaultMenu);
+  window.addEventListener('contextmenu', preventDefaultMenu)
 
   rafId = requestAnimationFrame(loop)
 })
@@ -1110,7 +1404,7 @@ onUnmounted(() => {
   cursor: none;
   user-select: none;
   -webkit-user-select: none; /* Para Safari/Chrome antiguo */
-  -moz-user-select: none;    /* Para Firefox */
+  -moz-user-select: none; /* Para Firefox */
   -ms-user-select: none;
 }
 
@@ -1530,5 +1824,14 @@ onUnmounted(() => {
   border-radius: 0;
   will-change: transform;
   z-index: 3;
+}
+
+.obstacle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  border-radius: 6px;
+  image-rendering: pixelated;
 }
 </style>
