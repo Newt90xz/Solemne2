@@ -97,7 +97,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     damage: 16,
     projectileSpeed: 600,
     projectileLifetime: 6.5,
-    projectileSize: 9,
+    projectileSize: 20,
     projectileColor: '#ff6b35',
     pellets: 1,
     spreadDeg: 0,
