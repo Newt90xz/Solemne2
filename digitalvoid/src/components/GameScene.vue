@@ -3,6 +3,7 @@
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
+        
 
         <section v-if="showObjective" class="neon-card objective-panel">
           <div class="panel-heading">
@@ -223,6 +224,16 @@ const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
+const showHitboxes = ref(true)
+
+const isDashing = ref(false)
+const dashDuration = 0.15 
+const dashForce = 1500
+let dashTimeLeft = 0
+const dashDirection = { x: 0, y: 0 }
+const dashCooldown = 2       
+let dashRechargeTimer = 0
+
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
