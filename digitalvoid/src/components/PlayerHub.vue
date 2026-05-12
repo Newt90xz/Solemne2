@@ -26,6 +26,14 @@
           </div>
           <span class="bar-text">{{ expText }}</span>
         </div>
+
+        <div class="stat-row infection-row">
+          <span class="label">TIEMPO DE INFECCIÓN</span>
+          <div class="track track-infection">
+            <div class="fill fill-infection" :style="infectionBarStyle"></div>
+          </div>
+          <span class="bar-text">{{ infectionText }}</span>
+        </div>
       </div>
     </div>
   </section>
@@ -44,8 +52,17 @@ const expText = computed(
   () => `${playerStats.value.experience} / ${playerStats.value.experienceToLevel}`,
 )
 
+const infectionText = computed(() => `${playerStats.value.kills} / 100`)
+
 const expBarStyle = computed(() => {
   const percentage = (playerStats.value.experience / playerStats.value.experienceToLevel) * 100
+  return {
+    width: `${Math.min(percentage, 100)}%`,
+  }
+})
+
+const infectionBarStyle = computed(() => {
+  const percentage = (playerStats.value.kills / 100) * 100
   return {
     width: `${Math.min(percentage, 100)}%`,
   }
@@ -140,6 +157,10 @@ const healthBarStyle = computed(() => {
   min-width: 128px;
 }
 
+.track-infection {
+  min-width: 128px;
+}
+
 .fill {
   height: 100%;
   border-radius: inherit;
@@ -154,6 +175,11 @@ const healthBarStyle = computed(() => {
 .fill-exp {
   background: linear-gradient(90deg, #57c8ff, #8d7bff);
   box-shadow: 0 0 12px rgba(95, 163, 255, 0.5);
+}
+
+.fill-infection {
+  background: linear-gradient(90deg, #90ee90, #32cd32);
+  box-shadow: 0 0 12px rgba(50, 205, 50, 0.6);
 }
 
 .bar-text {

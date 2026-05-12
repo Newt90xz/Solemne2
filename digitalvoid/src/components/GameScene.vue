@@ -360,7 +360,7 @@ let nextExplosionId = 1
 let nextEnemyId = 1
 let shootAccumulator = 0
 let enemySpawnInterval: number | null = null
-const ENEMY_SPAWN_INTERVAL_MS = 1800
+const ENEMY_SPAWN_INTERVAL_MS = 900
 const MIN_ACTIVE_ENEMIES = 10
 const MAX_ACTIVE_ENEMIES = 28
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank']
@@ -558,7 +558,7 @@ function spawnEnemyTick() {
 
   if (enemies.length < MIN_ACTIVE_ENEMIES) {
     const missing = MIN_ACTIVE_ENEMIES - enemies.length
-    const spawnCount = Math.min(4, missing)
+    const spawnCount = Math.min(6, missing)
     for (let i = 0; i < spawnCount; i += 1) {
       const forcedType = missingTypes.shift()
       if (forcedType) {
@@ -578,7 +578,7 @@ function spawnEnemyTick() {
     }
   }
 
-  if (enemies.length < MAX_ACTIVE_ENEMIES && Math.random() < 0.5) {
+  if (enemies.length < MAX_ACTIVE_ENEMIES && Math.random() < 0.85) {
     spawnEnemy()
   }
 }
@@ -659,6 +659,7 @@ function updateEnemies(dt: number) {
 
     // check death
     if (e.hp <= 0) {
+      gameStore.incrementKills()
       enemies.splice(i, 1)
       continue
     }
