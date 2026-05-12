@@ -137,6 +137,8 @@ import PlayerHub from './PlayerHub.vue'
 import spritesheetImg from '../assets/New_Piskel.png'
 import cursorImg from '../assets/cursorfire.png'
 import buildingSpritesheet from '../assets/buildings.png'
+import bulletTexture from '../assets/Bullet_Orbital.png'
+
 interface Bullet {
   id: number
   x: number
@@ -816,10 +818,12 @@ function bulletStyle(bullet: Bullet) {
     return {
       width: `${bullet.size}px`,
       height: `${bullet.size}px`,
-      background: bullet.color,
+      backgroundImage: `url(${bulletTexture})`,
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
       borderRadius: '2px',
       transform: `translate(${screenX}px, ${screenY}px)`,
-      boxShadow: `0 0 8px ${bullet.color}`,
+      imageRendering: 'pixelated',
     } as CSSProperties
   }
 
@@ -830,8 +834,11 @@ function bulletStyle(bullet: Bullet) {
     return {
       width: `${bullet.size}px`,
       height: `${bullet.size}px`,
-      background: bullet.color,
+      backgroundImage: `url(${bulletTexture})`,
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
       borderRadius: '99px',
+      imageRendering: 'pixelated',
       transform: `translate(${screenX}px, ${screenY}px)`,
       boxShadow: `0 0 ${glow}px rgba(168,218,220,0.85)`,
     } as CSSProperties
@@ -840,8 +847,11 @@ function bulletStyle(bullet: Bullet) {
   return {
     width: `${bullet.size}px`,
     height: `${bullet.size}px`,
-    background: bullet.color,
+    backgroundImage: `url(${bulletTexture})`,
+    backgroundSize: 'cover',
+    backgroundRepeat: 'no-repeat',
     borderRadius: '99px',
+    imageRendering: 'pixelated',
     transform: `translate(${screenX}px, ${screenY}px)`,
   } as CSSProperties
 }
