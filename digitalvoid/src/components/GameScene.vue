@@ -223,16 +223,6 @@ const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
-const showHitboxes = ref(true)
-
-const isDashing = ref(false)
-const dashDuration = 0.15 
-const dashForce = 1500
-let dashTimeLeft = 0
-const dashDirection = { x: 0, y: 0 }
-const dashCooldown = 1.2          // seconds before a charge refills
-let dashRechargeTimer = 0
-
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
