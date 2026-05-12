@@ -3,7 +3,6 @@
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
-        
 
         <section v-if="showObjective" class="neon-card objective-panel">
           <div class="panel-heading">
@@ -150,6 +149,7 @@ interface Bullet {
   initialVx?: number
   initialVy?: number
   explosiveDeceleration?: number
+  piercing?: boolean
 }
 
 interface Explosion {
@@ -227,13 +227,12 @@ const isPaused = ref(false)
 const showHitboxes = ref(true)
 
 const isDashing = ref(false)
-const dashDuration = 0.15 
+const dashDuration = 0.15
 const dashForce = 1500
 let dashTimeLeft = 0
 const dashDirection = { x: 0, y: 0 }
-const dashCooldown = 2       
+const dashCooldown = 2
 let dashRechargeTimer = 0
-
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
@@ -343,6 +342,10 @@ let nextExplosionId = 1
 let nextEnemyId = 1
 let shootAccumulator = 0
 let enemySpawnInterval: number | null = null
+const ENEMY_SPAWN_INTERVAL_MS = 1800
+const MIN_ACTIVE_ENEMIES = 10
+const MAX_ACTIVE_ENEMIES = 28
+const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank']
 
 function cycleWeapon(dir: 1 | -1) {
   const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
@@ -415,7 +418,8 @@ function startDash() {
 function spawnEnemy(opts?: Partial<Enemy>) {
   const offscreen = spawnOffscreenPosition()
   const typeRoll = randRange(0, 100)
-  const type: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  const randomType: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  const type = opts?.type ?? randomType
   const base: Enemy = {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
@@ -444,6 +448,14 @@ function getEnemyHitbox(enemy: Enemy): CircleHitbox {
     x: enemy.x,
     y: enemy.y,
     radius: enemy.size * ENEMY_HITBOX_SCALE,
+  }
+}
+
+function getBulletHitbox(bullet: Bullet): CircleHitbox {
+  return {
+    x: bullet.x,
+    y: bullet.y,
+    radius: Math.max(2, bullet.size * 0.5),
   }
 }
 
@@ -481,6 +493,38 @@ function enemyHitboxStyle(enemy: Enemy) {
 
 function spawnEnemies(count = 1) {
   for (let i = 0; i < count; i++) spawnEnemy()
+}
+
+function spawnEnemyTick() {
+  if (isPaused.value) return
+
+  const missingTypes = ENEMY_TYPES.filter((type) => !enemies.some((enemy) => enemy.type === type))
+
+  if (enemies.length < MIN_ACTIVE_ENEMIES) {
+    const missing = MIN_ACTIVE_ENEMIES - enemies.length
+    const spawnCount = Math.min(4, missing)
+    for (let i = 0; i < spawnCount; i += 1) {
+      const forcedType = missingTypes.shift()
+      if (forcedType) {
+        spawnEnemy({ type: forcedType })
+      } else {
+        spawnEnemy()
+      }
+    }
+    return
+  }
+
+  if (missingTypes.length > 0 && enemies.length < MAX_ACTIVE_ENEMIES) {
+    const forcedType = missingTypes[randRange(0, missingTypes.length - 1)]
+    if (forcedType) {
+      spawnEnemy({ type: forcedType })
+      return
+    }
+  }
+
+  if (enemies.length < MAX_ACTIVE_ENEMIES && Math.random() < 0.5) {
+    spawnEnemy()
+  }
 }
 
 function enemyStyle(e: Enemy) {
@@ -721,11 +765,11 @@ function onMouseMove(e: MouseEvent) {
 function onMouseDown(e: MouseEvent) {
   if (isPaused.value) return
   onMouseMove(e)
-  
-  if (e.button === 0) { 
+
+  if (e.button === 0) {
     mouse.down = true
     shootFromPlayer()
-  } else if (e.button === 2) { 
+  } else if (e.button === 2) {
     startDash()
   }
 }
@@ -814,6 +858,7 @@ function shootFromPlayer() {
         orbitSpeed: ORBIT_ANGULAR_SPEED,
         initialVx: vx,
         initialVy: vy,
+        piercing: Boolean(weapon.piercing),
       })
     } else if (weapon.explosive) {
       bullets.push({
@@ -829,6 +874,7 @@ function shootFromPlayer() {
         color: weapon.projectileColor,
         type: 'explosive',
         explosiveDeceleration: EXPLOSIVE_DECEL,
+        piercing: Boolean(weapon.piercing),
       })
     } else {
       bullets.push({
@@ -843,6 +889,7 @@ function shootFromPlayer() {
         damage: weapon.damage,
         color: weapon.projectileColor,
         type: 'normal',
+        piercing: Boolean(weapon.piercing),
       })
     }
   }
@@ -924,7 +971,26 @@ function updateBullets(dt: number) {
       bullet.x > worldSize.width + margin ||
       bullet.y > worldSize.height + margin
 
-    if (bullet.ttl <= 0 || outOfWorld) {
+    const bulletHitbox = getBulletHitbox(bullet)
+    let hitEnemy = false
+    for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex -= 1) {
+      const enemy = enemies[enemyIndex]
+      if (!enemy || enemy.hp <= 0) continue
+      const overlap = circlesOverlap(bulletHitbox, getEnemyHitbox(enemy))
+      if (!overlap.overlapping) continue
+
+      enemy.hp -= bullet.damage
+      hitEnemy = true
+
+      if (!bullet.piercing) {
+        if (bullet.type === 'explosive') {
+          spawnExplosion(bullet.x, bullet.y)
+        }
+        break
+      }
+    }
+
+    if (bullet.ttl <= 0 || outOfWorld || (hitEnemy && !bullet.piercing)) {
       bullets.splice(i, 1)
     }
   }
@@ -955,7 +1021,7 @@ function updateAutoShoot(dt: number) {
 }
 
 function preventDefaultMenu(e: Event) {
-  e.preventDefault();
+  e.preventDefault()
 }
 
 function tryCapture() {
@@ -1016,7 +1082,7 @@ function loop(ts: number) {
   }
 
   gameStore.updateBuffs(dt)
-  updateDash(dt)  
+  updateDash(dt)
 
   const speed = baseSpeed * gameStore.playerStats.speedMultiplier
   let vx = 0
@@ -1058,7 +1124,7 @@ function loop(ts: number) {
 
 onMounted(() => {
   gameStore.resetPlayerStats()
-  window.removeEventListener('contextmenu', preventDefaultMenu);
+  window.removeEventListener('contextmenu', preventDefaultMenu)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('mousemove', onMouseMove)
@@ -1067,14 +1133,14 @@ onMounted(() => {
   window.addEventListener('mouseleave', onMouseLeave)
   window.addEventListener('wheel', onWheel, { passive: false })
   spawnBuildings(10)
-  spawnEnemies(6)
-  enemySpawnInterval = window.setInterval(() => spawnEnemies(1), 5000)
+  spawnEnemies(MIN_ACTIVE_ENEMIES)
+  enemySpawnInterval = window.setInterval(spawnEnemyTick, ENEMY_SPAWN_INTERVAL_MS)
 
   showObjective.value = true
   setTimeout(() => {
     showObjective.value = false
   }, 5000)
-  window.addEventListener('contextmenu', preventDefaultMenu);
+  window.addEventListener('contextmenu', preventDefaultMenu)
 
   rafId = requestAnimationFrame(loop)
 })
@@ -1100,7 +1166,7 @@ onUnmounted(() => {
   cursor: none;
   user-select: none;
   -webkit-user-select: none; /* Para Safari/Chrome antiguo */
-  -moz-user-select: none;    /* Para Firefox */
+  -moz-user-select: none; /* Para Firefox */
   -ms-user-select: none;
 }
 
