@@ -1180,8 +1180,8 @@ function updateBullets(dt: number) {
 
       if (bullet.bouncesLeft && bullet.bouncesLeft > 0) {
         // normal from building -> bullet
-        const nx = (bullet.x - b.x) / safeDist
-        const ny = (bullet.y - b.y) / safeDist
+        const nx = (bullet.x - b!.x) / safeDist
+        const ny = (bullet.y - b!.y) / safeDist
 
         // reflect velocity: v' = v - 2*(v·n)*n
         const dot = bullet.vx * nx + bullet.vy * ny
