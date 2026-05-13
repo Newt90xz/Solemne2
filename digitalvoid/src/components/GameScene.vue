@@ -517,6 +517,86 @@ function getBulletHitbox(bullet: Bullet): CircleHitbox {
   }
 }
 
+function consumeBulletBounce(bullet: Bullet) {
+  const bounces = bullet.bouncesLeft ?? 0
+  if (bounces <= 0) return false
+  bullet.bouncesLeft = bounces - 1
+  bullet.ttl -= 0.04
+  return true
+}
+
+function bounceBulletOnWorldBounds(bullet: Bullet) {
+  const radius = Math.max(2, bullet.size * 0.5)
+  let bounced = false
+
+  if (bullet.x - radius < 0) {
+    bullet.x = radius
+    bullet.vx = Math.abs(bullet.vx)
+    bounced = true
+  } else if (bullet.x + radius > worldSize.width) {
+    bullet.x = worldSize.width - radius
+    bullet.vx = -Math.abs(bullet.vx)
+    bounced = true
+  }
+
+  if (bullet.y - radius < 0) {
+    bullet.y = radius
+    bullet.vy = Math.abs(bullet.vy)
+    bounced = true
+  } else if (bullet.y + radius > worldSize.height) {
+    bullet.y = worldSize.height - radius
+    bullet.vy = -Math.abs(bullet.vy)
+    bounced = true
+  }
+
+  if (!bounced) return false
+  if (!consumeBulletBounce(bullet)) return false
+
+  bullet.vx *= 0.75
+  bullet.vy *= 0.75
+  return true
+}
+
+function bounceBulletOnObstacle(
+  bullet: Bullet,
+  rect: { left: number; right: number; top: number; bottom: number },
+) {
+  const radius = Math.max(2, bullet.size * 0.5)
+  const overlapO = circleRectOverlap(getBulletHitbox(bullet), rect)
+  if (!overlapO.overlapping) return false
+  if (!consumeBulletBounce(bullet)) return false
+
+  const overlapLeft = Math.abs(bullet.x + radius - rect.left)
+  const overlapRight = Math.abs(rect.right - (bullet.x - radius))
+  const overlapTop = Math.abs(bullet.y + radius - rect.top)
+  const overlapBottom = Math.abs(rect.bottom - (bullet.y - radius))
+
+  const minHorizontal = Math.min(overlapLeft, overlapRight)
+  const minVertical = Math.min(overlapTop, overlapBottom)
+
+  if (minHorizontal < minVertical) {
+    if (overlapLeft < overlapRight) {
+      bullet.x = rect.left - radius - 0.5
+      bullet.vx = -Math.abs(bullet.vx)
+    } else {
+      bullet.x = rect.right + radius + 0.5
+      bullet.vx = Math.abs(bullet.vx)
+    }
+  } else {
+    if (overlapTop < overlapBottom) {
+      bullet.y = rect.top - radius - 0.5
+      bullet.vy = -Math.abs(bullet.vy)
+    } else {
+      bullet.y = rect.bottom + radius + 0.5
+      bullet.vy = Math.abs(bullet.vy)
+    }
+  }
+
+  bullet.vx *= 0.75
+  bullet.vy *= 0.75
+  return true
+}
+
 function circlesOverlap(a: CircleHitbox, b: CircleHitbox) {
   const dx = b.x - a.x
   const dy = b.y - a.y
@@ -1205,6 +1285,48 @@ function updateBullets(dt: number) {
       bullet.y += bullet.vy * dt
     }
 
+    let destroyBullet = false
+
+    if (
+      bullet.type !== 'orbiting' ||
+      bullet.orbitTimeElapsed! >= ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME
+    ) {
+      const bouncedOnWorld = bounceBulletOnWorldBounds(bullet)
+      if (!bouncedOnWorld) {
+        const radius = Math.max(2, bullet.size * 0.5)
+        const touchingWorldBounds =
+          bullet.x - radius <= 0 ||
+          bullet.y - radius <= 0 ||
+          bullet.x + radius >= worldSize.width ||
+          bullet.y + radius >= worldSize.height
+        if (touchingWorldBounds) {
+          destroyBullet = true
+        }
+      }
+    }
+
+    for (let oi = 0; oi < obstacles.length; oi++) {
+      const o = obstacles[oi]
+      if (!o) continue
+      if (
+        bullet.type === 'orbiting' &&
+        bullet.orbitTimeElapsed! < ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME
+      ) {
+        continue
+      }
+
+      const bouncedOnObstacle = bounceBulletOnObstacle(bullet, getObstacleRect(o))
+      if (bouncedOnObstacle) {
+        break
+      }
+
+      const overlapO = circleRectOverlap(getBulletHitbox(bullet), getObstacleRect(o))
+      if (overlapO.overlapping) {
+        destroyBullet = true
+        break
+      }
+    }
+
     if (bullet.type === 'normal' && (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')) {
       bullet.animTimeElapsed = (bullet.animTimeElapsed ?? 0) + dt
     }
@@ -1245,7 +1367,7 @@ function updateBullets(dt: number) {
 
       const safeDist = overlapB.dist < 0.0001 ? 0.0001 : overlapB.dist
 
-      if (bullet.bouncesLeft && bullet.bouncesLeft > 0) {
+      if (consumeBulletBounce(bullet)) {
         // normal from building -> bullet
         const nx = (bullet.x - b!.x) / safeDist
         const ny = (bullet.y - b!.y) / safeDist
@@ -1264,7 +1386,6 @@ function updateBullets(dt: number) {
         bullet.vx *= 0.75
         bullet.vy *= 0.75
         bullet.bouncesLeft!--
-        bullet.angleDeg = Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
 
         // small ttl penalty to avoid infinite bouncing
         bullet.ttl -= 0.04
@@ -1280,7 +1401,7 @@ function updateBullets(dt: number) {
       }
     }
 
-    if (bullet.ttl <= 0 || outOfWorld || (hitEnemy && !bullet.piercing)) {
+    if (bullet.ttl <= 0 || outOfWorld || destroyBullet || (hitEnemy && !bullet.piercing)) {
       bullets.splice(i, 1)
     }
   }
