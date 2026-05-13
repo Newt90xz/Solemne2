@@ -4,13 +4,37 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <section v-if="showObjective" class="neon-card objective-panel">
+        <section v-if="showObjective && !upgradeMenu.visible" class="neon-card objective-panel">
           <div class="panel-heading">
             <span class="panel-mark">⌬</span>
             <p class="panel-title">OBJETIVO</p>
           </div>
           <p class="objective-copy">{{ objectiveText }}</p>
         </section>
+
+        <template v-if="upgradeMenu.visible">
+          <button class="neon-card upgrade-card" @click="selectUpgrade('dash')">
+            <div class="panel-heading">
+              <span class="panel-mark">💨</span>
+              <p class="panel-title">DASH EXTRA</p>
+            </div>
+            <p class="objective-copy">+1 carga de dash permanente</p>
+          </button>
+          <button class="neon-card upgrade-card" @click="selectUpgrade('akimbo')">
+            <div class="panel-heading">
+              <span class="panel-mark">🔫</span>
+              <p class="panel-title">AKIMBO</p>
+            </div>
+            <p class="objective-copy">Doble cadencia por 15 segundos</p>
+          </button>
+          <button class="neon-card upgrade-card" @click="selectUpgrade('health_up')">
+            <div class="panel-heading">
+              <span class="panel-mark">❤️</span>
+              <p class="panel-title">VIDA MÁXIMA</p>
+            </div>
+            <p class="objective-copy">+30 de salud máxima permanente</p>
+          </button>
+        </template>
       </div>
 
       <section class="neon-card weapon-panel">
@@ -35,29 +59,15 @@
         </div>
       </section>
 
-      <button
-        class="music-circle"
-        @click="togglePause"
-        :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
-      >
+      <button class="music-circle" @click="togglePause" :aria-label="isPaused ? 'Reanudar' : 'Pausar'">
         {{ isPaused ? '▶' : '⏸' }}
       </button>
 
       <div class="hud-actions">
-        <button
-          class="hud-button"
-          type="button"
-          :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
-          @click="togglePause"
-        >
+        <button class="hud-button" type="button" :aria-label="isPaused ? 'Reanudar' : 'Pausar'" @click="togglePause">
           {{ isPaused ? '⏵' : '⏸' }}
         </button>
-        <button
-          class="hud-button hud-button-secondary"
-          type="button"
-          aria-label="Salir"
-          @click="exitGame"
-        >
+        <button class="hud-button hud-button-secondary" type="button" aria-label="Salir" @click="exitGame">
           ⎋
         </button>
       </div>
@@ -68,18 +78,14 @@
           <p class="pause-text">Pulsa reanudar para continuar o salir para volver al menú.</p>
         </div>
       </div>
+      
 
       <div v-if="nearestBuilding && hintVisible" class="capture-hint">
-        <div class="hint-icon">{{ nearestBuilding.b.icon }}</div>
-        <div>Presiona <strong>F</strong> para capturar — {{ nearestBuilding.b.buffText }}</div>
+        <div class="hint-icon">🏢</div>
+        <div>Presiona <strong>F</strong> para capturar</div>
       </div>
 
-      <div
-        v-for="b in buildings"
-        :key="'area-' + b.id"
-        class="building-area"
-        :style="buildingAreaStyle(b)"
-      ></div>
+      <div v-for="b in buildings" :key="'area-' + b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
         <!--<div class="building-icon">{{ b.icon }}</div>
@@ -87,37 +93,18 @@
         <div v-if="b.captured" class="building-captured">Capturado</div>-->
       </div>
 
-      <div
-        v-for="o in obstacles"
-        :key="'obstacle-' + o.id"
-        class="obstacle"
-        :style="obstacleStyle(o)"
-      ></div>
+      <div v-for="o in obstacles" :key="'obstacle-' + o.id" class="obstacle" :style="obstacleStyle(o)"></div>
 
-      <div
-        v-for="bullet in bullets"
-        :key="bullet.id"
-        class="bullet"
-        :style="bulletStyle(bullet)"
-      ></div>
+      <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
 
       <div v-for="e in enemies" :key="'enemy-' + e.id" class="enemy" :style="enemyStyle(e)"></div>
 
       <template v-if="showHitboxes">
-        <div
-          v-for="e in enemies"
-          :key="'enemy-hitbox-' + e.id"
-          class="hitbox hitbox-enemy"
-          :style="enemyHitboxStyle(e)"
-        ></div>
+        <div v-for="e in enemies" :key="'enemy-hitbox-' + e.id" class="hitbox hitbox-enemy"
+          :style="enemyHitboxStyle(e)"></div>
       </template>
 
-      <div
-        v-for="exp in explosions"
-        :key="exp.id"
-        class="explosion"
-        :style="explosionStyle(exp)"
-      ></div>
+      <div v-for="exp in explosions" :key="exp.id" class="explosion" :style="explosionStyle(exp)"></div>
 
       <div class="player" :style="playerStyle"></div>
 
@@ -130,21 +117,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
-import escenarioImg from '../assets/Escenario_Principal.png'
+import escenarioImg from '../assets/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
-import spritesheetImg from '../assets/New_Piskel.png'
+import spritesheetImg from '../assets/buggy.png'
 import cursorImg from '../assets/cursorfire.png'
 import buildingSpritesheet from '../assets/buildings.png'
-import bulletTexture from '../assets/Bullet_Orbital.png'
+import bulletTexture from '../assets/Orbital.png'
+import troyanoBulletSpritesheet from '../assets/troyanobullet.png'
+import memoriaBulletSpritesheet from '../assets/memorybulletsprite.png'
+import martilloBulletTexture from '../assets/martillobullet.png'
+import gusanoBulletSpritesheet from '../assets/gusanosprite.png'
 
 interface Bullet {
   id: number
+  weaponId: WeaponId
   x: number
   y: number
   vx: number
   vy: number
+  angleDeg?: number
   size: number
   ttl: number
   maxTtl: number
@@ -158,6 +151,8 @@ interface Bullet {
   initialVx?: number
   initialVy?: number
   explosiveDeceleration?: number
+  flashTimeElapsed?: number
+  animTimeElapsed?: number
   piercing?: boolean
   bouncesLeft?: number
 }
@@ -179,14 +174,8 @@ interface Building {
   size: number
   name: string
   captured: boolean
-  buff: {
-    type: 'speed' | 'damage'
-    value: number
-    duration: number
-  }
+  upgradeType: 'dash' | 'akimbo' | 'health_up'
   areaRadius?: number
-  icon?: string
-  buffText?: string
 }
 
 interface Obstacle {
@@ -244,7 +233,7 @@ const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
-const showHitboxes = ref(true)
+const showHitboxes = ref(false)
 
 const isDashing = ref(false)
 const dashDuration = 0.15
@@ -253,6 +242,11 @@ let dashTimeLeft = 0
 const dashDirection = { x: 0, y: 0 }
 const dashCooldown = 2
 let dashRechargeTimer = 0
+
+const upgradeMenu = reactive<{ visible: boolean; buildingId: number | null }>({
+  visible: false,
+  buildingId: null,
+})
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
@@ -274,6 +268,12 @@ const EXPLOSION_MAX_RADIUS = 80
 const EXPLOSION_DURATION = 0.45
 const PLAYER_HITBOX_SCALE = 0.25
 const ENEMY_HITBOX_SCALE = 0.34
+// Roughly "every 8 frames" assuming ~60fps => 8/60s ≈ 0.133s
+const TROYANO_FLASH_INTERVAL = 8 / 60
+const MEMORIA_FRAMES = 4
+const MEMORIA_FRAME_INTERVAL = 8 / 60
+const GUSANO_FRAMES = 4
+const GUSANO_FRAME_INTERVAL = 8 / 60
 
 const sceneStyle = computed(
   () =>
@@ -678,6 +678,7 @@ function updateEnemies(dt: number) {
 function spawnBuildings(count = 8) {
   buildings.length = 0
   let attempts = 0
+  const upgradeTypes: Array<'dash' | 'akimbo' | 'health_up'> = ['dash', 'akimbo', 'health_up']
   while (buildings.length < count && attempts < count * 50) {
     attempts++
     const size = randRange(48, 96)
@@ -699,15 +700,7 @@ function spawnBuildings(count = 8) {
     }
     if (collides) continue
 
-    const type: 'speed' | 'damage' =
-      buildings.length % 3 === 0 ? 'speed' : buildings.length % 3 === 1 ? 'damage' : 'speed'
-    const buff =
-      type === 'speed'
-        ? { type: 'speed' as const, value: 1.35, duration: 12 }
-        : { type: 'damage' as const, value: 1.25, duration: 10 }
-
-    const icon = type === 'speed' ? '⚡' : '🔥'
-    const buffText = type === 'speed' ? 'Velocidad +35% (12s)' : 'Daño +25% (10s)'
+    const upgradeType = upgradeTypes[buildings.length % upgradeTypes.length]!
     const areaRadius = Math.floor(size * 1.6)
 
     buildings.push({
@@ -717,10 +710,8 @@ function spawnBuildings(count = 8) {
       size,
       name: `Edificio ${buildings.length + 1}`,
       captured: false,
-      buff,
+      upgradeType,
       areaRadius,
-      icon,
-      buffText,
     })
   }
 }
@@ -822,25 +813,76 @@ function bulletStyle(bullet: Bullet) {
       backgroundSize: 'cover',
       backgroundRepeat: 'no-repeat',
       borderRadius: '2px',
-      transform: `translate(${screenX}px, ${screenY}px)`,
+      transform: `translate3d(${screenX}px, ${screenY}px, 0px)`,
       imageRendering: 'pixelated',
     } as CSSProperties
   }
 
   if (bullet.type === 'explosive') {
-    const speed = Math.hypot(bullet.vx, bullet.vy)
-    const maxSpeed = bullet.explosiveDeceleration! * 1.5
-    const glow = Math.round((speed / maxSpeed) * 14)
+    const frame = Math.floor((bullet.flashTimeElapsed ?? 0) / TROYANO_FLASH_INTERVAL) % 2
+    const backgroundX = frame === 0 ? '0%' : '100%'
     return {
       width: `${bullet.size}px`,
       height: `${bullet.size}px`,
-      backgroundImage: `url(${bulletTexture})`,
-      backgroundSize: 'cover',
+      backgroundImage: `url(${troyanoBulletSpritesheet})`,
+      backgroundSize: '200% 100%',
+      backgroundPosition: `${backgroundX} 0%`,
       backgroundRepeat: 'no-repeat',
-      borderRadius: '99px',
+      borderRadius: '0px',
+      transform: `translate3d(${screenX}px, ${screenY}px, 0px)`,
+    } as CSSProperties
+  }
+
+  if (bullet.type === 'normal') {
+    const rotationDeg = bullet.angleDeg ?? Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
+
+    if (bullet.weaponId === 'Disparo_Memoria') {
+      const frame = Math.floor((bullet.animTimeElapsed ?? 0) / MEMORIA_FRAME_INTERVAL) % MEMORIA_FRAMES
+      const backgroundX = (frame / (MEMORIA_FRAMES - 1)) * 100
+      return {
+        width: `${bullet.size}px`,
+        height: `${bullet.size}px`,
+        backgroundImage: `url(${memoriaBulletSpritesheet})`,
+        backgroundSize: `${MEMORIA_FRAMES * 100}% 100%`,
+        backgroundPosition: `${backgroundX}% 0%`,
+        backgroundRepeat: 'no-repeat',
+        borderRadius: '0px',
+        imageRendering: 'pixelated',
+        transform: `translate3d(${screenX}px, ${screenY}px, 0px) rotate(${rotationDeg}deg)`,
+      } as CSSProperties
+    }
+
+    if (bullet.weaponId === 'gusano') {
+      const frame = Math.floor((bullet.animTimeElapsed ?? 0) / GUSANO_FRAME_INTERVAL) % GUSANO_FRAMES
+      const backgroundX = (frame / (GUSANO_FRAMES - 1)) * 100
+      return {
+        width: `${bullet.size}px`,
+        height: `${bullet.size}px`,
+        backgroundImage: `url(${gusanoBulletSpritesheet})`,
+        backgroundSize: `${GUSANO_FRAMES * 100}% 100%`,
+        backgroundPosition: `${backgroundX}% 0%`,
+        backgroundRepeat: 'no-repeat',
+        borderRadius: '0px',
+        imageRendering: 'pixelated',
+        transform: `translate3d(${screenX}px, ${screenY}px, 0px) rotate(${rotationDeg}deg)`,
+      } as CSSProperties
+    }
+
+    const sprite =
+      bullet.weaponId === 'ransomware'
+          ? martilloBulletTexture
+          : bulletTexture
+
+    return {
+      width: `${bullet.size}px`,
+      height: `${bullet.size}px`,
+      backgroundImage: `url(${sprite})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      borderRadius: '0px',
       imageRendering: 'pixelated',
-      transform: `translate(${screenX}px, ${screenY}px)`,
-      boxShadow: `0 0 ${glow}px rgba(168,218,220,0.85)`,
+      transform: `translate3d(${screenX}px, ${screenY}px, 0px) rotate(${rotationDeg}deg)`,
     } as CSSProperties
   }
 
@@ -1027,10 +1069,12 @@ function shootFromPlayer() {
     if (weapon.orbiting) {
       bullets.push({
         id: nextBulletId++,
+        weaponId: selectedWeaponId.value,
         x: startX,
         y: startY,
         vx,
         vy,
+        angleDeg: undefined,
         size: weapon.projectileSize,
         ttl: weapon.projectileLifetime,
         maxTtl: weapon.projectileLifetime,
@@ -1049,10 +1093,12 @@ function shootFromPlayer() {
     } else if (weapon.explosive) {
       bullets.push({
         id: nextBulletId++,
+        weaponId: selectedWeaponId.value,
         x: startX,
         y: startY,
         vx,
         vy,
+        angleDeg: undefined,
         size: weapon.projectileSize,
         ttl: weapon.projectileLifetime,
         maxTtl: weapon.projectileLifetime,
@@ -1060,16 +1106,21 @@ function shootFromPlayer() {
         color: weapon.projectileColor,
         type: 'explosive',
         explosiveDeceleration: EXPLOSIVE_DECEL,
+        flashTimeElapsed: 0,
         piercing: Boolean(weapon.piercing),
         bouncesLeft: 2,
       })
     } else {
+      const baseAngleDeg = (shotAngle * 180) / Math.PI
       bullets.push({
         id: nextBulletId++,
+        weaponId: selectedWeaponId.value,
         x: startX,
         y: startY,
         vx,
         vy,
+        // cache angle to avoid atan2 per bullet per frame (perf)
+        angleDeg: baseAngleDeg + 90,
         size: weapon.projectileSize,
         ttl: weapon.projectileLifetime,
         maxTtl: weapon.projectileLifetime,
@@ -1133,6 +1184,7 @@ function updateBullets(dt: number) {
         bullet.y += bullet.vy * dt
       }
     } else if (bullet.type === 'explosive') {
+      bullet.flashTimeElapsed = (bullet.flashTimeElapsed ?? 0) + dt
       const speed = Math.hypot(bullet.vx, bullet.vy)
       if (speed > 0) {
         const decel = Math.min(speed, bullet.explosiveDeceleration! * dt)
@@ -1151,6 +1203,10 @@ function updateBullets(dt: number) {
     } else {
       bullet.x += bullet.vx * dt
       bullet.y += bullet.vy * dt
+    }
+
+    if (bullet.type === 'normal' && (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')) {
+      bullet.animTimeElapsed = (bullet.animTimeElapsed ?? 0) + dt
     }
 
     const outOfWorld =
@@ -1208,6 +1264,7 @@ function updateBullets(dt: number) {
         bullet.vx *= 0.75
         bullet.vy *= 0.75
         bullet.bouncesLeft!--
+        bullet.angleDeg = Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
 
         // small ttl penalty to avoid infinite bouncing
         bullet.ttl -= 0.04
@@ -1273,12 +1330,17 @@ function tryCapture() {
   if (!nearest) return
   const effectiveRadius = nearest.areaRadius ?? captureRange
   if (bestDist > effectiveRadius) return
-  nearest.captured = true
-  applyBuff(nearest.buff)
+
+  upgradeMenu.visible = true
+  upgradeMenu.buildingId = nearest.id
 }
 
-function applyBuff(buff: { type: 'speed' | 'damage'; value: number; duration: number }) {
-  gameStore.addBuff(buff)
+function selectUpgrade(type: 'dash' | 'akimbo' | 'health_up') {
+  const b = buildings.find(b => b.id === upgradeMenu.buildingId)
+  if (b) b.captured = true
+  gameStore.applyUpgrade(type)
+  upgradeMenu.visible = false
+  upgradeMenu.buildingId = null
 }
 
 function updateDash(dt: number) {
@@ -1404,8 +1466,10 @@ onUnmounted(() => {
   overflow: hidden;
   cursor: none;
   user-select: none;
-  -webkit-user-select: none; /* Para Safari/Chrome antiguo */
-  -moz-user-select: none; /* Para Firefox */
+  -webkit-user-select: none;
+  /* Para Safari/Chrome antiguo */
+  -moz-user-select: none;
+  /* Para Firefox */
   -ms-user-select: none;
 }
 
@@ -1526,16 +1590,14 @@ onUnmounted(() => {
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 0 22px rgba(202, 82, 255, 0.26),
     0 0 38px rgba(108, 51, 255, 0.1);
-  clip-path: polygon(
-    0 12px,
-    12px 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    16px 100%,
-    0 calc(100% - 16px)
-  );
+  clip-path: polygon(0 12px,
+      12px 0,
+      calc(100% - 16px) 0,
+      100% 16px,
+      100% calc(100% - 12px),
+      calc(100% - 12px) 100%,
+      16px 100%,
+      0 calc(100% - 16px));
 }
 
 .neon-card::before {
@@ -1582,6 +1644,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1718,6 +1781,7 @@ onUnmounted(() => {
   top: 0;
   pointer-events: none;
   z-index: 4;
+  will-change: transform;
 }
 
 .enemy {
@@ -1834,5 +1898,79 @@ onUnmounted(() => {
   pointer-events: none;
   border-radius: 6px;
   image-rendering: pixelated;
+}
+
+.upgrade-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.upgrade-card {
+  width: 170px;
+  padding: 12px 14px 10px;
+  cursor: pointer;
+  text-align: left;
+  border: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  animation: slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.upgrade-card:hover {
+  border-color: rgba(255, 121, 255, 0.75);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 28px rgba(202, 82, 255, 0.45),
+    0 0 48px rgba(108, 51, 255, 0.2);
+}
+
+.upgrade-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.upgrade-btn {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(194, 120, 255, 0.35);
+  border-radius: 10px;
+  color: #f2e9ff;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.upgrade-btn:hover {
+  background: rgba(194, 120, 255, 0.12);
+  border-color: rgba(194, 120, 255, 0.7);
+}
+
+.upgrade-icon {
+  grid-row: 1 / 3;
+  font-size: 1.5rem;
+  display: grid;
+  place-items: center;
+}
+
+.upgrade-label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+.upgrade-desc {
+  font-size: 0.74rem;
+  color: rgba(210, 190, 255, 0.7);
 }
 </style>

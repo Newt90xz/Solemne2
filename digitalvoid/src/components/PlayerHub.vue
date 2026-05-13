@@ -28,7 +28,7 @@
         </div>
 
         <div class="stat-row infection-row">
-          <span class="label">TIEMPO DE INFECCIÓN</span>
+          <span class="label">PROGRESO INFECCIÓN</span>
           <div class="track track-infection">
             <div class="fill fill-infection" :style="infectionBarStyle"></div>
           </div>
