@@ -1,6 +1,9 @@
 <template>
   <div class="game-viewpoint" ref="viewportRef">
     <div class="game-scene" ref="sceneRef" :style="sceneStyle">
+      <!-- World background (tiled) clipped to world bounds -->
+      <div class="world" :style="worldStyle"></div>
+
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
@@ -144,6 +147,18 @@
       ></div>
 
       <div class="player" :style="playerStyle"></div>
+      <div
+        v-if="showDashBar || showAkimboBar"
+        class="cooldown-bars"
+        :style="cooldownBarsStyle"
+      >
+        <div v-if="showDashBar" class="cooldown-bar cooldown-bar-dash">
+          <div class="cooldown-bar-fill" :style="dashBarFillStyle"></div>
+        </div>
+        <div v-if="showAkimboBar" class="cooldown-bar cooldown-bar-akimbo">
+          <div class="cooldown-bar-fill" :style="akimboBarFillStyle"></div>
+        </div>
+      </div>
 
       <div v-if="showHitboxes" class="hitbox hitbox-player" :style="playerHitboxStyle"></div>
 
@@ -280,7 +295,8 @@ const dashForce = 1500
 let dashTimeLeft = 0
 const dashDirection = { x: 0, y: 0 }
 const dashCooldown = 2
-let dashRechargeTimer = 0
+const dashRechargeTimer = ref(0)
+const akimboTimeLeft = ref(0)
 
 const upgradeMenu = reactive<{ visible: boolean; buildingId: number | null }>({
   visible: false,
@@ -313,17 +329,34 @@ const MEMORIA_FRAMES = 4
 const MEMORIA_FRAME_INTERVAL = 8 / 60
 const GUSANO_FRAMES = 4
 const GUSANO_FRAME_INTERVAL = 8 / 60
+const AKIMBO_DURATION = 15
+const AKIMBO_BARREL_OFFSET = 12
 
 const sceneStyle = computed(
   () =>
     ({
-      backgroundImage: `url(${escenarioImg})`,
-      backgroundSize: '2500px 2500px',
-      backgroundPosition: `${-camera.x}px ${-camera.y}px`,
-      backgroundRepeat: 'repeat',
+      // Outside the world bounds you'll see this "void" color
+      backgroundColor: '#05060b',
       width: '100%',
       height: '100vh',
       imageRendering: 'pixelated',
+    }) as CSSProperties,
+)
+
+const worldStyle = computed(
+  () =>
+    ({
+      width: `${worldSize.width}px`,
+      height: `${worldSize.height}px`,
+      backgroundImage: `url(${escenarioImg})`,
+      backgroundSize: '2500px 2500px',
+      backgroundRepeat: 'repeat',
+      imageRendering: 'pixelated',
+      boxSizing: 'border-box',
+      // Move the world opposite the camera so the player appears centered.
+      transform: `translate3d(${-Math.round(camera.x)}px, ${-Math.round(camera.y)}px, 0px)`,
+      // Optional: visible border to clearly mark the world edge
+      border: '2px solid rgba(120, 200, 255, 0.18)',
     }) as CSSProperties,
 )
 
@@ -345,6 +378,41 @@ const playerCenterScreen = computed(() => ({
   x: player.x - camera.x + playerSize.value / 2,
   y: player.y - camera.y + playerSize.value / 2,
 }))
+
+const showDashBar = computed(() => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes)
+const dashCooldownProgress = computed(() => {
+  if (!showDashBar.value) return 1
+  return Math.min(1, Math.max(0, dashRechargeTimer.value / dashCooldown))
+})
+
+const showAkimboBar = computed(() => akimboTimeLeft.value > 0.0001)
+const akimboProgress = computed(() => {
+  if (!showAkimboBar.value) return 1
+  return Math.min(1, Math.max(0, 1 - akimboTimeLeft.value / AKIMBO_DURATION))
+})
+
+const cooldownBarsStyle = computed(
+  () =>
+    ({
+      transform: `translate3d(${Math.round(player.x - camera.x + player.size / 2)}px, ${Math.round(
+        player.y - camera.y + player.size + 10,
+      )}px, 0px) translateX(-50%)`,
+    }) as CSSProperties,
+)
+
+const dashBarFillStyle = computed(
+  () =>
+    ({
+      transform: `scaleX(${dashCooldownProgress.value})`,
+    }) as CSSProperties,
+)
+
+const akimboBarFillStyle = computed(
+  () =>
+    ({
+      transform: `scaleX(${akimboProgress.value})`,
+    }) as CSSProperties,
+)
 
 const aimDelta = computed(() => {
   const start = playerCenterScreen.value
@@ -482,6 +550,8 @@ function startDash() {
   dashDirection.y = dy / len
 
   gameStore.playerStats.currentdashes--
+  // start recharge bar immediately when consuming a dash
+  dashRechargeTimer.value = 0
   isDashing.value = true
   dashTimeLeft = dashDuration
 }
@@ -539,8 +609,11 @@ function circleRectOverlap(
   const nearestY = Math.max(rectObj.top, Math.min(circle.y, rectObj.bottom))
   const dx = circle.x - nearestX
   const dy = circle.y - nearestY
-  const dist = Math.hypot(dx, dy)
-  const overlapping = dist < circle.radius
+  // PERF: avoid sqrt (hypot) unless actually overlapping
+  const dist2 = dx * dx + dy * dy
+  const r2 = circle.radius * circle.radius
+  const overlapping = dist2 < r2
+  const dist = overlapping ? Math.sqrt(dist2) : 0
   return {
     overlapping,
     dist,
@@ -651,10 +724,13 @@ function bounceBulletOnObstacle(
 function circlesOverlap(a: CircleHitbox, b: CircleHitbox) {
   const dx = b.x - a.x
   const dy = b.y - a.y
-  const dist = Math.hypot(dx, dy)
   const minDist = a.radius + b.radius
+  // PERF: avoid sqrt unless overlapping
+  const dist2 = dx * dx + dy * dy
+  const overlapping = dist2 < minDist * minDist
+  const dist = overlapping ? Math.sqrt(dist2) : 0
   return {
-    overlapping: dist < minDist,
+    overlapping,
     dist,
     minDist,
     dx,
@@ -863,8 +939,8 @@ function buildingAreaStyle(b: Building) {
     width: `${r * 2}px`,
     height: `${r * 2}px`,
     transform: `translate(${Math.round(b.x - camera.x - r)}px, ${Math.round(b.y - camera.y - r)}px)`,
-    background: b.captured ? 'rgba(120,200,120,0.12)' : 'rgba(60,120,220,0.08)',
-    border: b.captured ? '2px solid rgba(80,200,120,0.25)' : '1px dashed rgba(120,140,200,0.12)',
+    background: b.captured ? 'rgba(74,48,81,1.0)' : 'rgba(60,120,220,0.08)',
+    border: b.captured ? '2px solid rgba(74,48,81,1.0)' : '1px dashed rgba(120,140,200,0.12)',
     borderRadius: '999px',
     zIndex: 1,
   } as CSSProperties
@@ -1199,6 +1275,7 @@ function shootFromPlayer() {
   const baseAngle = Math.atan2(dy, dx)
   const pelletCount = Math.max(1, weapon.pellets)
   const spreadRad = (weapon.spreadDeg * Math.PI) / 180
+  const akimboActive = akimboTimeLeft.value > 0.0001
 
   for (let i = 0; i < pelletCount; i += 1) {
     const spreadFactor = pelletCount === 1 ? 0 : i / (pelletCount - 1) - 0.5
@@ -1206,70 +1283,82 @@ function shootFromPlayer() {
     const vx = Math.cos(shotAngle) * weapon.projectileSpeed
     const vy = Math.sin(shotAngle) * weapon.projectileSpeed
 
-    if (weapon.orbiting) {
-      bullets.push({
-        id: nextBulletId++,
-        weaponId: selectedWeaponId.value,
-        x: startX,
-        y: startY,
-        vx,
-        vy,
-        angleDeg: undefined,
-        size: weapon.projectileSize,
-        ttl: weapon.projectileLifetime,
-        maxTtl: weapon.projectileLifetime,
-        damage: weapon.damage,
-        color: weapon.projectileColor,
-        type: 'orbiting',
-        orbitPhase: Math.random() * Math.PI * 2,
-        orbitRadius: ORBIT_RADIUS,
-        orbitTimeElapsed: 0,
-        orbitSpeed: ORBIT_ANGULAR_SPEED,
-        initialVx: vx,
-        initialVy: vy,
-        piercing: Boolean(weapon.piercing),
-        bouncesLeft: 2,
-      })
-    } else if (weapon.explosive) {
-      bullets.push({
-        id: nextBulletId++,
-        weaponId: selectedWeaponId.value,
-        x: startX,
-        y: startY,
-        vx,
-        vy,
-        angleDeg: undefined,
-        size: weapon.projectileSize,
-        ttl: weapon.projectileLifetime,
-        maxTtl: weapon.projectileLifetime,
-        damage: weapon.damage,
-        color: weapon.projectileColor,
-        type: 'explosive',
-        explosiveDeceleration: EXPLOSIVE_DECEL,
-        flashTimeElapsed: 0,
-        piercing: Boolean(weapon.piercing),
-        bouncesLeft: 2,
-      })
-    } else {
-      const baseAngleDeg = (shotAngle * 180) / Math.PI
-      bullets.push({
-        id: nextBulletId++,
-        weaponId: selectedWeaponId.value,
-        x: startX,
-        y: startY,
-        vx,
-        vy,
-        // cache angle to avoid atan2 per bullet per frame (perf)
-        angleDeg: baseAngleDeg + 90,
-        size: weapon.projectileSize,
-        ttl: weapon.projectileLifetime,
-        maxTtl: weapon.projectileLifetime,
-        damage: weapon.damage,
-        color: weapon.projectileColor,
-        type: 'normal',
-        piercing: Boolean(weapon.piercing),
-        bouncesLeft: 2,
-      })
+    // Akimbo: spawn 2 bullets with a small lateral offset so it's obvious.
+    const perpX = -Math.sin(shotAngle)
+    const perpY = Math.cos(shotAngle)
+    const barrelOffset = akimboActive ? AKIMBO_BARREL_OFFSET : 0
+    const barrelCount = akimboActive ? 2 : 1
+
+    for (let barrelIndex = 0; barrelIndex < barrelCount; barrelIndex += 1) {
+      const sign = barrelCount === 1 ? 0 : barrelIndex === 0 ? 1 : -1
+      const bulletStartX = startX + perpX * barrelOffset * sign
+      const bulletStartY = startY + perpY * barrelOffset * sign
+
+      if (weapon.orbiting) {
+        bullets.push({
+          id: nextBulletId++,
+          weaponId: selectedWeaponId.value,
+          x: bulletStartX,
+          y: bulletStartY,
+          vx,
+          vy,
+          angleDeg: undefined,
+          size: weapon.projectileSize,
+          ttl: weapon.projectileLifetime,
+          maxTtl: weapon.projectileLifetime,
+          damage: weapon.damage,
+          color: weapon.projectileColor,
+          type: 'orbiting',
+          orbitPhase: Math.random() * Math.PI * 2,
+          orbitRadius: ORBIT_RADIUS,
+          orbitTimeElapsed: 0,
+          orbitSpeed: ORBIT_ANGULAR_SPEED,
+          initialVx: vx,
+          initialVy: vy,
+          piercing: Boolean(weapon.piercing),
+          bouncesLeft: 2,
+        })
+      } else if (weapon.explosive) {
+        bullets.push({
+          id: nextBulletId++,
+          weaponId: selectedWeaponId.value,
+          x: bulletStartX,
+          y: bulletStartY,
+          vx,
+          vy,
+          angleDeg: undefined,
+          size: weapon.projectileSize,
+          ttl: weapon.projectileLifetime,
+          maxTtl: weapon.projectileLifetime,
+          damage: weapon.damage,
+          color: weapon.projectileColor,
+          type: 'explosive',
+          explosiveDeceleration: EXPLOSIVE_DECEL,
+          flashTimeElapsed: 0,
+          piercing: Boolean(weapon.piercing),
+          bouncesLeft: 2,
+        })
+      } else {
+        const baseAngleDeg = (shotAngle * 180) / Math.PI
+        bullets.push({
+          id: nextBulletId++,
+          weaponId: selectedWeaponId.value,
+          x: bulletStartX,
+          y: bulletStartY,
+          vx,
+          vy,
+          // cache angle to avoid atan2 per bullet per frame (perf)
+          angleDeg: baseAngleDeg + 90,
+          size: weapon.projectileSize,
+          ttl: weapon.projectileLifetime,
+          maxTtl: weapon.projectileLifetime,
+          damage: weapon.damage,
+          color: weapon.projectileColor,
+          type: 'normal',
+          piercing: Boolean(weapon.piercing),
+          bouncesLeft: 2,
+        })
+      }
     }
   }
 }
@@ -1523,6 +1612,7 @@ function selectUpgrade(type: 'dash' | 'akimbo' | 'health_up') {
   const b = buildings.find((b) => b.id === upgradeMenu.buildingId)
   if (b) b.captured = true
   gameStore.applyUpgrade(type)
+  if (type === 'akimbo') akimboTimeLeft.value = AKIMBO_DURATION
   upgradeMenu.visible = false
   upgradeMenu.buildingId = null
 }
@@ -1542,13 +1632,13 @@ function updateDash(dt: number) {
   }
   const stats = gameStore.playerStats
   if (stats.currentdashes < stats.maxdashes) {
-    dashRechargeTimer += dt
-    if (dashRechargeTimer >= dashCooldown) {
-      dashRechargeTimer = 0
+    dashRechargeTimer.value += dt
+    if (dashRechargeTimer.value >= dashCooldown) {
+      dashRechargeTimer.value = 0
       stats.currentdashes = Math.min(stats.currentdashes + 1, stats.maxdashes)
     }
   } else {
-    dashRechargeTimer = 0
+    dashRechargeTimer.value = 0
   }
 }
 
@@ -1563,6 +1653,7 @@ function loop(ts: number) {
   }
 
   gameStore.updateBuffs(dt)
+  if (akimboTimeLeft.value > 0) akimboTimeLeft.value = Math.max(0, akimboTimeLeft.value - dt)
   updateDash(dt)
 
   // Actualizar cooldown de daño
@@ -1668,6 +1759,14 @@ onUnmounted(() => {
   position: relative;
   display: block;
   user-select: none;
+}
+
+.world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .hud-actions {
@@ -1972,7 +2071,6 @@ onUnmounted(() => {
   top: 0;
   pointer-events: none;
   z-index: 4;
-  will-change: transform;
 }
 
 .enemy {
@@ -2080,6 +2178,42 @@ onUnmounted(() => {
   border-radius: 0;
   will-change: transform;
   z-index: 3;
+}
+
+.cooldown-bars {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cooldown-bar {
+  width: 54px;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+}
+
+.cooldown-bar-fill {
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  will-change: transform;
+}
+
+.cooldown-bar-dash .cooldown-bar-fill {
+  background: linear-gradient(90deg, rgba(120, 220, 255, 0.9), rgba(80, 140, 255, 0.9));
+}
+
+.cooldown-bar-akimbo .cooldown-bar-fill {
+  background: linear-gradient(90deg, rgba(255, 120, 245, 0.9), rgba(255, 80, 150, 0.9));
 }
 
 .obstacle {
