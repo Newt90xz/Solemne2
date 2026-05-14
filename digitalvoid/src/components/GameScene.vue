@@ -193,6 +193,7 @@ import troyanoBulletSpritesheet from '../assets/troyanobullet.png'
 import memoriaBulletSpritesheet from '../assets/memorybulletsprite.png'
 import martilloBulletTexture from '../assets/martillobullet.png'
 import gusanoBulletSpritesheet from '../assets/gusanosprite.png'
+import tankEnemySprite from '../assets/tank.png'
 
 interface Bullet {
   id: number
@@ -374,7 +375,7 @@ const worldStyle = computed(
       width: `${worldSize.width}px`,
       height: `${worldSize.height}px`,
       backgroundImage: `url(${escenarioImg})`,
-      backgroundSize: '2500px 2500px',
+      backgroundSize: '1500px 1500px',
       backgroundRepeat: 'repeat',
       imageRendering: 'pixelated',
       boxSizing: 'border-box',
@@ -508,9 +509,10 @@ const ENEMY_EXPERIENCE = {
   runner: 35,
   tank: 50,
 }
-const ENEMY_SPAWN_INTERVAL_MS = 900
-const MIN_ACTIVE_ENEMIES = 10
-const MAX_ACTIVE_ENEMIES = 28
+// Enemy pacing (tweakable)
+const ENEMY_SPAWN_INTERVAL_MS = 500
+const MIN_ACTIVE_ENEMIES = 12
+const MAX_ACTIVE_ENEMIES = 40
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank']
 
 function cycleWeapon(dir: 1 | -1) {
@@ -586,7 +588,8 @@ function startDash() {
 function spawnEnemy(opts?: Partial<Enemy>) {
   const offscreen = spawnOffscreenPosition()
   const typeRoll = randRange(0, 100)
-  const randomType: Enemy['type'] = typeRoll < 60 ? 'grunt' : typeRoll < 85 ? 'runner' : 'tank'
+  // Slightly higher tank chance so it's easier to notice/test the sprite.
+  const randomType: Enemy['type'] = typeRoll < 55 ? 'grunt' : typeRoll < 80 ? 'runner' : 'tank'
   const type = opts?.type ?? randomType
   const base: Enemy = {
     id: nextEnemyId++,
@@ -814,14 +817,30 @@ function spawnEnemyTick() {
     }
   }
 
-  if (enemies.length < MAX_ACTIVE_ENEMIES && Math.random() < 0.85) {
-    spawnEnemy()
-  }
+  if (enemies.length < MAX_ACTIVE_ENEMIES) spawnEnemy()
 }
 
 function enemyStyle(e: Enemy) {
   const screenX = Math.round(e.x - camera.x - e.size / 2)
   const screenY = Math.round(e.y - camera.y - e.size / 2)
+
+  if (e.type === 'tank') {
+    return {
+      width: `${e.size}px`,
+      height: `${e.size}px`,
+      transform: `translate(${screenX}px, ${screenY}px)`,
+      backgroundImage: `url(${tankEnemySprite})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundColor: 'transparent',
+      imageRendering: 'pixelated',
+      borderRadius: '0px',
+      zIndex: 7,
+      boxShadow: '0 0 12px rgba(0,0,0,0.35)',
+    } as CSSProperties
+  }
+
   return {
     width: `${e.size}px`,
     height: `${e.size}px`,
@@ -1752,6 +1771,8 @@ function loop(ts: number) {
 
 onMounted(() => {
   gameStore.resetPlayerStats()
+  // Safety: prevent starting in "game over" state (which stops enemy spawning).
+  if (gameStore.playerStats.health <= 0) gameStore.playerStats.health = 1
   try {
     storedHighScore.value = Number(localStorage.getItem(HIGH_SCORE_KEY) || '0')
   } catch {
