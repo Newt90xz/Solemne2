@@ -264,7 +264,9 @@ const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
-const player = reactive({ x: 2500, y: 2500, size: 48 })
+const player = reactive({ x: 2500, y: 2500 })
+
+const playerSize = computed(() => gameStore.playerStats.playerSize)
 const camera = reactive({ x: 0, y: 0 })
 const baseSpeed = 320
 
@@ -362,19 +364,19 @@ const playerStyle = computed(() => {
   const currentFrame = isMoving ? playerFrame.value : 0
 
   return {
-    width: `${player.size}px`,
-    height: `${player.size}px`,
+    width: `${playerSize.value}px`,
+    height: `${playerSize.value}px`,
     backgroundImage: `url(${spritesheetImg})`,
-    backgroundSize: `${player.size}px ${player.size * SPRITE_FRAMES}px`,
-    backgroundPosition: `0px ${-currentFrame * player.size}px`,
+    backgroundSize: `${playerSize.value}px ${playerSize.value * SPRITE_FRAMES}px`,
+    backgroundPosition: `0px ${-currentFrame * playerSize.value}px`,
     backgroundRepeat: 'no-repeat',
     transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
   } as CSSProperties
 })
 
 const playerCenterScreen = computed(() => ({
-  x: player.x - camera.x + player.size / 2,
-  y: player.y - camera.y + player.size / 2,
+  x: player.x - camera.x + playerSize.value / 2,
+  y: player.y - camera.y + playerSize.value / 2,
 }))
 
 const showDashBar = computed(() => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes)
@@ -440,8 +442,8 @@ const customCursorStyle = computed(
 const nearestBuilding = computed(() => {
   let nearest: Building | null = null
   let bestDist = Infinity
-  const px = player.x + player.size / 2
-  const py = player.y + player.size / 2
+  const px = player.x + playerSize.value / 2
+  const py = player.y + playerSize.value / 2
   for (const b of buildings) {
     const d = Math.hypot(b.x - px, b.y - py)
     if (d < bestDist) {
@@ -473,6 +475,11 @@ const ENEMY_DAMAGE = {
   grunt: 10,
   runner: 8,
   tank: 15,
+}
+const ENEMY_EXPERIENCE = {
+  grunt: 25,
+  runner: 35,
+  tank: 50,
 }
 const ENEMY_SPAWN_INTERVAL_MS = 900
 const MIN_ACTIVE_ENEMIES = 10
@@ -560,8 +567,8 @@ function spawnEnemy(opts?: Partial<Enemy>) {
     y: opts?.y ?? offscreen.y,
     size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : 40),
     speed: opts?.speed ?? (type === 'runner' ? 420 : type === 'tank' ? 90 : 160),
-    hp: opts?.hp ?? (type === 'tank' ? 8 : type === 'runner' ? 2 : 4),
-    maxHp: opts?.maxHp ?? (type === 'tank' ? 8 : type === 'runner' ? 2 : 4),
+    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : 12),
+    maxHp: opts?.maxHp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : 12),
     color: opts?.color ?? (type === 'tank' ? '#ff8c66' : type === 'runner' ? '#ffd36b' : '#ff6b9a'),
     type,
   }
@@ -571,9 +578,9 @@ function spawnEnemy(opts?: Partial<Enemy>) {
 
 function getPlayerHitbox(): CircleHitbox {
   return {
-    x: player.x + player.size / 2.5,
-    y: player.y + player.size / 2,
-    radius: player.size * PLAYER_HITBOX_SCALE,
+    x: player.x + playerSize.value / 2.5,
+    y: player.y + playerSize.value / 2,
+    radius: playerSize.value * PLAYER_HITBOX_SCALE,
   }
 }
 
@@ -806,8 +813,8 @@ function updateEnemies(dt: number) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i]
     if (!e) continue
-    const px = player.x + player.size / 2
-    const py = player.y + player.size / 2
+    const px = player.x + playerSize.value / 2
+    const py = player.y + playerSize.value / 2
     const dx = px - e.x
     const dy = py - e.y
     const dist = Math.hypot(dx, dy) || 1
@@ -870,6 +877,8 @@ function updateEnemies(dt: number) {
     // check death
     if (e.hp <= 0) {
       gameStore.incrementKills()
+      const experienceAmount = ENEMY_EXPERIENCE[e.type]
+      gameStore.addExperience(experienceAmount)
       enemies.splice(i, 1)
       continue
     }
@@ -1191,8 +1200,8 @@ function onWheel(e: WheelEvent) {
 }
 
 function clampPlayer() {
-  player.x = Math.max(0, Math.min(player.x, worldSize.width - player.size))
-  player.y = Math.max(0, Math.min(player.y, worldSize.height - player.size))
+  player.x = Math.max(0, Math.min(player.x, worldSize.width - playerSize.value))
+  player.y = Math.max(0, Math.min(player.y, worldSize.height - playerSize.value))
 }
 
 function resolvePlayerBuildingCollisions() {
@@ -1247,8 +1256,8 @@ function updateCamera() {
   if (!sceneRef.value) return
   const vw = sceneRef.value.clientWidth
   const vh = sceneRef.value.clientHeight
-  const targetX = player.x - vw / 2 + player.size / 2
-  const targetY = player.y - vh / 2 + player.size / 2
+  const targetX = player.x - vw / 2 + playerSize.value / 2
+  const targetY = player.y - vh / 2 + playerSize.value / 2
   camera.x += (targetX - camera.x) * 0.1
   camera.y += (targetY - camera.y) * 0.1
 }
@@ -1261,8 +1270,8 @@ function shootFromPlayer() {
   const aimLength = Math.hypot(dx, dy)
   if (aimLength < 1) return
 
-  const startX = player.x + player.size / 2
-  const startY = player.y + player.size / 2
+  const startX = player.x + playerSize.value / 2
+  const startY = player.y + playerSize.value / 2
   const baseAngle = Math.atan2(dy, dx)
   const pelletCount = Math.max(1, weapon.pellets)
   const spreadRad = (weapon.spreadDeg * Math.PI) / 180
@@ -1579,8 +1588,8 @@ function preventDefaultMenu(e: Event) {
 }
 
 function tryCapture() {
-  const px = player.x + player.size / 2
-  const py = player.y + player.size / 2
+  const px = player.x + playerSize.value / 2
+  const py = player.y + playerSize.value / 2
   let nearest: Building | null = null
   let bestDist = Infinity
   for (const b of buildings) {

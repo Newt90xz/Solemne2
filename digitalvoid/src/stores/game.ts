@@ -27,6 +27,7 @@ export interface PlayerStats {
   maxdashes: number
   isAkimbo: boolean       
   akimboTimer: number
+  playerSize: number
 }
 
 export interface ActiveBuff {
@@ -58,6 +59,7 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
   maxdashes: 1,
   isAkimbo: false,
   akimboTimer: 0,
+  playerSize: 48,
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -93,6 +95,7 @@ export const useGameStore = defineStore('game', () => {
     playerStats.level += 1
     playerStats.maxHealth += 10
     playerStats.health = playerStats.maxHealth
+    playerStats.playerSize += 3
     playerStats.experienceToLevel = Math.floor(playerStats.experienceToLevel * 1.15)
   }
 

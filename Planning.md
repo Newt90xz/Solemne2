@@ -45,6 +45,7 @@
     - [x] Off-screen spawn.
     - [x] Randomizing.
   - [x] Tracking Player.
+  - [x] Enemy health and damage.
   - [] Enemie Design.
     - [] Neutral.
     - [ ] Shooters
