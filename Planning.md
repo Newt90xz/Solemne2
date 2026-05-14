@@ -1,119 +1,99 @@
 # Work Planning
+
 ## Semana 1, 27 de abril - 1 de mayo:
 
-- [X] Videogame genre definition
-- [X] Define technologies to use.
-- [X] Develop mockup.
+- [x] Videogame genre definition
+- [x] Define technologies to use.
+- [x] Develop mockup.
 
 ## Semana 2, 4 de mayo - 8 de mayo:
 
-- [X] Base Game Development
-    - [X] File Structure
-    - [X] Pause/Exit
-    - [X] Map
-        - [X] Loop
-    - [X] Building Implementation
-        - [X] Capture Buildings
-        - [X] Buffs
-- [X] Desarrollo de paginas principales del juego.
-    - [X] Main Menu
-    - [X] Options
-    - [X] UI
-    - [X] Manual
-- [X] Player Development 
-    - [X] Moovement
-    - [X] Cursor Fire
-    - [X] Exp System Structure
-    - [X] Animations
-- [X] Definir propiedades de las armas y objetos. 
-    - [X] Weapon Design
-    - [X] Weapon Properties
-- [X] Principal
-        - [X] Piercing
-        - [X] Shotgun
-        - [X] Orbital
-        - [X] Explosives
-- [X] Player Hud
-    - [X] Player State
-        - [X] Life
-        - [X] Exp/Level
-    - [X] Weapon Icons
-            - [X] Main
-            - [X] Piercing
-            - [X] Shotgun
-            - [X] Orbital
-            - [X] Explosives
--   [X] Movement and control tests.
+- [x] Base Game Development
+  - [x] File Structure
+  - [x] Pause/Exit
+  - [x] Map
+    - [x] Loop
+  - [x] Building Implementation
+    - [x] Capture Buildings
+    - [x] Buffs
+- [x] Desarrollo de paginas principales del juego.
+  - [x] Main Menu
+  - [x] Options
+  - [x] UI
+  - [x] Manual
+- [x] Player Development
+  - [x] Moovement
+  - [x] Cursor Fire
+  - [x] Exp System Structure
+  - [x] Animations
+- [x] Definir propiedades de las armas y objetos.
+  - [x] Weapon Design
+  - [x] Weapon Properties
+- [x] Principal - [X] Piercing - [X] Shotgun - [X] Orbital - [X] Explosives
+- [x] Player Hud
+  - [x] Player State
+    - [x] Life
+    - [x] Exp/Level
+  - [x] Weapon Icons - [X] Main - [X] Piercing - [X] Shotgun - [X] Orbital - [X] Explosives
+- [x] Movement and control tests.
 
 ## Semana 3, 11 de mayo - 15 de mayo:
 
-- [X] Enemy Development/System.
-    - [X] Spawn
-        - [X] Spawning fuction.
-        - [X] Off-screen spawn.
-        - [X] Randomizing.
-    - [X] Tracking Player.
-    - [] Enemie Design.
-        - [] Neutral.
-        - [ ] Shooters
-        - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
-        - [ ] Big Tank
+- [x] Enemy Development/System.
+  - [x] Spawn
+    - [x] Spawning fuction.
+    - [x] Off-screen spawn.
+    - [x] Randomizing.
+  - [x] Tracking Player.
+  - [] Enemie Design.
+    - [] Neutral.
+    - [ ] Shooters
+    - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
+    - [ ] Big Tank
 
-- [ ] Combat System.
-    - [X] Hitboxes.
-        - [X] Player hitbox.
-        - [X] Enemy hitbox.
-        - [ ] Boss hitbox.
-    - [X] Collitions.
-        - [X] Bullet collition.
-        - [X] Obstacles.
-            - [X] Random obstacle generation
-            - [x] Physical wall
-            - [ ] Destroyed buildings 
+- [x] Combat System.
+  - [x] Hitboxes.
+    - [x] Player hitbox.
+    - [x] Enemy hitbox.
+  - [x] Collitions.
+    - [x] Bullet collition.
+    - [x] Obstacles.
+      - [x] Random obstacle generation
+      - [x] Physical wall
+      - [x] Destroyed buildings
 
 - Upgrade zones (aka Buildings).
-    - [ ] Upgrades
-        - [ ] Akimbo
-        - [ ] Dash
-        - [ ] Health up
-    - [ ] Icon
-        - [ ] Akimbo
-        - [ ] Dash
-        - [ ] Health up
+  - [x] Upgrades
+    - [x] Akimbo
+    - [x] Dash
+    - [x] Health up
+  - [ ] Icon
+    - [ ] Akimbo
+    - [ ] Dash
+    - [ ] Health up
 
 - [ ] Tweaks
-    - [ ] Weapon balance adjustments
-    - [ ] Score and Score Board (Score = Damage delt throughout)
-    - [ ] Building Randomizer
-    - [ ] defined color palettes
+  - [ ] Weapon balance adjustments
+  - [ ] Score and Score Board (Score = Damage delt throughout)
+  - [x] Building Randomizer
+  - [x] defined color palettes
 
 - [] Movement and function tests
-    - [ ] BugDash
-    - [ ] Building capture buff
-
-
+  - [ ] BugDash
+  - [ ] Building capture buff
 
 ## Semana 4, 25 de mayo - 28 de mayo:
 
 - [ ] Music and Sound Effects
-    - [ ] Main music
-    - PLayer sounds
-    - [ ] Weapon sounds
-        - [] Hitmarker sounds
-        - [] Explotions
+  - [ ] Main music
+  - PLayer sounds
+  - [ ] Weapon sounds
+    - [] Hitmarker sounds
+    - [] Explotions
 - [ ] Bosses
-        - [ ] Spawn Condition (Very important)
-        - [ ] Cloud Storage
-            - [ ] Lighting Shotgun Attack
-            - [ ] Dissapear then reappears elsewhere
-            - [ ] Difficult to hit
-        - [ ] Wifi
-            - [ ] Tornado attacks
-            - [ ] Expansive Bullets
-        - [ ] Firewall
-            - [ ] Inmortal (Must run/survive)
-            - [ ] Touches you, you die.
-            - [ ] Creates obstacules in front of player
-            - [ ] Bullets orbit around him
+  - [ ] Spawn Condition (Very important)
+  - [ ] Boss hitbox
+
+- [ ] Cloud Storage - [ ] Lighting Shotgun Attack - [ ] Dissapear then reappears elsewhere - [ ] Difficult to hit - [ ] Wifi - [ ] Tornado attacks - [ ] Expansive Bullets - [ ] Firewall - [ ] Inmortal (Must run/survive) - [ ] Touches you, you die. - [ ] Creates obstacules in front of player - [ ] Bullets orbit around him
 
 - [] Error corrections and Quality of life changes.
