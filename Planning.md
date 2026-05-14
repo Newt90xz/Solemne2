@@ -47,7 +47,7 @@
   - [x] Tracking Player.
   - [x] Enemy health and damage.
   - [] Enemie Design.
-    - [] Neutral.
+    - [ ] Neutral.
     - [ ] Shooters
     - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
     - [ ] Big Tank
@@ -63,7 +63,7 @@
       - [x] Physical wall
       - [x] Destroyed buildings
 
-- Upgrade zones (aka Buildings).
+- [x] Upgrade zones (aka Buildings).
   - [x] Upgrades
     - [x] Akimbo
     - [x] Dash
@@ -75,14 +75,14 @@
 
 - [ ] Tweaks
   - [ ] Weapon balance adjustments
-  - [ ] Score and Score Board (Score = Damage delt throughout)
+  - [x] Score and Score Board (Score = Damage delt throughout)
   - [x] Building Randomizer
   - [x] defined color palettes
   - [x] Add game over screen
 
-- [] Movement and function tests
-  - [ ] BugDash
-  - [ ] Building capture buff
+- [x] Movement and function tests
+  - [x] BugDash
+  - [x] Building capture buff
 
 ## Semana 4, 25 de mayo - 28 de mayo:
 

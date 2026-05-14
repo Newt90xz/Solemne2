@@ -89,6 +89,13 @@
         </button>
       </div>
 
+      <div class="top-score">
+        <div class="score-card">
+          <div class="score-label">SCORE</div>
+          <div class="score-value">{{ currentScore }}</div>
+        </div>
+      </div>
+
       <div v-if="isPaused" class="pause-overlay">
         <div class="pause-card">
           <p class="pause-title">Juego en pausa</p>
@@ -160,6 +167,7 @@
       ></div>
 
       <div class="player" :style="playerStyle"></div>
+      <div v-if="isStunned" class="stun-ring" :style="stunStyle"></div>
       <div v-if="showDashBar || showAkimboBar" class="cooldown-bars" :style="cooldownBarsStyle">
         <div v-if="showDashBar" class="cooldown-bar cooldown-bar-dash">
           <div class="cooldown-bar-fill" :style="dashBarFillStyle"></div>
@@ -197,7 +205,7 @@ import tankEnemySprite from '../assets/tank.png'
 
 interface Bullet {
   id: number
-  weaponId: WeaponId
+  weaponId: WeaponId | string
   x: number
   y: number
   vx: number
@@ -220,6 +228,9 @@ interface Bullet {
   animTimeElapsed?: number
   piercing?: boolean
   bouncesLeft?: number
+  owner?: 'player' | 'enemy'
+  stun?: boolean
+  stunDuration?: number
 }
 
 interface Explosion {
@@ -260,7 +271,10 @@ interface Enemy {
   hp: number
   maxHp: number
   color: string
-  type: 'grunt' | 'runner' | 'tank'
+  type: 'grunt' | 'runner' | 'tank' | 'shooter'
+  // optional runtime fields for special enemies
+  shootTimer?: number
+  shootCooldown?: number
 }
 
 interface CircleHitbox {
@@ -302,6 +316,21 @@ const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
 const showHitboxes = ref(false)
 
+const isStunned = ref(false)
+const stunTimeLeft = ref(0)
+const DEFAULT_STUN_DURATION = 1.2
+
+const stunStyle = computed(() => {
+  const r = Math.round(playerSize.value * 1.6)
+  const x = Math.round(player.x - camera.x - r + playerSize.value / 2)
+  const y = Math.round(player.y - camera.y - r + playerSize.value / 2)
+  return {
+    width: `${r * 2}px`,
+    height: `${r * 2}px`,
+    transform: `translate(${x}px, ${y}px)`,
+  } as CSSProperties
+})
+
 const isDashing = ref(false)
 const dashDuration = 0.15
 const dashForce = 1500
@@ -338,6 +367,7 @@ const finalKills = computed(() => gameStore.playerStats.kills)
 const storedHighScore = ref(0)
 const displayedBestScore = computed(() => Math.max(storedHighScore.value, finalScore.value))
 const isNewRecord = computed(() => finalScore.value > storedHighScore.value)
+const currentScore = computed(() => gameStore.playerStats.score)
 
 const ORBIT_APPROACH_TIME = 1.0
 const ORBIT_HOLD_TIME = 5.0
@@ -503,17 +533,18 @@ const ENEMY_DAMAGE = {
   grunt: 10,
   runner: 8,
   tank: 15,
+  shooter: 12,
 }
 const ENEMY_EXPERIENCE = {
   grunt: 25,
   runner: 35,
   tank: 50,
+  shooter: 40,
 }
-// Enemy pacing (tweakable)
-const ENEMY_SPAWN_INTERVAL_MS = 500
-const MIN_ACTIVE_ENEMIES = 12
-const MAX_ACTIVE_ENEMIES = 40
-const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank']
+const ENEMY_SPAWN_INTERVAL_MS = 900
+const MIN_ACTIVE_ENEMIES = 10
+const MAX_ACTIVE_ENEMIES = 28
+const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
 
 function cycleWeapon(dir: 1 | -1) {
   const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
@@ -563,7 +594,7 @@ function spawnOffscreenPosition(minDistFromPlayer = 600) {
 }
 
 function startDash() {
-  if (gameStore.playerStats.currentdashes <= 0 || isDashing.value) return
+  if (gameStore.playerStats.currentdashes <= 0 || isDashing.value || isStunned.value) return
 
   let dx = (keys.left ? -1 : 0) + (keys.right ? 1 : 0)
   let dy = (keys.up ? -1 : 0) + (keys.down ? 1 : 0)
@@ -588,6 +619,8 @@ function startDash() {
 function spawnEnemy(opts?: Partial<Enemy>) {
   const offscreen = spawnOffscreenPosition()
   const typeRoll = randRange(0, 100)
+  const randomType: Enemy['type'] =
+    typeRoll < 55 ? 'grunt' : typeRoll < 80 ? 'runner' : typeRoll < 95 ? 'tank' : 'shooter'
   // Slightly higher tank chance so it's easier to notice/test the sprite.
   const randomType: Enemy['type'] = typeRoll < 55 ? 'grunt' : typeRoll < 80 ? 'runner' : 'tank'
   const type = opts?.type ?? randomType
@@ -595,12 +628,28 @@ function spawnEnemy(opts?: Partial<Enemy>) {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
     y: opts?.y ?? offscreen.y,
-    size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : 40),
-    speed: opts?.speed ?? (type === 'runner' ? 420 : type === 'tank' ? 90 : 160),
-    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : 12),
-    maxHp: opts?.maxHp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : 12),
-    color: opts?.color ?? (type === 'tank' ? '#ff8c66' : type === 'runner' ? '#ffd36b' : '#ff6b9a'),
+    size:
+      opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : type === 'shooter' ? 48 : 40),
+    speed:
+      opts?.speed ??
+      (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 0 : 160),
+    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
+    maxHp:
+      opts?.maxHp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
+    color:
+      opts?.color ??
+      (type === 'tank'
+        ? '#ff8c66'
+        : type === 'runner'
+          ? '#ffd36b'
+          : type === 'shooter'
+            ? '#6bff8a'
+            : '#ff6b9a'),
     type,
+  }
+  if (type === 'shooter') {
+    base.shootCooldown = opts?.shootCooldown ?? 2.0
+    base.shootTimer = Math.random() * (base.shootCooldown ?? 2.0)
   }
   enemies.push(base)
   return base
@@ -639,7 +688,7 @@ function circleRectOverlap(
   const nearestY = Math.max(rectObj.top, Math.min(circle.y, rectObj.bottom))
   const dx = circle.x - nearestX
   const dy = circle.y - nearestY
-  // PERF: avoid sqrt (hypot) unless actually overlapping
+  // PERF: avoid sqrt unless overlapping
   const dist2 = dx * dx + dy * dy
   const r2 = circle.radius * circle.radius
   const overlapping = dist2 < r2
@@ -867,9 +916,43 @@ function updateEnemies(dt: number) {
     const nx = dx / dist
     const ny = dy / dist
 
-    const moveSpeed = e.speed
-    e.x += nx * moveSpeed * dt
-    e.y += ny * moveSpeed * dt
+    // Shooter-specific behavior: stationary, fires at player when in range
+    if (e.type === 'shooter') {
+      e.shootTimer = (e.shootTimer ?? 0) - dt
+      const SHOOTER_RANGE = 720
+      if (dist <= SHOOTER_RANGE) {
+        if ((e.shootTimer ?? 0) <= 0) {
+          const angle = Math.atan2(dy, dx)
+          const shotSpeed = 420
+          bullets.push({
+            id: nextBulletId++,
+            weaponId: 'shooter',
+            x: e.x,
+            y: e.y,
+            vx: Math.cos(angle) * shotSpeed,
+            vy: Math.sin(angle) * shotSpeed,
+            angleDeg: (angle * 180) / Math.PI + 90,
+            size: 8,
+            ttl: 6,
+            maxTtl: 6,
+            damage: 0,
+            color: '#88ffb0',
+            type: 'normal',
+            piercing: false,
+            bouncesLeft: 0,
+            owner: 'enemy',
+            stun: true,
+            stunDuration: 1.2,
+          })
+          e.shootTimer = e.shootCooldown ?? 2.0
+        }
+      }
+      // shooters don't move
+    } else {
+      const moveSpeed = e.speed
+      e.x += nx * moveSpeed * dt
+      e.y += ny * moveSpeed * dt
+    }
 
     // Resolve overlap with buildings
     const enemyHit = getEnemyHitbox(e)
@@ -1177,12 +1260,12 @@ function explosionStyle(exp: Explosion) {
 }
 
 function onKeyDown(e: KeyboardEvent) {
-  if (isGameOver.value) return
-
   if (e.key === 'Escape') {
     togglePause()
     return
   }
+
+  if (isGameOver.value || isStunned.value) return
 
   if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true
   if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true
@@ -1209,7 +1292,7 @@ function onKeyUp(e: KeyboardEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
-  if (isPaused.value || isGameOver.value) return
+  if (isPaused.value || isGameOver.value || isStunned.value) return
   if (!sceneRef.value) return
   const rect = sceneRef.value.getBoundingClientRect()
   mouseScreen.x = e.clientX - rect.left
@@ -1220,7 +1303,7 @@ function onMouseMove(e: MouseEvent) {
 }
 
 function onMouseDown(e: MouseEvent) {
-  if (isPaused.value || isGameOver.value) return
+  if (isPaused.value || isGameOver.value || isStunned.value) return
   onMouseMove(e)
 
   if (e.button === 0) {
@@ -1242,7 +1325,7 @@ function onMouseLeave() {
 }
 
 function onWheel(e: WheelEvent) {
-  if (isPaused.value || isGameOver.value) return
+  if (isPaused.value || isGameOver.value || isStunned.value) return
   e.preventDefault()
   cycleWeapon(e.deltaY > 0 ? 1 : -1)
 }
@@ -1556,6 +1639,22 @@ function updateBullets(dt: number) {
       bullet.y > worldSize.height + margin
 
     const bulletHitbox = getBulletHitbox(bullet)
+    // bullets can hit the player (enemy-fired)
+    if (bullet.owner === 'enemy') {
+      const ph = getPlayerHitbox()
+      const pOverlap = circlesOverlap(bulletHitbox, ph)
+      if (pOverlap.overlapping) {
+        if (bullet.damage && bullet.damage > 0) {
+          gameStore.takeDamage(bullet.damage)
+        }
+        if (bullet.stun) {
+          isStunned.value = true
+          stunTimeLeft.value = bullet.stunDuration ?? DEFAULT_STUN_DURATION
+        }
+        bullets.splice(i, 1)
+        continue
+      }
+    }
     let hitEnemy = false
     for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex -= 1) {
       const enemy = enemies[enemyIndex]
@@ -1639,7 +1738,8 @@ function updateExplosions(dt: number) {
 }
 
 function updateAutoShoot(dt: number) {
-  if (!mouse.down || !mouseScreen.active || isPaused.value || isGameOver.value) return
+  if (!mouse.down || !mouseScreen.active || isPaused.value || isGameOver.value || isStunned.value)
+    return
   const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
   const shotInterval = 1 / shotsPerSecond
   shootAccumulator += dt
@@ -1654,7 +1754,7 @@ function preventDefaultMenu(e: Event) {
 }
 
 function tryCapture() {
-  if (isGameOver.value) return
+  if (isGameOver.value || isStunned.value) return
 
   const px = player.x + playerSize.value / 2
   const py = player.y + playerSize.value / 2
@@ -1724,6 +1824,14 @@ function loop(ts: number) {
   if (akimboTimeLeft.value > 0) akimboTimeLeft.value = Math.max(0, akimboTimeLeft.value - dt)
   updateDash(dt)
 
+  // Update stun timer
+  if (isStunned.value) {
+    stunTimeLeft.value = Math.max(0, stunTimeLeft.value - dt)
+    if (stunTimeLeft.value <= 0) {
+      isStunned.value = false
+    }
+  }
+
   // Actualizar cooldown de daño
   if (lastDamageTime > 0) {
     lastDamageTime -= dt
@@ -1736,6 +1844,13 @@ function loop(ts: number) {
   if (keys.down) vy += 1
   if (keys.left) vx -= 1
   if (keys.right) vx += 1
+
+  if (isStunned.value) {
+    vx = 0
+    vy = 0
+    mouse.down = false
+    shootAccumulator = 0
+  }
 
   const moving = vx !== 0 || vy !== 0
   isMoving = moving
@@ -2492,5 +2607,63 @@ onUnmounted(() => {
 .upgrade-desc {
   font-size: 0.74rem;
   color: rgba(210, 190, 255, 0.7);
+}
+
+.top-score {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  pointer-events: none;
+}
+.score-card {
+  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+  backdrop-filter: blur(4px);
+}
+.score-label {
+  font-size: 0.7rem;
+  color: rgba(200, 200, 200, 0.9);
+  letter-spacing: 1px;
+}
+.score-value {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.stun-ring {
+  position: absolute;
+  z-index: 50;
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 3px rgba(120, 255, 120, 0.12),
+    0 0 24px rgba(120, 255, 120, 0.18);
+  border: 1px solid rgba(120, 255, 120, 0.28);
+  animation: stunPulse 0.9s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+@keyframes stunPulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
 }
 </style>
