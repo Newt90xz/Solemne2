@@ -74,8 +74,8 @@
 - Upgrade zones (aka Buildings).
     - [ ] Upgrades
         - [ ] Akimbo
-        - [ ] Dash
-        - [ ] Health up
+        - [X] Dash
+        - [x] Health up
     - [ ] Icon
         - [ ] Akimbo
         - [ ] Dash
@@ -85,11 +85,11 @@
     - [ ] Weapon balance adjustments
     - [ ] Score and Score Board (Score = Damage delt throughout)
     - [ ] Building Randomizer
-    - [ ] defined color palettes
+    - [X] defined color palettes
 
-- [] Movement and function tests
-    - [ ] BugDash
-    - [ ] Building capture buff
+- [x] Movement and function tests
+    - [x] BugDash
+    - [x] Building capture buff
 
 
 
