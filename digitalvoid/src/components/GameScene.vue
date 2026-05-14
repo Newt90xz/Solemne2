@@ -18,21 +18,21 @@
         <template v-if="upgradeMenu.visible">
           <button class="neon-card upgrade-card" @click="selectUpgrade('dash')">
             <div class="panel-heading">
-              <span class="panel-mark">💨</span>
+              <img :src="upgradeIcons.dash" alt="dash" class="panel-mark-icon" />
               <p class="panel-title">DASH EXTRA</p>
             </div>
             <p class="objective-copy">+1 carga de dash permanente</p>
           </button>
           <button class="neon-card upgrade-card" @click="selectUpgrade('akimbo')">
             <div class="panel-heading">
-              <span class="panel-mark">🔫</span>
+              <img :src="upgradeIcons.akimbo" alt="akimbo" class="panel-mark-icon" />
               <p class="panel-title">AKIMBO</p>
             </div>
             <p class="objective-copy">Doble cadencia por 15 segundos</p>
           </button>
           <button class="neon-card upgrade-card" @click="selectUpgrade('health_up')">
             <div class="panel-heading">
-              <span class="panel-mark">❤️</span>
+              <img :src="upgradeIcons.health_up" alt="health" class="panel-mark-icon" />
               <p class="panel-title">VIDA MÁXIMA</p>
             </div>
             <p class="objective-copy">+30 de salud máxima permanente</p>
@@ -185,6 +185,9 @@ import PlayerHub from './PlayerHub.vue'
 import spritesheetImg from '../assets/buggy.png'
 import cursorImg from '../assets/cursorfire.png'
 import buildingSpritesheet from '../assets/buildings.png'
+import upgradeDashIcon from '../assets/upgrade_dash.png'
+import upgradeHealthIcon from '../assets/upgrade_health.png'
+import upgradeAkimboIcon from '../assets/upgrade_akimbo.png'
 import bulletTexture from '../assets/Orbital.png'
 import troyanoBulletSpritesheet from '../assets/troyanobullet.png'
 import memoriaBulletSpritesheet from '../assets/memorybulletsprite.png'
@@ -311,6 +314,12 @@ const upgradeMenu = reactive<{ visible: boolean; buildingId: number | null }>({
   visible: false,
   buildingId: null,
 })
+
+const upgradeIcons = {
+  dash: upgradeDashIcon,
+  akimbo: upgradeAkimboIcon,
+  health_up: upgradeHealthIcon,
+}
 
 const SPRITE_FRAMES = 4
 const SPRITE_FPS = 8
@@ -2068,6 +2077,14 @@ onUnmounted(() => {
   text-shadow: 0 0 12px rgba(255, 121, 255, 0.72);
 }
 
+.panel-mark-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  margin-right: 6px;
+  image-rendering: pixelated;
+}
+
 .panel-title {
   margin: 0;
   color: #f0d9ff;
@@ -2437,6 +2454,12 @@ onUnmounted(() => {
   font-size: 1.5rem;
   display: grid;
   place-items: center;
+}
+
+.upgrade-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .upgrade-label {

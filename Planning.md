@@ -68,16 +68,17 @@
     - [x] Akimbo
     - [x] Dash
     - [x] Health up
-  - [ ] Icon
-    - [ ] Akimbo
-    - [ ] Dash
-    - [ ] Health up
+  - [x] Icon
+    - [x] Akimbo
+    - [x] Dash
+    - [x] Health up
 
 - [ ] Tweaks
   - [ ] Weapon balance adjustments
   - [ ] Score and Score Board (Score = Damage delt throughout)
   - [x] Building Randomizer
   - [x] defined color palettes
+  - [x] Add game over screen
 
 - [] Movement and function tests
   - [ ] BugDash
