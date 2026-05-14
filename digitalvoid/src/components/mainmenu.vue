@@ -24,6 +24,8 @@ const handleSettings = () => {
 
 const gameStore = useGameStore()
 const displayUserName = computed(() => gameStore.settings.playerName.trim() || 'VIRUS_23A')
+const HIGH_SCORE_KEY = 'digitalvoidHighScore'
+const bestScore = ref(0)
 
 // Matrix background
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -71,6 +73,11 @@ function draw() {
 
 onMounted(() => {
   gameStore.loadFromLocal()
+  try {
+    bestScore.value = Number(localStorage.getItem(HIGH_SCORE_KEY) || '0')
+  } catch {
+    bestScore.value = 0
+  }
 
   const canvas = canvasRef.value
   if (!canvas) return
@@ -108,6 +115,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="hud-box hud-right">
         <p>USUARIO: {{ displayUserName }}</p>
+        <p>HIGH SCORE: {{ bestScore }}</p>
         <div class="xp-line">
           <span>NIVEL 1</span>
           <span>0 / 100 XP</span>

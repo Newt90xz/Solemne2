@@ -96,6 +96,19 @@
         </div>
       </div>
 
+      <div v-if="isGameOver" class="lose-overlay">
+        <div class="lose-card">
+          <p class="lose-title">GAME LOSE</p>
+          <p class="lose-score">Score final: {{ finalScore }}</p>
+          <p class="lose-kills">Bajas: {{ finalKills }}</p>
+          <p class="lose-best">Mejor score: {{ displayedBestScore }}</p>
+          <p v-if="isNewRecord" class="lose-record">NUEVO RECORD</p>
+          <button class="lose-button" type="button" @click="exitGame">
+            Regresar al menu principal
+          </button>
+        </div>
+      </div>
+
       <div v-if="nearestBuilding && hintVisible" class="capture-hint">
         <div class="hint-icon">🏢</div>
         <div>Presiona <strong>F</strong> para capturar</div>
@@ -147,11 +160,7 @@
       ></div>
 
       <div class="player" :style="playerStyle"></div>
-      <div
-        v-if="showDashBar || showAkimboBar"
-        class="cooldown-bars"
-        :style="cooldownBarsStyle"
-      >
+      <div v-if="showDashBar || showAkimboBar" class="cooldown-bars" :style="cooldownBarsStyle">
         <div v-if="showDashBar" class="cooldown-bar cooldown-bar-dash">
           <div class="cooldown-bar-fill" :style="dashBarFillStyle"></div>
         </div>
@@ -313,6 +322,12 @@ const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
 const showObjective = ref(false)
+const isGameOver = computed(() => gameStore.playerStats.health <= 0)
+const finalScore = computed(() => gameStore.playerStats.score)
+const finalKills = computed(() => gameStore.playerStats.kills)
+const storedHighScore = ref(0)
+const displayedBestScore = computed(() => Math.max(storedHighScore.value, finalScore.value))
+const isNewRecord = computed(() => finalScore.value > storedHighScore.value)
 
 const ORBIT_APPROACH_TIME = 1.0
 const ORBIT_HOLD_TIME = 5.0
@@ -331,6 +346,7 @@ const GUSANO_FRAMES = 4
 const GUSANO_FRAME_INTERVAL = 8 / 60
 const AKIMBO_DURATION = 15
 const AKIMBO_BARREL_OFFSET = 12
+const HIGH_SCORE_KEY = 'digitalvoidHighScore'
 
 const sceneStyle = computed(
   () =>
@@ -379,7 +395,9 @@ const playerCenterScreen = computed(() => ({
   y: player.y - camera.y + playerSize.value / 2,
 }))
 
-const showDashBar = computed(() => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes)
+const showDashBar = computed(
+  () => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes,
+)
 const dashCooldownProgress = computed(() => {
   if (!showDashBar.value) return 1
   return Math.min(1, Math.max(0, dashRechargeTimer.value / dashCooldown))
@@ -394,8 +412,8 @@ const akimboProgress = computed(() => {
 const cooldownBarsStyle = computed(
   () =>
     ({
-      transform: `translate3d(${Math.round(player.x - camera.x + player.size / 2)}px, ${Math.round(
-        player.y - camera.y + player.size + 10,
+      transform: `translate3d(${Math.round(player.x - camera.x + playerSize.value / 2)}px, ${Math.round(
+        player.y - camera.y + playerSize.value + 10,
       )}px, 0px) translateX(-50%)`,
     }) as CSSProperties,
 )
@@ -761,7 +779,7 @@ function spawnEnemies(count = 1) {
 }
 
 function spawnEnemyTick() {
-  if (isPaused.value) return
+  if (isPaused.value || isGameOver.value) return
 
   const missingTypes = ENEMY_TYPES.filter((type) => !enemies.some((enemy) => enemy.type === type))
 
@@ -1131,6 +1149,8 @@ function explosionStyle(exp: Explosion) {
 }
 
 function onKeyDown(e: KeyboardEvent) {
+  if (isGameOver.value) return
+
   if (e.key === 'Escape') {
     togglePause()
     return
@@ -1161,7 +1181,7 @@ function onKeyUp(e: KeyboardEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
-  if (isPaused.value) return
+  if (isPaused.value || isGameOver.value) return
   if (!sceneRef.value) return
   const rect = sceneRef.value.getBoundingClientRect()
   mouseScreen.x = e.clientX - rect.left
@@ -1172,7 +1192,7 @@ function onMouseMove(e: MouseEvent) {
 }
 
 function onMouseDown(e: MouseEvent) {
-  if (isPaused.value) return
+  if (isPaused.value || isGameOver.value) return
   onMouseMove(e)
 
   if (e.button === 0) {
@@ -1194,7 +1214,7 @@ function onMouseLeave() {
 }
 
 function onWheel(e: WheelEvent) {
-  if (isPaused.value) return
+  if (isPaused.value || isGameOver.value) return
   e.preventDefault()
   cycleWeapon(e.deltaY > 0 ? 1 : -1)
 }
@@ -1239,6 +1259,8 @@ function resolvePlayerObstacleCollisions() {
 }
 
 function togglePause() {
+  if (isGameOver.value) return
+
   isPaused.value = !isPaused.value
   if (isPaused.value) {
     keys.up = false
@@ -1248,7 +1270,23 @@ function togglePause() {
   }
 }
 
+function persistHighScore() {
+  try {
+    const saved = Number(localStorage.getItem(HIGH_SCORE_KEY) || '0')
+    const current = gameStore.playerStats.score
+    if (current > saved) {
+      localStorage.setItem(HIGH_SCORE_KEY, String(current))
+      storedHighScore.value = current
+    } else {
+      storedHighScore.value = saved
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
+
 function exitGame() {
+  persistHighScore()
   emit('exit')
 }
 
@@ -1263,7 +1301,7 @@ function updateCamera() {
 }
 
 function shootFromPlayer() {
-  if (isPaused.value) return
+  if (isPaused.value || isGameOver.value) return
 
   const weapon = selectedWeapon.value
   const { dx, dy } = aimDelta.value
@@ -1573,7 +1611,7 @@ function updateExplosions(dt: number) {
 }
 
 function updateAutoShoot(dt: number) {
-  if (!mouse.down || !mouseScreen.active || isPaused.value) return
+  if (!mouse.down || !mouseScreen.active || isPaused.value || isGameOver.value) return
   const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
   const shotInterval = 1 / shotsPerSecond
   shootAccumulator += dt
@@ -1588,6 +1626,8 @@ function preventDefaultMenu(e: Event) {
 }
 
 function tryCapture() {
+  if (isGameOver.value) return
+
   const px = player.x + playerSize.value / 2
   const py = player.y + playerSize.value / 2
   let nearest: Building | null = null
@@ -1647,7 +1687,7 @@ function loop(ts: number) {
   const dt = (ts - lastTime) / 1000
   lastTime = ts
 
-  if (isPaused.value) {
+  if (isPaused.value || isGameOver.value) {
     rafId = requestAnimationFrame(loop)
     return
   }
@@ -1703,6 +1743,11 @@ function loop(ts: number) {
 
 onMounted(() => {
   gameStore.resetPlayerStats()
+  try {
+    storedHighScore.value = Number(localStorage.getItem(HIGH_SCORE_KEY) || '0')
+  } catch {
+    storedHighScore.value = 0
+  }
   window.removeEventListener('contextmenu', preventDefaultMenu)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
@@ -1820,6 +1865,108 @@ onUnmounted(() => {
   text-align: center;
   max-width: 320px;
   box-shadow: 0 0 20px rgba(206, 89, 255, 0.22);
+}
+
+.lose-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(35, 255, 150, 0.14), rgba(0, 0, 0, 0.72) 62%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(35, 255, 150, 0.03) 0,
+      rgba(35, 255, 150, 0.03) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  backdrop-filter: blur(3px);
+}
+
+.lose-card {
+  min-width: 280px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border: 1px solid rgba(60, 255, 170, 0.62);
+  background:
+    linear-gradient(180deg, rgba(8, 34, 22, 0.94), rgba(4, 17, 12, 0.96)), rgba(5, 14, 10, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(140, 255, 206, 0.12) inset,
+    0 0 26px rgba(48, 255, 162, 0.28);
+  text-align: center;
+  clip-path: polygon(
+    0 10px,
+    10px 0,
+    calc(100% - 12px) 0,
+    100% 12px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    12px 100%,
+    0 calc(100% - 12px)
+  );
+}
+
+.lose-title,
+.lose-score,
+.lose-kills,
+.lose-best,
+.lose-record {
+  margin: 0;
+}
+
+.lose-title {
+  color: #caffea;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+  text-shadow: 0 0 12px rgba(86, 255, 177, 0.5);
+}
+
+.lose-score {
+  color: rgba(211, 255, 233, 0.95);
+  margin-bottom: 4px;
+}
+
+.lose-kills,
+.lose-best {
+  color: rgba(180, 255, 220, 0.9);
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+
+.lose-record {
+  display: inline-block;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  padding: 4px 8px;
+  border: 1px solid rgba(108, 255, 195, 0.6);
+  background: rgba(14, 64, 42, 0.72);
+  color: #adffd9;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.lose-best {
+  margin-bottom: 14px;
+}
+
+.lose-button {
+  border: 1px solid rgba(108, 255, 195, 0.72);
+  background: rgba(10, 52, 34, 0.95);
+  color: #d7ffed;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lose-button:hover {
+  background: rgba(12, 72, 47, 0.95);
+  box-shadow: 0 0 14px rgba(80, 255, 180, 0.28);
 }
 
 .pause-title,
