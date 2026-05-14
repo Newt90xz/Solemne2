@@ -957,8 +957,8 @@ function buildingAreaStyle(b: Building) {
     width: `${r * 2}px`,
     height: `${r * 2}px`,
     transform: `translate(${Math.round(b.x - camera.x - r)}px, ${Math.round(b.y - camera.y - r)}px)`,
-    background: b.captured ? 'rgba(74,48,81,1.0)' : 'rgba(60,120,220,0.08)',
-    border: b.captured ? '2px solid rgba(74,48,81,1.0)' : '1px dashed rgba(120,140,200,0.12)',
+    background: b.captured ? 'rgba(37,40,91,0.08)' : 'rgba(60,120,220,0.08)',
+    border: b.captured ? '2px solid rgba(74,48,81,0.12)' : '1px dashed rgba(120,140,200,0.12)',
     borderRadius: '999px',
     zIndex: 1,
   } as CSSProperties
@@ -977,7 +977,7 @@ function buildingStyle(b: Building) {
     backgroundRepeat: 'no-repeat',
     imageRendering: 'pixelated',
 
-    boxShadow: b.captured ? '0 0 18px rgba(80,200,120,0.45)' : '0 0 10px rgba(180,120,220,0.25)',
+    boxShadow: b.captured ? '0 0 18px rgba(74,48,81,0.12)' : '0 0 10px rgba(180,120,220,0.25)',
     zIndex: 5,
   } as CSSProperties
 }
