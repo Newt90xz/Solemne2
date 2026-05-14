@@ -62,15 +62,29 @@
         </div>
       </section>
 
-      <button class="music-circle" @click="togglePause" :aria-label="isPaused ? 'Reanudar' : 'Pausar'">
+      <button
+        class="music-circle"
+        @click="togglePause"
+        :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
+      >
         {{ isPaused ? '▶' : '⏸' }}
       </button>
 
       <div class="hud-actions">
-        <button class="hud-button" type="button" :aria-label="isPaused ? 'Reanudar' : 'Pausar'" @click="togglePause">
+        <button
+          class="hud-button"
+          type="button"
+          :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
+          @click="togglePause"
+        >
           {{ isPaused ? '⏵' : '⏸' }}
         </button>
-        <button class="hud-button hud-button-secondary" type="button" aria-label="Salir" @click="exitGame">
+        <button
+          class="hud-button hud-button-secondary"
+          type="button"
+          aria-label="Salir"
+          @click="exitGame"
+        >
           ⎋
         </button>
       </div>
@@ -81,14 +95,18 @@
           <p class="pause-text">Pulsa reanudar para continuar o salir para volver al menú.</p>
         </div>
       </div>
-      
 
       <div v-if="nearestBuilding && hintVisible" class="capture-hint">
         <div class="hint-icon">🏢</div>
         <div>Presiona <strong>F</strong> para capturar</div>
       </div>
 
-      <div v-for="b in buildings" :key="'area-' + b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
+      <div
+        v-for="b in buildings"
+        :key="'area-' + b.id"
+        class="building-area"
+        :style="buildingAreaStyle(b)"
+      ></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
         <!--<div class="building-icon">{{ b.icon }}</div>
@@ -96,18 +114,37 @@
         <div v-if="b.captured" class="building-captured">Capturado</div>-->
       </div>
 
-      <div v-for="o in obstacles" :key="'obstacle-' + o.id" class="obstacle" :style="obstacleStyle(o)"></div>
+      <div
+        v-for="o in obstacles"
+        :key="'obstacle-' + o.id"
+        class="obstacle"
+        :style="obstacleStyle(o)"
+      ></div>
 
-      <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
+      <div
+        v-for="bullet in bullets"
+        :key="bullet.id"
+        class="bullet"
+        :style="bulletStyle(bullet)"
+      ></div>
 
       <div v-for="e in enemies" :key="'enemy-' + e.id" class="enemy" :style="enemyStyle(e)"></div>
 
       <template v-if="showHitboxes">
-        <div v-for="e in enemies" :key="'enemy-hitbox-' + e.id" class="hitbox hitbox-enemy"
-          :style="enemyHitboxStyle(e)"></div>
+        <div
+          v-for="e in enemies"
+          :key="'enemy-hitbox-' + e.id"
+          class="hitbox hitbox-enemy"
+          :style="enemyHitboxStyle(e)"
+        ></div>
       </template>
 
-      <div v-for="exp in explosions" :key="exp.id" class="explosion" :style="explosionStyle(exp)"></div>
+      <div
+        v-for="exp in explosions"
+        :key="exp.id"
+        class="explosion"
+        :style="explosionStyle(exp)"
+      ></div>
 
       <div class="player" :style="playerStyle"></div>
       <div
@@ -430,6 +467,13 @@ let nextExplosionId = 1
 let nextEnemyId = 1
 let shootAccumulator = 0
 let enemySpawnInterval: number | null = null
+let lastDamageTime = 0
+const DAMAGE_COOLDOWN = 0.5 // segundos entre cada daño
+const ENEMY_DAMAGE = {
+  grunt: 10,
+  runner: 8,
+  tank: 15,
+}
 const ENEMY_SPAWN_INTERVAL_MS = 900
 const MIN_ACTIVE_ENEMIES = 10
 const MAX_ACTIVE_ENEMIES = 28
@@ -807,6 +851,14 @@ function updateEnemies(dt: number) {
     const enemyHitbox = getEnemyHitbox(e)
     const overlap = circlesOverlap(playerHitbox, enemyHitbox)
     if (overlap.overlapping) {
+      // Aplicar daño al jugador si pasó el cooldown
+      if (lastDamageTime <= 0) {
+        const damageAmount = ENEMY_DAMAGE[e.type]
+        gameStore.takeDamage(damageAmount)
+        lastDamageTime = DAMAGE_COOLDOWN
+      }
+
+      // Push del enemigo hacia atrás
       const safeDist = overlap.dist < 0.0001 ? 0.0001 : overlap.dist
       const push = overlap.minDist - safeDist
       const pushX = (overlap.dx / safeDist) * push
@@ -993,7 +1045,8 @@ function bulletStyle(bullet: Bullet) {
     const rotationDeg = bullet.angleDeg ?? Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
 
     if (bullet.weaponId === 'Disparo_Memoria') {
-      const frame = Math.floor((bullet.animTimeElapsed ?? 0) / MEMORIA_FRAME_INTERVAL) % MEMORIA_FRAMES
+      const frame =
+        Math.floor((bullet.animTimeElapsed ?? 0) / MEMORIA_FRAME_INTERVAL) % MEMORIA_FRAMES
       const backgroundX = (frame / (MEMORIA_FRAMES - 1)) * 100
       return {
         width: `${bullet.size}px`,
@@ -1009,7 +1062,8 @@ function bulletStyle(bullet: Bullet) {
     }
 
     if (bullet.weaponId === 'gusano') {
-      const frame = Math.floor((bullet.animTimeElapsed ?? 0) / GUSANO_FRAME_INTERVAL) % GUSANO_FRAMES
+      const frame =
+        Math.floor((bullet.animTimeElapsed ?? 0) / GUSANO_FRAME_INTERVAL) % GUSANO_FRAMES
       const backgroundX = (frame / (GUSANO_FRAMES - 1)) * 100
       return {
         width: `${bullet.size}px`,
@@ -1024,10 +1078,7 @@ function bulletStyle(bullet: Bullet) {
       } as CSSProperties
     }
 
-    const sprite =
-      bullet.weaponId === 'ransomware'
-          ? martilloBulletTexture
-          : bulletTexture
+    const sprite = bullet.weaponId === 'ransomware' ? martilloBulletTexture : bulletTexture
 
     return {
       width: `${bullet.size}px`,
@@ -1416,7 +1467,10 @@ function updateBullets(dt: number) {
       }
     }
 
-    if (bullet.type === 'normal' && (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')) {
+    if (
+      bullet.type === 'normal' &&
+      (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')
+    ) {
       bullet.animTimeElapsed = (bullet.animTimeElapsed ?? 0) + dt
     }
 
@@ -1546,7 +1600,7 @@ function tryCapture() {
 }
 
 function selectUpgrade(type: 'dash' | 'akimbo' | 'health_up') {
-  const b = buildings.find(b => b.id === upgradeMenu.buildingId)
+  const b = buildings.find((b) => b.id === upgradeMenu.buildingId)
   if (b) b.captured = true
   gameStore.applyUpgrade(type)
   if (type === 'akimbo') akimboTimeLeft.value = AKIMBO_DURATION
@@ -1592,6 +1646,11 @@ function loop(ts: number) {
   gameStore.updateBuffs(dt)
   if (akimboTimeLeft.value > 0) akimboTimeLeft.value = Math.max(0, akimboTimeLeft.value - dt)
   updateDash(dt)
+
+  // Actualizar cooldown de daño
+  if (lastDamageTime > 0) {
+    lastDamageTime -= dt
+  }
 
   const speed = baseSpeed * gameStore.playerStats.speedMultiplier
   let vx = 0
@@ -1810,14 +1869,16 @@ onUnmounted(() => {
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 0 22px rgba(202, 82, 255, 0.26),
     0 0 38px rgba(108, 51, 255, 0.1);
-  clip-path: polygon(0 12px,
-      12px 0,
-      calc(100% - 16px) 0,
-      100% 16px,
-      100% calc(100% - 12px),
-      calc(100% - 12px) 100%,
-      16px 100%,
-      0 calc(100% - 16px));
+  clip-path: polygon(
+    0 12px,
+    12px 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    16px 100%,
+    0 calc(100% - 16px)
+  );
 }
 
 .neon-card::before {
@@ -2171,7 +2232,9 @@ onUnmounted(() => {
   cursor: pointer;
   text-align: left;
   border: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   animation: slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -2203,7 +2266,9 @@ onUnmounted(() => {
   color: #f2e9ff;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .upgrade-btn:hover {
