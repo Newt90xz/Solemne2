@@ -46,11 +46,11 @@
     - [x] Randomizing.
   - [x] Tracking Player.
   - [x] Enemy health and damage.
-  - [] Enemie Design.
-    - [ ] Neutral.
-    - [ ] Shooters
-    - [ ] Runners/Dashers (Stops then goes fast, could go over buildings)
-    - [ ] Big Tank
+  - [x] Enemie Design.
+    - [x] Neutral.
+    - [x] Shooters
+    - [x] Runners/Dashers (Stops then goes fast, could go over buildings)
+    - [x] Big Tank
 
 - [x] Combat System.
   - [x] Hitboxes.
@@ -73,8 +73,8 @@
     - [x] Dash
     - [x] Health up
 
-- [ ] Tweaks
-  - [ ] Weapon balance adjustments
+- [x] Tweaks
+  - [x] Weapon balance adjustments
   - [x] Score and Score Board (Score = Damage delt throughout)
   - [x] Building Randomizer
   - [x] defined color palettes
