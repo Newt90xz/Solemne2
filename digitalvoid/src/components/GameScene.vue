@@ -201,7 +201,7 @@ import troyanoBulletSpritesheet from '../assets/troyanobullet.png'
 import memoriaBulletSpritesheet from '../assets/memorybulletsprite.png'
 import martilloBulletTexture from '../assets/martillobullet.png'
 import gusanoBulletSpritesheet from '../assets/gusanosprite.png'
-import tankEnemySprite from '../assets/tank.png'
+import enemySpritesheet from '../assets/enemy_spritesheet.png'
 
 interface Bullet {
   id: number
@@ -378,7 +378,6 @@ const EXPLOSION_MAX_RADIUS = 80
 const EXPLOSION_DURATION = 0.45
 const PLAYER_HITBOX_SCALE = 0.25
 const ENEMY_HITBOX_SCALE = 0.34
-// Roughly "every 8 frames" assuming ~60fps => 8/60s ≈ 0.133s
 const TROYANO_FLASH_INTERVAL = 8 / 60
 const MEMORIA_FRAMES = 4
 const MEMORIA_FRAME_INTERVAL = 8 / 60
@@ -541,9 +540,9 @@ const ENEMY_EXPERIENCE = {
   tank: 50,
   shooter: 40,
 }
-const ENEMY_SPAWN_INTERVAL_MS = 900
-const MIN_ACTIVE_ENEMIES = 10
-const MAX_ACTIVE_ENEMIES = 28
+const ENEMY_SPAWN_INTERVAL_MS = 1
+const MIN_ACTIVE_ENEMIES = 15
+const MAX_ACTIVE_ENEMIES = 30
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
 
 function cycleWeapon(dir: 1 | -1) {
@@ -621,18 +620,16 @@ function spawnEnemy(opts?: Partial<Enemy>) {
   const typeRoll = randRange(0, 100)
   const randomType: Enemy['type'] =
     typeRoll < 55 ? 'grunt' : typeRoll < 80 ? 'runner' : typeRoll < 95 ? 'tank' : 'shooter'
-  // Slightly higher tank chance so it's easier to notice/test the sprite.
-  const randomType: Enemy['type'] = typeRoll < 55 ? 'grunt' : typeRoll < 80 ? 'runner' : 'tank'
   const type = opts?.type ?? randomType
   const base: Enemy = {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
     y: opts?.y ?? offscreen.y,
     size:
-      opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 28 : type === 'shooter' ? 48 : 40),
+      opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 45 : type === 'shooter' ? 48 : 40),
     speed:
       opts?.speed ??
-      (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 0 : 160),
+      (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 130 : 160),
     hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
     maxHp:
       opts?.maxHp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
@@ -873,31 +870,31 @@ function enemyStyle(e: Enemy) {
   const screenX = Math.round(e.x - camera.x - e.size / 2)
   const screenY = Math.round(e.y - camera.y - e.size / 2)
 
-  if (e.type === 'tank') {
-    return {
-      width: `${e.size}px`,
-      height: `${e.size}px`,
-      transform: `translate(${screenX}px, ${screenY}px)`,
-      backgroundImage: `url(${tankEnemySprite})`,
-      backgroundSize: 'contain',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      backgroundColor: 'transparent',
-      imageRendering: 'pixelated',
-      borderRadius: '0px',
-      zIndex: 7,
-      boxShadow: '0 0 12px rgba(0,0,0,0.35)',
-    } as CSSProperties
+  // Spritesheet order: grunt, runner, tank, shooter
+  const frameIndexByType: Record<Enemy['type'], number> = {
+    grunt: 0,
+    runner: 1,
+    tank: 2,
+    shooter: 3,
   }
 
+  const frameIndex = frameIndexByType[e.type] ?? 0
+  const frameSize = e.size
+
   return {
-    width: `${e.size}px`,
-    height: `${e.size}px`,
+    width: `${frameSize}px`,
+    height: `${frameSize}px`,
     transform: `translate(${screenX}px, ${screenY}px)`,
-    borderRadius: '999px',
-    background: e.color,
-    boxShadow: '0 0 12px rgba(0,0,0,0.35)',
+    backgroundImage: `url(${enemySpritesheet})`,
+    // scale the whole sheet so each frame becomes frameSize x frameSize
+    backgroundSize: `${frameSize * 4}px ${frameSize}px`,
+    backgroundPosition: `-${frameIndex * frameSize}px 0px`,
+    backgroundRepeat: 'no-repeat',
+    backgroundColor: 'transparent',
+    imageRendering: 'pixelated',
+    borderRadius: '0px',
     zIndex: 7,
+    boxShadow: '0 0 12px rgba(0,0,0,0.35)',
   } as CSSProperties
 }
 
@@ -916,11 +913,18 @@ function updateEnemies(dt: number) {
     const nx = dx / dist
     const ny = dy / dist
 
-    // Shooter-specific behavior: stationary, fires at player when in range
+    // Shooter-specific behavior: moves towards the player, stops at a distance, then shoots
     if (e.type === 'shooter') {
       e.shootTimer = (e.shootTimer ?? 0) - dt
-      const SHOOTER_RANGE = 720
-      if (dist <= SHOOTER_RANGE) {
+      const SHOOTER_STOP_DISTANCE = 620
+
+      // Move until it reaches the stop distance.
+      if (dist > SHOOTER_STOP_DISTANCE) {
+        const moveSpeed = e.speed
+        e.x += nx * moveSpeed * dt
+        e.y += ny * moveSpeed * dt
+      } else {
+        // Once in position, start shooting.
         if ((e.shootTimer ?? 0) <= 0) {
           const angle = Math.atan2(dy, dx)
           const shotSpeed = 420
@@ -932,22 +936,22 @@ function updateEnemies(dt: number) {
             vx: Math.cos(angle) * shotSpeed,
             vy: Math.sin(angle) * shotSpeed,
             angleDeg: (angle * 180) / Math.PI + 90,
-            size: 8,
-            ttl: 6,
-            maxTtl: 6,
-            damage: 0,
-            color: '#88ffb0',
+            // Small, visible dart bullet
+            size: 6,
+            ttl: 3.2,
+            maxTtl: 3.2,
+            damage: 10,
+            color: '#eaf6ff',
             type: 'normal',
             piercing: false,
             bouncesLeft: 0,
             owner: 'enemy',
-            stun: true,
-            stunDuration: 1.2,
+            stun: false,
+            stunDuration: 0,
           })
           e.shootTimer = e.shootCooldown ?? 2.0
         }
       }
-      // shooters don't move
     } else {
       const moveSpeed = e.speed
       e.x += nx * moveSpeed * dt
@@ -1181,6 +1185,24 @@ function bulletStyle(bullet: Bullet) {
 
   if (bullet.type === 'normal') {
     const rotationDeg = bullet.angleDeg ?? Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
+
+    // Enemy shooter bullet: draw a small dart so it's easy to see.
+    if (bullet.weaponId === 'shooter') {
+      const width = Math.max(10, Math.round(bullet.size * 2))
+      const height = Math.max(2, Math.round(bullet.size * 0.6))
+      const dartX = Math.round(bullet.x - camera.x - width / 2)
+      const dartY = Math.round(bullet.y - camera.y - height / 2)
+      return {
+        width: `${width}px`,
+        height: `${height}px`,
+        background:
+          'linear-gradient(90deg, rgba(234,246,255,0.15) 0%, rgba(234,246,255,0.95) 40%, rgba(140,220,255,0.95) 100%)',
+        borderRadius: '2px',
+        boxShadow: '0 0 8px rgba(140,220,255,0.55)',
+        transform: `translate3d(${dartX}px, ${dartY}px, 0px) rotate(${rotationDeg}deg)`,
+        transformOrigin: 'center',
+      } as CSSProperties
+    }
 
     if (bullet.weaponId === 'Disparo_Memoria') {
       const frame =
