@@ -7,37 +7,13 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <section v-if="showObjective && !upgradeMenu.visible" class="neon-card objective-panel">
+        <section v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible" class="neon-card objective-panel">
           <div class="panel-heading">
             <span class="panel-mark">⌬</span>
             <p class="panel-title">OBJETIVO</p>
           </div>
           <p class="objective-copy">{{ objectiveText }}</p>
         </section>
-
-        <template v-if="upgradeMenu.visible">
-          <button class="neon-card upgrade-card" @click="selectUpgrade('dash')">
-            <div class="panel-heading">
-              <img :src="upgradeIcons.dash" alt="dash" class="panel-mark-icon" />
-              <p class="panel-title">DASH EXTRA</p>
-            </div>
-            <p class="objective-copy">+1 carga de dash permanente</p>
-          </button>
-          <button class="neon-card upgrade-card" @click="selectUpgrade('akimbo')">
-            <div class="panel-heading">
-              <img :src="upgradeIcons.akimbo" alt="akimbo" class="panel-mark-icon" />
-              <p class="panel-title">AKIMBO</p>
-            </div>
-            <p class="objective-copy">Doble cadencia por 15 segundos</p>
-          </button>
-          <button class="neon-card upgrade-card" @click="selectUpgrade('health_up')">
-            <div class="panel-heading">
-              <img :src="upgradeIcons.health_up" alt="health" class="panel-mark-icon" />
-              <p class="panel-title">VIDA MÁXIMA</p>
-            </div>
-            <p class="objective-copy">+30 de salud máxima permanente</p>
-          </button>
-        </template>
       </div>
 
       <section class="neon-card weapon-panel">
@@ -96,6 +72,76 @@
         </div>
       </div>
 
+      <!-- Upgrade Menu Overlay Centered -->
+      <div v-if="weaponUnlockMenu.visible || upgradeMenu.visible" class="upgrade-overlay">
+        <div class="upgrade-menu-container">
+          <template v-if="weaponUnlockMenu.visible">
+            <section class="neon-card objective-panel">
+              <div class="panel-heading">
+                <span class="panel-mark">⚙</span>
+                <p class="panel-title">NUEVA ARMA</p>
+              </div>
+              <p class="objective-copy">Elegí un arma para desbloquear.</p>
+            </section>
+
+            <div class="upgrade-cards-row">
+              <button
+                v-for="weaponId in availableWeaponUnlocks"
+                :key="weaponId"
+                class="neon-card upgrade-card"
+                @click="selectWeaponUnlock(weaponId)"
+              >
+                <div class="panel-heading">
+                  <img
+                    :src="WEAPON_CATALOG[weaponId].image"
+                    :alt="WEAPON_CATALOG[weaponId].name"
+                    class="panel-mark-icon"
+                  />
+                  <p class="panel-title">{{ WEAPON_CATALOG[weaponId].name }}</p>
+                </div>
+                <p class="objective-copy">
+                  {{ WEAPON_CATALOG[weaponId].alias }} · {{ WEAPON_CATALOG[weaponId].role }}
+                </p>
+              </button>
+            </div>
+          </template>
+
+          <template v-else-if="upgradeMenu.visible">
+            <section class="neon-card objective-panel">
+              <div class="panel-heading">
+                <span class="panel-mark">✦</span>
+                <p class="panel-title">MEJORA DISPONIBLE</p>
+              </div>
+              <p class="objective-copy">Elige una mejora para tu personaje.</p>
+            </section>
+
+            <div class="upgrade-cards-row">
+              <button class="neon-card upgrade-card" @click="selectUpgrade('dash')">
+                <div class="panel-heading">
+                  <img :src="upgradeIcons.dash" alt="dash" class="panel-mark-icon" />
+                  <p class="panel-title">DASH EXTRA</p>
+                </div>
+                <p class="objective-copy">+1 carga de dash permanente</p>
+              </button>
+              <button class="neon-card upgrade-card" @click="selectUpgrade('akimbo')">
+                <div class="panel-heading">
+                  <img :src="upgradeIcons.akimbo" alt="akimbo" class="panel-mark-icon" />
+                  <p class="panel-title">AKIMBO</p>
+                </div>
+                <p class="objective-copy">Doble cadencia por 15 segundos</p>
+              </button>
+              <button class="neon-card upgrade-card" @click="selectUpgrade('health_up')">
+                <div class="panel-heading">
+                  <img :src="upgradeIcons.health_up" alt="health" class="panel-mark-icon" />
+                  <p class="panel-title">VIDA MÁXIMA</p>
+                </div>
+                <p class="objective-copy">+30 de salud máxima permanente</p>
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+
       <div v-if="isPaused" class="pause-overlay">
         <div class="pause-card">
           <p class="pause-title">Juego en pausa</p>
@@ -110,9 +156,7 @@
           <p class="lose-kills">Bajas: {{ finalKills }}</p>
           <p class="lose-best">Mejor score: {{ displayedBestScore }}</p>
           <p v-if="isNewRecord" class="lose-record">NUEVO RECORD</p>
-          <button class="lose-button" type="button" @click="exitGame">
-            Regresar al menu principal
-          </button>
+          <button class="lose-button" type="button" @click="exitGame">Regresar al menu principal</button>
         </div>
       </div>
 
@@ -141,12 +185,7 @@
         :style="obstacleStyle(o)"
       ></div>
 
-      <div
-        v-for="bullet in bullets"
-        :key="bullet.id"
-        class="bullet"
-        :style="bulletStyle(bullet)"
-      ></div>
+      <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
 
       <div v-for="e in enemies" :key="'enemy-' + e.id" class="enemy" :style="enemyStyle(e)"></div>
 
@@ -159,12 +198,7 @@
         ></div>
       </template>
 
-      <div
-        v-for="exp in explosions"
-        :key="exp.id"
-        class="explosion"
-        :style="explosionStyle(exp)"
-      ></div>
+      <div v-for="exp in explosions" :key="exp.id" class="explosion" :style="explosionStyle(exp)"></div>
 
       <div class="player" :style="playerStyle"></div>
       <div v-if="isStunned" class="stun-ring" :style="stunStyle"></div>
@@ -185,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, type CSSProperties } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import escenarioImg from '../assets/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
@@ -229,6 +263,7 @@ interface Bullet {
   piercing?: boolean
   bouncesLeft?: number
   owner?: 'player' | 'enemy'
+  ownerId?: number
   stun?: boolean
   stunDuration?: number
 }
@@ -315,7 +350,7 @@ const explosions = reactive<Explosion[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
 const showHitboxes = ref(false)
-
+const isGameOver = computed(() => gameStore.playerStats.health <= 0)
 const isStunned = ref(false)
 const stunTimeLeft = ref(0)
 const DEFAULT_STUN_DURATION = 1.2
@@ -359,9 +394,80 @@ let isMoving = false
 
 const selectedWeaponId = ref<WeaponId>(DEFAULT_WEAPON_ID)
 const selectedWeapon = computed(() => WEAPON_CATALOG[selectedWeaponId.value])
+
+// --- Desbloqueo de armas por nivel (múltiplos de 5) ---
+const weaponUnlockMenu = reactive<{ visible: boolean }>({ visible: false })
+
+const unlockedWeaponOrder = computed(() => {
+  const unlocked = gameStore.playerStats.unlockedWeapons ?? [DEFAULT_WEAPON_ID]
+  return WEAPON_ORDER.filter((id) => unlocked.includes(id))
+})
+
+const availableWeaponUnlocks = computed(() => {
+  const unlocked = gameStore.playerStats.unlockedWeapons ?? [DEFAULT_WEAPON_ID]
+  return WEAPON_ORDER.filter((id) => !unlocked.includes(id))
+})
+
+const isMenuOpen = computed(() => weaponUnlockMenu.visible || upgradeMenu.visible)
+const isInputLocked = computed(
+  () => isPaused.value || isMenuOpen.value || isGameOver.value || isStunned.value,
+)
+
+function tryOpenWeaponUnlockMenu() {
+  if (weaponUnlockMenu.visible) return
+  if (isPaused.value || upgradeMenu.visible || isGameOver.value) return
+
+  const tokens = gameStore.playerStats.weaponUnlockTokens ?? 0
+  if (tokens <= 0) return
+
+  // Si ya no quedan armas por desbloquear, consumimos los tokens para no trabar el juego.
+  if (availableWeaponUnlocks.value.length === 0) {
+    gameStore.playerStats.weaponUnlockTokens = 0
+    return
+  }
+
+  weaponUnlockMenu.visible = true
+  // Evitar que queden teclas "pegadas" cuando se abre el menú.
+  keys.up = false
+  keys.down = false
+  keys.left = false
+  keys.right = false
+  mouse.down = false
+}
+
+function selectWeaponUnlock(weaponId: WeaponId) {
+  const unlocked = gameStore.playerStats.unlockedWeapons ?? [DEFAULT_WEAPON_ID]
+  if (unlocked.includes(weaponId)) return
+
+  gameStore.playerStats.unlockedWeapons = [...unlocked, weaponId]
+  gameStore.playerStats.weaponUnlockTokens = Math.max(
+    0,
+    (gameStore.playerStats.weaponUnlockTokens ?? 0) - 1,
+  )
+  selectedWeaponId.value = weaponId
+  weaponUnlockMenu.visible = false
+
+  // Si todavía quedan tokens (por haber subido varios niveles de golpe), reintentar abrir.
+  tryOpenWeaponUnlockMenu()
+}
+
+watch(
+  () => gameStore.playerStats.weaponUnlockTokens,
+  () => {
+    tryOpenWeaponUnlockMenu()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => upgradeMenu.visible,
+  (visible) => {
+    if (!visible) tryOpenWeaponUnlockMenu()
+  },
+)
+
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
 const showObjective = ref(false)
-const isGameOver = computed(() => gameStore.playerStats.health <= 0)
 const finalScore = computed(() => gameStore.playerStats.score)
 const finalKills = computed(() => gameStore.playerStats.kills)
 const storedHighScore = ref(0)
@@ -425,7 +531,9 @@ const playerStyle = computed(() => {
     backgroundSize: `${playerSize.value}px ${playerSize.value * SPRITE_FRAMES}px`,
     backgroundPosition: `0px ${-currentFrame * playerSize.value}px`,
     backgroundRepeat: 'no-repeat',
-    transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(player.y - camera.y)}px) rotate(${aimAngleDeg.value}deg)`,
+    transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(
+      player.y - camera.y,
+    )}px) rotate(${aimAngleDeg.value}deg)`,
   } as CSSProperties
 })
 
@@ -434,9 +542,7 @@ const playerCenterScreen = computed(() => ({
   y: player.y - camera.y + playerSize.value / 2,
 }))
 
-const showDashBar = computed(
-  () => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes,
-)
+const showDashBar = computed(() => gameStore.playerStats.currentdashes < gameStore.playerStats.maxdashes)
 const dashCooldownProgress = computed(() => {
   if (!showDashBar.value) return 1
   return Math.min(1, Math.max(0, dashRechargeTimer.value / dashCooldown))
@@ -532,13 +638,13 @@ const ENEMY_DAMAGE = {
   grunt: 10,
   runner: 8,
   tank: 15,
-  shooter: 12,
+  shooter: 18,
 }
 const ENEMY_EXPERIENCE = {
   grunt: 25,
   runner: 35,
   tank: 50,
-  shooter: 40,
+  shooter: 55,
 }
 const ENEMY_SPAWN_INTERVAL_MS = 1
 const MIN_ACTIVE_ENEMIES = 15
@@ -546,9 +652,10 @@ const MAX_ACTIVE_ENEMIES = 30
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
 
 function cycleWeapon(dir: 1 | -1) {
-  const idx = WEAPON_ORDER.indexOf(selectedWeaponId.value)
-  const next = (idx + dir + WEAPON_ORDER.length) % WEAPON_ORDER.length
-  const nextWeapon = WEAPON_ORDER[next]
+  const order = unlockedWeaponOrder.value.length > 0 ? unlockedWeaponOrder.value : [DEFAULT_WEAPON_ID]
+  const idx = order.indexOf(selectedWeaponId.value)
+  const next = (idx + dir + order.length) % order.length
+  const nextWeapon = order[next]
   if (nextWeapon) {
     selectedWeaponId.value = nextWeapon
   }
@@ -625,14 +732,14 @@ function spawnEnemy(opts?: Partial<Enemy>) {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
     y: opts?.y ?? offscreen.y,
-    size:
-      opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 45 : type === 'shooter' ? 48 : 40),
+    size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 45 : type === 'shooter' ? 48 : 46),
     speed:
       opts?.speed ??
-      (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 130 : 160),
-    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
+      (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 120 : 160),
+    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 40 : 12),
     maxHp:
-      opts?.maxHp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 14 : 12),
+      opts?.maxHp ??
+      (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 40 : 12),
     color:
       opts?.color ??
       (type === 'tank'
@@ -645,8 +752,8 @@ function spawnEnemy(opts?: Partial<Enemy>) {
     type,
   }
   if (type === 'shooter') {
-    base.shootCooldown = opts?.shootCooldown ?? 2.0
-    base.shootTimer = Math.random() * (base.shootCooldown ?? 2.0)
+    base.shootCooldown = opts?.shootCooldown ?? 0.55
+    base.shootTimer = opts?.shootTimer ?? 0
   }
   enemies.push(base)
   return base
@@ -819,7 +926,9 @@ const playerHitboxStyle = computed(() => {
   return {
     width: `${hb.radius * 2}px`,
     height: `${hb.radius * 2}px`,
-    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(hb.y - camera.y - hb.radius)}px)`,
+    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(
+      hb.y - camera.y - hb.radius,
+    )}px)`,
   } as CSSProperties
 })
 
@@ -828,7 +937,9 @@ function enemyHitboxStyle(enemy: Enemy) {
   return {
     width: `${hb.radius * 2}px`,
     height: `${hb.radius * 2}px`,
-    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(hb.y - camera.y - hb.radius)}px)`,
+    transform: `translate(${Math.round(hb.x - camera.x - hb.radius)}px, ${Math.round(
+      hb.y - camera.y - hb.radius,
+    )}px)`,
   } as CSSProperties
 }
 
@@ -915,8 +1026,10 @@ function updateEnemies(dt: number) {
 
     // Shooter-specific behavior: moves towards the player, stops at a distance, then shoots
     if (e.type === 'shooter') {
-      e.shootTimer = (e.shootTimer ?? 0) - dt
-      const SHOOTER_STOP_DISTANCE = 620
+      if (e.shootTimer === undefined) {
+        e.shootTimer = 0
+      }
+      const SHOOTER_STOP_DISTANCE = 500
 
       // Move until it reaches the stop distance.
       if (dist > SHOOTER_STOP_DISTANCE) {
@@ -924,32 +1037,11 @@ function updateEnemies(dt: number) {
         e.x += nx * moveSpeed * dt
         e.y += ny * moveSpeed * dt
       } else {
-        // Once in position, start shooting.
-        if ((e.shootTimer ?? 0) <= 0) {
-          const angle = Math.atan2(dy, dx)
-          const shotSpeed = 420
-          bullets.push({
-            id: nextBulletId++,
-            weaponId: 'shooter',
-            x: e.x,
-            y: e.y,
-            vx: Math.cos(angle) * shotSpeed,
-            vy: Math.sin(angle) * shotSpeed,
-            angleDeg: (angle * 180) / Math.PI + 90,
-            // Small, visible dart bullet
-            size: 6,
-            ttl: 3.2,
-            maxTtl: 3.2,
-            damage: 10,
-            color: '#eaf6ff',
-            type: 'normal',
-            piercing: false,
-            bouncesLeft: 0,
-            owner: 'enemy',
-            stun: false,
-            stunDuration: 0,
-          })
-          e.shootTimer = e.shootCooldown ?? 2.0
+        // Once in position, start shooting continuously.
+        e.shootTimer -= dt
+        if (e.shootTimer <= 0) {
+          shootFromEnemy(e, px, py)
+          e.shootTimer = e.shootCooldown ?? 0.55
         }
       }
     } else {
@@ -1084,7 +1176,9 @@ function buildingStyle(b: Building) {
   return {
     width: `${b.size}px`,
     height: `${b.size}px`,
-    transform: `translate(${Math.round(b.x - camera.x - b.size / 2)}px, ${Math.round(b.y - camera.y - b.size / 2)}px)`,
+    transform: `translate(${Math.round(b.x - camera.x - b.size / 2)}px, ${Math.round(
+      b.y - camera.y - b.size / 2,
+    )}px)`,
 
     backgroundImage: `url(${buildingSpritesheet})`,
     backgroundSize: '200% 100%',
@@ -1133,14 +1227,7 @@ function spawnObstacles(count = 6) {
         top: b.y - b.size / 2,
         bottom: b.y + b.size / 2,
       }
-      if (
-        !(
-          rect.right < bb.left ||
-          rect.left > bb.right ||
-          rect.bottom < bb.top ||
-          rect.top > bb.bottom
-        )
-      ) {
+      if (!(rect.right < bb.left || rect.left > bb.right || rect.bottom < bb.top || rect.top > bb.bottom)) {
         collides = true
         break
       }
@@ -1283,11 +1370,12 @@ function explosionStyle(exp: Explosion) {
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    togglePause()
+    // Si hay un menú abierto (upgrade/armas), evitamos el toggle de pausa para no romper el flow.
+    if (!isMenuOpen.value) togglePause()
     return
   }
 
-  if (isGameOver.value || isStunned.value) return
+  if (isInputLocked.value) return
 
   if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true
   if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true
@@ -1297,7 +1385,9 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key >= '1' && e.key <= '5') {
     const index = Number(e.key) - 1
     const id = WEAPON_ORDER[index]
-    if (id) selectedWeaponId.value = id
+    if (id && unlockedWeaponOrder.value.includes(id)) {
+      selectedWeaponId.value = id
+    }
   }
 
   if (e.key === 'q' || e.key === 'Q') cycleWeapon(-1)
@@ -1314,7 +1404,6 @@ function onKeyUp(e: KeyboardEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
-  if (isPaused.value || isGameOver.value || isStunned.value) return
   if (!sceneRef.value) return
   const rect = sceneRef.value.getBoundingClientRect()
   mouseScreen.x = e.clientX - rect.left
@@ -1325,7 +1414,7 @@ function onMouseMove(e: MouseEvent) {
 }
 
 function onMouseDown(e: MouseEvent) {
-  if (isPaused.value || isGameOver.value || isStunned.value) return
+  if (isInputLocked.value) return
   onMouseMove(e)
 
   if (e.button === 0) {
@@ -1347,7 +1436,7 @@ function onMouseLeave() {
 }
 
 function onWheel(e: WheelEvent) {
-  if (isPaused.value || isGameOver.value || isStunned.value) return
+  if (isInputLocked.value) return
   e.preventDefault()
   cycleWeapon(e.deltaY > 0 ? 1 : -1)
 }
@@ -1431,6 +1520,38 @@ function updateCamera() {
   const targetY = player.y - vh / 2 + playerSize.value / 2
   camera.x += (targetX - camera.x) * 0.1
   camera.y += (targetY - camera.y) * 0.1
+}
+
+function shootFromEnemy(enemy: Enemy, targetX: number, targetY: number) {
+  const dx = targetX - enemy.x
+  const dy = targetY - enemy.y
+  const dist = Math.hypot(dx, dy) || 1
+  const nx = dx / dist
+  const ny = dy / dist
+  const angle = Math.atan2(dy, dx)
+  const shotSpeed = 580
+
+  bullets.push({
+    id: nextBulletId++,
+    weaponId: 'shooter',
+    x: enemy.x,
+    y: enemy.y,
+    vx: Math.cos(angle) * shotSpeed,
+    vy: Math.sin(angle) * shotSpeed,
+    angleDeg: (angle * 180) / Math.PI + 90,
+    size: 6,
+    ttl: 3.2,
+    maxTtl: 3.2,
+    damage: 10,
+    color: '#eaf6ff',
+    type: 'normal',
+    piercing: false,
+    bouncesLeft: 0,
+    owner: 'enemy',
+    ownerId: enemy.id,
+    stun: false,
+    stunDuration: 0,
+  })
 }
 
 function shootFromPlayer() {
@@ -1607,10 +1728,7 @@ function updateBullets(dt: number) {
 
     let destroyBullet = false
 
-    if (
-      bullet.type !== 'orbiting' ||
-      bullet.orbitTimeElapsed! >= ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME
-    ) {
+    if (bullet.type !== 'orbiting' || bullet.orbitTimeElapsed! >= ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME) {
       const bouncedOnWorld = bounceBulletOnWorldBounds(bullet)
       if (!bouncedOnWorld) {
         const radius = Math.max(2, bullet.size * 0.5)
@@ -1628,10 +1746,7 @@ function updateBullets(dt: number) {
     for (let oi = 0; oi < obstacles.length; oi++) {
       const o = obstacles[oi]
       if (!o) continue
-      if (
-        bullet.type === 'orbiting' &&
-        bullet.orbitTimeElapsed! < ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME
-      ) {
+      if (bullet.type === 'orbiting' && bullet.orbitTimeElapsed! < ORBIT_APPROACH_TIME + ORBIT_HOLD_TIME) {
         continue
       }
 
@@ -1647,10 +1762,7 @@ function updateBullets(dt: number) {
       }
     }
 
-    if (
-      bullet.type === 'normal' &&
-      (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')
-    ) {
+    if (bullet.type === 'normal' && (bullet.weaponId === 'gusano' || bullet.weaponId === 'Disparo_Memoria')) {
       bullet.animTimeElapsed = (bullet.animTimeElapsed ?? 0) + dt
     }
 
@@ -1678,20 +1790,23 @@ function updateBullets(dt: number) {
       }
     }
     let hitEnemy = false
-    for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex -= 1) {
-      const enemy = enemies[enemyIndex]
-      if (!enemy || enemy.hp <= 0) continue
-      const overlap = circlesOverlap(bulletHitbox, getEnemyHitbox(enemy))
-      if (!overlap.overlapping) continue
+    // Balas enemigas solo deben dañar al jugador, no a otros enemigos
+    if (bullet.owner !== 'enemy') {
+      for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex -= 1) {
+        const enemy = enemies[enemyIndex]
+        if (!enemy || enemy.hp <= 0) continue
+        const overlap = circlesOverlap(bulletHitbox, getEnemyHitbox(enemy))
+        if (!overlap.overlapping) continue
 
-      enemy.hp -= bullet.damage
-      hitEnemy = true
+        enemy.hp -= bullet.damage
+        hitEnemy = true
 
-      if (!bullet.piercing) {
-        if (bullet.type === 'explosive') {
-          spawnExplosion(bullet.x, bullet.y)
+        if (!bullet.piercing) {
+          if (bullet.type === 'explosive') {
+            spawnExplosion(bullet.x, bullet.y)
+          }
+          break
         }
-        break
       }
     }
 
@@ -1729,7 +1844,6 @@ function updateBullets(dt: number) {
         // small ttl penalty to avoid infinite bouncing
         bullet.ttl -= 0.04
 
-        // update hitbox after correction
         // continue scanning (but break to avoid multi-resolve in same frame)
         break
       } else {
@@ -1760,8 +1874,7 @@ function updateExplosions(dt: number) {
 }
 
 function updateAutoShoot(dt: number) {
-  if (!mouse.down || !mouseScreen.active || isPaused.value || isGameOver.value || isStunned.value)
-    return
+  if (!mouse.down || !mouseScreen.active || isInputLocked.value) return
   const shotsPerSecond = Math.max(0.2, selectedWeapon.value.fireRate)
   const shotInterval = 1 / shotsPerSecond
   shootAccumulator += dt
@@ -1776,7 +1889,7 @@ function preventDefaultMenu(e: Event) {
 }
 
 function tryCapture() {
-  if (isGameOver.value || isStunned.value) return
+  if (isInputLocked.value) return
 
   const px = player.x + playerSize.value / 2
   const py = player.y + playerSize.value / 2
@@ -1837,7 +1950,7 @@ function loop(ts: number) {
   const dt = (ts - lastTime) / 1000
   lastTime = ts
 
-  if (isPaused.value || isGameOver.value) {
+  if (isPaused.value || isGameOver.value || isMenuOpen.value) {
     rafId = requestAnimationFrame(loop)
     return
   }
@@ -1908,6 +2021,8 @@ function loop(ts: number) {
 
 onMounted(() => {
   gameStore.resetPlayerStats()
+  selectedWeaponId.value = DEFAULT_WEAPON_ID
+  weaponUnlockMenu.visible = false
   // Safety: prevent starting in "game over" state (which stops enemy spawning).
   if (gameStore.playerStats.health <= 0) gameStore.playerStats.health = 1
   try {
@@ -2022,6 +2137,7 @@ onUnmounted(() => {
   place-items: center;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(2px);
+
 }
 
 .pause-card {
@@ -2128,7 +2244,6 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 10px 14px;
   font-weight: 700;
-  cursor: pointer;
 }
 
 .lose-button:hover {
@@ -2555,6 +2670,7 @@ onUnmounted(() => {
   place-items: center;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(3px);
+  cursor: pointer;
 }
 
 .upgrade-card {
@@ -2687,5 +2803,24 @@ onUnmounted(() => {
     transform: scale(0.9);
     opacity: 0.9;
   }
+}
+
+.upgrade-menu-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 90vw;
+}
+
+.upgrade-cards-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.upgrade-overlay .objective-panel {
+  animation: slideDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 </style>

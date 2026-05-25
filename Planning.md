@@ -95,7 +95,17 @@
 - [ ] Bosses
   - [ ] Spawn Condition (Very important)
   - [ ] Boss hitbox
-
-- [ ] Cloud Storage - [ ] Lighting Shotgun Attack - [ ] Dissapear then reappears elsewhere - [ ] Difficult to hit - [ ] Wifi - [ ] Tornado attacks - [ ] Expansive Bullets - [ ] Firewall - [ ] Inmortal (Must run/survive) - [ ] Touches you, you die. - [ ] Creates obstacules in front of player - [ ] Bullets orbit around him
+  - [ ] Creates obstacules in front of player 
+    - [ ] McAffe
+      - [ ] Tornado attacks 
+      - [ ] Expansive Bullets 
+    - [ ] Norton 
+      - [ ] Lighting Shotgun Attack 
+      - [ ] Dissapear then reappears elsewhere 
+      - [ ] Difficult to hit 
+    - [ ] Windows Defender 
+      - [ ] Inmortal (Must run/survive its orbit) 
+      - [ ] Touches you, you die. 
+      - [ ] Bullets orbit around him
 
 - [] Error corrections and Quality of life changes.

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
+import { DEFAULT_WEAPON_ID, type WeaponId } from '../game/weapons.ts'
 
 type Difficulty = 'facil' | 'medio' | 'dificil'
 type Mode = 'solitario' | 'multijugador'
@@ -28,6 +29,8 @@ export interface PlayerStats {
   isAkimbo: boolean       
   akimboTimer: number
   playerSize: number
+  unlockedWeapons: WeaponId[]
+  weaponUnlockTokens: number
 }
 
 export interface ActiveBuff {
@@ -60,6 +63,8 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
   isAkimbo: false,
   akimboTimer: 0,
   playerSize: 48,
+  unlockedWeapons: [DEFAULT_WEAPON_ID],
+  weaponUnlockTokens: 0,
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -97,6 +102,10 @@ export const useGameStore = defineStore('game', () => {
     playerStats.health = playerStats.maxHealth
     playerStats.playerSize += 3
     playerStats.experienceToLevel = Math.floor(playerStats.experienceToLevel * 1.15)
+
+    if (playerStats.level % 5 === 0) {
+      playerStats.weaponUnlockTokens += 1
+    }
   }
 
   function takeDamage(amount: number) {
