@@ -88,10 +88,7 @@
 
 - [ ] Music and Sound Effects
   - [ ] Main music
-  - PLayer sounds
-  - [ ] Weapon sounds
-    - [] Hitmarker sounds
-    - [] Explotions
+  
 - [ ] Bosses
   - [ ] Spawn Condition (Very important)
   - [ ] Boss hitbox

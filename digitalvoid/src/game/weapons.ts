@@ -95,7 +95,7 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
     role: 'Balas que orbitan el cursor antes de liberarse',
     image: arma4,
     fireRate: 3,
-    damage: 2,
+    damage: 8,
     projectileSpeed: 600,
     projectileLifetime: 6.5,
     projectileSize: 25,

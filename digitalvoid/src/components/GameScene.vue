@@ -7,7 +7,8 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <section v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible" class="neon-card objective-panel">
+        <section v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
+          class="neon-card objective-panel">
           <div class="panel-heading">
             <span class="panel-mark">⌬</span>
             <p class="panel-title">OBJETIVO</p>
@@ -38,29 +39,15 @@
         </div>
       </section>
 
-      <button
-        class="music-circle"
-        @click="togglePause"
-        :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
-      >
+      <button class="music-circle" @click="togglePause" :aria-label="isPaused ? 'Reanudar' : 'Pausar'">
         {{ isPaused ? '▶' : '⏸' }}
       </button>
 
       <div class="hud-actions">
-        <button
-          class="hud-button"
-          type="button"
-          :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
-          @click="togglePause"
-        >
+        <button class="hud-button" type="button" :aria-label="isPaused ? 'Reanudar' : 'Pausar'" @click="togglePause">
           {{ isPaused ? '⏵' : '⏸' }}
         </button>
-        <button
-          class="hud-button hud-button-secondary"
-          type="button"
-          aria-label="Salir"
-          @click="exitGame"
-        >
+        <button class="hud-button hud-button-secondary" type="button" aria-label="Salir" @click="exitGame">
           ⎋
         </button>
       </div>
@@ -85,18 +72,11 @@
             </section>
 
             <div class="upgrade-cards-row">
-              <button
-                v-for="weaponId in availableWeaponUnlocks"
-                :key="weaponId"
-                class="neon-card upgrade-card"
-                @click="selectWeaponUnlock(weaponId)"
-              >
+              <button v-for="weaponId in availableWeaponUnlocks" :key="weaponId" class="neon-card upgrade-card"
+                @click="selectWeaponUnlock(weaponId)">
                 <div class="panel-heading">
-                  <img
-                    :src="WEAPON_CATALOG[weaponId].image"
-                    :alt="WEAPON_CATALOG[weaponId].name"
-                    class="panel-mark-icon"
-                  />
+                  <img :src="WEAPON_CATALOG[weaponId].image" :alt="WEAPON_CATALOG[weaponId].name"
+                    class="panel-mark-icon" />
                   <p class="panel-title">{{ WEAPON_CATALOG[weaponId].name }}</p>
                 </div>
                 <p class="objective-copy">
@@ -165,12 +145,7 @@
         <div>Presiona <strong>F</strong> para capturar</div>
       </div>
 
-      <div
-        v-for="b in buildings"
-        :key="'area-' + b.id"
-        class="building-area"
-        :style="buildingAreaStyle(b)"
-      ></div>
+      <div v-for="b in buildings" :key="'area-' + b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
         <!--<div class="building-icon">{{ b.icon }}</div>
@@ -178,24 +153,15 @@
         <div v-if="b.captured" class="building-captured">Capturado</div>-->
       </div>
 
-      <div
-        v-for="o in obstacles"
-        :key="'obstacle-' + o.id"
-        class="obstacle"
-        :style="obstacleStyle(o)"
-      ></div>
+      <div v-for="o in obstacles" :key="'obstacle-' + o.id" class="obstacle" :style="obstacleStyle(o)"></div>
 
       <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
 
       <div v-for="e in enemies" :key="'enemy-' + e.id" class="enemy" :style="enemyStyle(e)"></div>
 
       <template v-if="showHitboxes">
-        <div
-          v-for="e in enemies"
-          :key="'enemy-hitbox-' + e.id"
-          class="hitbox hitbox-enemy"
-          :style="enemyHitboxStyle(e)"
-        ></div>
+        <div v-for="e in enemies" :key="'enemy-hitbox-' + e.id" class="hitbox hitbox-enemy"
+          :style="enemyHitboxStyle(e)"></div>
       </template>
 
       <div v-for="exp in explosions" :key="exp.id" class="explosion" :style="explosionStyle(exp)"></div>
@@ -732,14 +698,14 @@ function spawnEnemy(opts?: Partial<Enemy>) {
     id: nextEnemyId++,
     x: opts?.x ?? offscreen.x,
     y: opts?.y ?? offscreen.y,
-    size: opts?.size ?? (type === 'tank' ? 56 : type === 'runner' ? 45 : type === 'shooter' ? 48 : 46),
+    size: opts?.size ?? (type === 'tank' ? 100 : type === 'runner' ? 50 : type === 'shooter' ? 55 : 70),
     speed:
       opts?.speed ??
       (type === 'runner' ? 420 : type === 'tank' ? 90 : type === 'shooter' ? 120 : 160),
-    hp: opts?.hp ?? (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 40 : 12),
+    hp: opts?.hp ?? (type === 'tank' ? 70 : type === 'runner' ? 8 : type === 'shooter' ? 40 : 32),
     maxHp:
       opts?.maxHp ??
-      (type === 'tank' ? 20 : type === 'runner' ? 8 : type === 'shooter' ? 40 : 12),
+      (type === 'tank' ? 80 : type === 'runner' ? 20 : type === 'shooter' ? 40 : 60),
     color:
       opts?.color ??
       (type === 'tank'
@@ -1525,9 +1491,6 @@ function updateCamera() {
 function shootFromEnemy(enemy: Enemy, targetX: number, targetY: number) {
   const dx = targetX - enemy.x
   const dy = targetY - enemy.y
-  const dist = Math.hypot(dx, dy) || 1
-  const nx = dx / dist
-  const ny = dy / dist
   const angle = Math.atan2(dy, dx)
   const shotSpeed = 580
 
@@ -2117,7 +2080,7 @@ onUnmounted(() => {
   border-radius: 14px;
   font-size: 1.2rem;
   font-weight: 800;
-  cursor: pointer;
+  cursor: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   box-shadow:
@@ -2158,13 +2121,11 @@ onUnmounted(() => {
   place-items: center;
   background:
     radial-gradient(circle at 50% 35%, rgba(35, 255, 150, 0.14), rgba(0, 0, 0, 0.72) 62%),
-    repeating-linear-gradient(
-      to bottom,
+    repeating-linear-gradient(to bottom,
       rgba(35, 255, 150, 0.03) 0,
       rgba(35, 255, 150, 0.03) 1px,
       transparent 1px,
-      transparent 4px
-    );
+      transparent 4px);
   backdrop-filter: blur(3px);
 }
 
@@ -2179,16 +2140,14 @@ onUnmounted(() => {
     0 0 0 1px rgba(140, 255, 206, 0.12) inset,
     0 0 26px rgba(48, 255, 162, 0.28);
   text-align: center;
-  clip-path: polygon(
-    0 10px,
-    10px 0,
-    calc(100% - 12px) 0,
-    100% 12px,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    12px 100%,
-    0 calc(100% - 12px)
-  );
+  clip-path: polygon(0 10px,
+      10px 0,
+      calc(100% - 12px) 0,
+      100% 12px,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      12px 100%,
+      0 calc(100% - 12px));
 }
 
 .lose-title,
@@ -2307,16 +2266,14 @@ onUnmounted(() => {
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 0 22px rgba(202, 82, 255, 0.26),
     0 0 38px rgba(108, 51, 255, 0.1);
-  clip-path: polygon(
-    0 12px,
-    12px 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    16px 100%,
-    0 calc(100% - 16px)
-  );
+  clip-path: polygon(0 12px,
+      12px 0,
+      calc(100% - 16px) 0,
+      100% 16px,
+      100% calc(100% - 12px),
+      calc(100% - 12px) 100%,
+      16px 100%,
+      0 calc(100% - 16px));
 }
 
 .neon-card::before {
@@ -2669,14 +2626,12 @@ onUnmounted(() => {
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
-  cursor: pointer;
+  cursor: none;
 }
 
 .upgrade-card {
   width: 170px;
   padding: 12px 14px 10px;
-  cursor: pointer;
   text-align: left;
   border: none;
   transition:
@@ -2711,7 +2666,6 @@ onUnmounted(() => {
   border: 1px solid rgba(194, 120, 255, 0.35);
   border-radius: 10px;
   color: #f2e9ff;
-  cursor: pointer;
   text-align: left;
   transition:
     background 0.15s,
@@ -2755,6 +2709,7 @@ onUnmounted(() => {
   z-index: 60;
   pointer-events: none;
 }
+
 .score-card {
   background: rgba(0, 0, 0, 0.45);
   padding: 6px 12px;
@@ -2766,11 +2721,13 @@ onUnmounted(() => {
   min-width: 96px;
   backdrop-filter: blur(4px);
 }
+
 .score-label {
   font-size: 0.7rem;
   color: rgba(200, 200, 200, 0.9);
   letter-spacing: 1px;
 }
+
 .score-value {
   font-weight: 800;
   font-size: 1.05rem;
@@ -2795,10 +2752,12 @@ onUnmounted(() => {
     transform: scale(0.9);
     opacity: 0.9;
   }
+
   50% {
     transform: scale(1.06);
     opacity: 0.6;
   }
+
   100% {
     transform: scale(0.9);
     opacity: 0.9;

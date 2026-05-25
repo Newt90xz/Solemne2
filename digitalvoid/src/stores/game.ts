@@ -98,8 +98,6 @@ export const useGameStore = defineStore('game', () => {
 
   function levelUp() {
     playerStats.level += 1
-    playerStats.maxHealth += 10
-    playerStats.health = playerStats.maxHealth
     playerStats.playerSize += 3
     playerStats.experienceToLevel = Math.floor(playerStats.experienceToLevel * 1.15)
 

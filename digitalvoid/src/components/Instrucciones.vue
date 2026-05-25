@@ -102,10 +102,11 @@ onBeforeUnmount(() => {
         <h2>Controles del jugador</h2>
         <ul>
           <li><strong>W / A / S / D</strong>: movimiento arriba, izquierda, abajo y derecha.</li>
-          <li><strong>Shift</strong>: correr por unos segundos para esquivar amenazas.</li>
-          <li><strong>E</strong>: interactuar con objetos y terminales.</li>
-          <li><strong>Espacio</strong>: accion principal (ataque o habilidad, segun equipo).</li>
+          <li><strong>Click Izquierda</strong>: accion principal (ataque o habilidad, segun equipo).</li>
+          <li><strong>Click Derecho</strong>: dash por unos segundos para esquivar amenazas.</li>
+          <li><strong>F</strong>: interactuar con objetos y terminales.</li>
           <li><strong>Esc</strong>: pausar y abrir menu rapido.</li>
+          <li><strong> 1-5 / Q / E </strong>: accion principal (ataque o habilidad, segun equipo).</li>
         </ul>
       </article>
 
