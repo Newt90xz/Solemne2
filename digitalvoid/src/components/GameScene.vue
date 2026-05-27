@@ -346,7 +346,7 @@ interface Enemy {
   hp: number
   maxHp: number
   color: string
-  type: 'grunt' | 'runner' | 'tank' | 'shooter' | 'mcaffe'
+  type: 'grunt' | 'runner' | 'tank' | 'shooter' | 'mcaffe' | 'norton'
   // optional runtime fields for special enemies
   shootTimer?: number
   shootCooldown?: number
@@ -698,7 +698,9 @@ const ENEMY_SPAWN_INTERVAL_MS = 1
 const MIN_ACTIVE_ENEMIES = 15
 const MAX_ACTIVE_ENEMIES = 30
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
-const normalEnemies = computed(() => enemies.filter((enemy) => enemy.type !== 'mcaffe'))
+const normalEnemies = computed(() =>
+  enemies.filter((enemy) => enemy.type !== 'mcaffe' && enemy.type !== 'norton'),
+)
 const bossActive = ref(false)
 const screenShake = reactive({ x: 0, y: 0, timeLeft: 0, intensity: 0, duration: 0 })
 
@@ -1040,6 +1042,7 @@ function enemyStyle(e: Enemy) {
     tank: 2,
     shooter: 3,
     mcaffe: 0,
+    norton: 1,
   }
 
   const frameIndex = frameIndexByType[e.type] ?? 0
@@ -1069,7 +1072,7 @@ function updateEnemies(dt: number) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i]
     if (!e) continue
-    if (e.type === 'mcaffe') continue
+    if (e.type === 'mcaffe' || e.type === 'norton') continue
     const px = player.x + playerSize.value / 2
     const py = player.y + playerSize.value / 2
     const dx = px - e.x
@@ -1336,6 +1339,23 @@ function bulletStyle(bullet: Bullet) {
 
   if (bullet.type === 'normal') {
     const rotationDeg = bullet.angleDeg ?? Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
+
+    if (bullet.weaponId === 'norton-lightning') {
+      const width = Math.max(12, Math.round(bullet.size * 2.2))
+      const height = Math.max(3, Math.round(bullet.size * 0.8))
+      const dartX = Math.round(bullet.x - camera.x - width / 2)
+      const dartY = Math.round(bullet.y - camera.y - height / 2)
+      return {
+        width: `${width}px`,
+        height: `${height}px`,
+        background:
+          'linear-gradient(90deg, rgba(225,248,255,0.2) 0%, rgba(225,248,255,0.95) 32%, rgba(126,226,255,0.98) 70%, rgba(94,166,255,0.92) 100%)',
+        borderRadius: '2px',
+        boxShadow: '0 0 10px rgba(116, 220, 255, 0.75)',
+        transform: `translate3d(${dartX}px, ${dartY}px, 0px) rotate(${rotationDeg}deg)`,
+        transformOrigin: 'center',
+      } as CSSProperties
+    }
 
     // Enemy shooter bullet: draw a small dart so it's easy to see.
     if (bullet.weaponId === 'shooter') {

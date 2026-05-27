@@ -3,7 +3,7 @@
     <div class="boss-hud">
       <div class="boss-card">
         <div class="boss-topline">
-          <span class="boss-title">MCAFFE</span>
+          <span class="boss-title">{{ bossLabel }}</span>
           <span class="boss-life">{{ bossHealthText }}</span>
         </div>
         <div class="boss-track">
@@ -31,7 +31,7 @@ interface BossEnemy {
   hp: number
   maxHp: number
   color: string
-  type: 'mcaffe' | 'grunt' | 'runner' | 'tank' | 'shooter'
+  type: 'mcaffe' | 'norton' | 'grunt' | 'runner' | 'tank' | 'shooter'
   tornadoTimer?: number
   tornadoCooldown?: number
   explosiveTimer?: number
@@ -42,6 +42,9 @@ interface BossEnemy {
   introStartY?: number
   introTargetX?: number
   introTargetY?: number
+  teleportTimer?: number
+  teleportCooldown?: number
+  teleportFxTimeLeft?: number
 }
 
 interface BossBullet {
@@ -126,7 +129,8 @@ export default defineComponent({
   setup(props, { emit }) {
     const gameStore = useGameStore()
 
-    const BOSS_TRIGGER_KILLS = 100
+    const MCAFFE_TRIGGER_KILLS = 100
+    const NORTON_TRIGGER_KILLS = 200
     const BOSS_MCAFFE_SIZE = 300
     const BOSS_MCAFFE_HP = 520
     const BOSS_MCAFFE_SPEED = 112
@@ -140,6 +144,18 @@ export default defineComponent({
     const BOSS_EXPLOSIVE_RADIUS = 150
     const BOSS_EXPLOSIVE_DAMAGE = 28
     const BOSS_EXPERIENCE = 250
+    const NORTON_SIZE = 170
+    const NORTON_HP = 420
+    const NORTON_SPEED = 132
+    const NORTON_INTRO_DURATION = 1.5
+    const NORTON_SHOTGUN_COOLDOWN = 1.15
+    const NORTON_SHOTGUN_PELLETS = 7
+    const NORTON_SHOTGUN_SPREAD_DEG = 55
+    const NORTON_SHOTGUN_SPEED = 820
+    const NORTON_SHOTGUN_DAMAGE = 9
+    const NORTON_TELEPORT_COOLDOWN = 2.35
+    const NORTON_TELEPORT_FX = 0.16
+    const NORTON_EXPERIENCE = 340
     const BOSS_SHAKE_DURATION = 2.2
     const BOSS_SHAKE_INTENSITY = 26
     const BOSS_CONTACT_DAMAGE = 28
@@ -147,45 +163,69 @@ export default defineComponent({
 
     let nextBossBulletId = 1_000_000
     let nextBossEnemyId = 1_000_000
-    let bossTriggerArmed = true
+    let mcaffeSpawned = false
+    let nortonSpawned = false
     let rafId: number | null = null
     let lastTime = 0
     let contactDamageCooldown = 0
 
-    const bossEnemy = computed(() => props.enemies.find((enemy) => enemy.type === 'mcaffe') ?? null)
+    const activeBoss = computed(
+      () =>
+        props.enemies.find((enemy) => enemy.type === 'mcaffe' || enemy.type === 'norton') ?? null,
+    )
+    const bossEnemy = computed(() => activeBoss.value)
+
+    const bossLabel = computed(() => {
+      if (!activeBoss.value) return 'BOSS'
+      return activeBoss.value.type === 'norton' ? 'NORTON' : 'MCAFFE'
+    })
 
     const bossHealthText = computed(() => {
-      if (!bossEnemy.value) return '0 / 0'
-      return `${bossEnemy.value.hp} / ${bossEnemy.value.maxHp}`
+      if (!activeBoss.value) return '0 / 0'
+      return `${activeBoss.value.hp} / ${activeBoss.value.maxHp}`
     })
 
     const bossHealthBarStyle = computed(() => {
-      if (!bossEnemy.value) return { width: '0%' }
-      const pct = Math.max(0, (bossEnemy.value.hp / bossEnemy.value.maxHp) * 100)
+      if (!activeBoss.value) return { width: '0%' }
+      const pct = Math.max(0, (activeBoss.value.hp / activeBoss.value.maxHp) * 100)
       return { width: `${Math.min(pct, 100)}%` }
     })
 
     const bossStyle = computed(() => {
-      const boss = bossEnemy.value
+      const boss = activeBoss.value
       if (!boss) return {}
 
       const screenX = Math.round(boss.x - props.camera.x - boss.size / 2)
       const screenY = Math.round(boss.y - props.camera.y - boss.size / 2)
       const introActive = (boss.introTimeLeft ?? 0) > 0
 
+      const isNorton = boss.type === 'norton'
+
       return {
         width: `${boss.size}px`,
         height: `${boss.size}px`,
         transform: `translate(${screenX}px, ${screenY}px)`,
-        background:
-          'radial-gradient(circle at 35% 30%, rgba(255, 238, 245, 0.96) 0%, rgba(255, 109, 142, 0.86) 28%, rgba(175, 28, 76, 0.95) 66%, rgba(33, 7, 18, 1) 100%)',
-        border: '6px solid rgba(255, 220, 230, 0.88)',
+        background: isNorton
+          ? 'radial-gradient(circle at 35% 28%, rgba(223, 248, 255, 0.96) 0%, rgba(126, 226, 255, 0.9) 28%, rgba(41, 143, 212, 0.92) 66%, rgba(9, 28, 48, 1) 100%)'
+          : 'radial-gradient(circle at 35% 30%, rgba(255, 238, 245, 0.96) 0%, rgba(255, 109, 142, 0.86) 28%, rgba(175, 28, 76, 0.95) 66%, rgba(33, 7, 18, 1) 100%)',
+        border: isNorton
+          ? '5px solid rgba(212, 247, 255, 0.9)'
+          : '6px solid rgba(255, 220, 230, 0.88)',
         borderRadius: '50%',
         boxShadow: introActive
-          ? '0 0 38px rgba(255, 81, 130, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.28)'
-          : '0 0 28px rgba(255, 81, 130, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.22)',
+          ? isNorton
+            ? '0 0 42px rgba(84, 213, 255, 0.84), inset 0 0 22px rgba(255, 255, 255, 0.24)'
+            : '0 0 38px rgba(255, 81, 130, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.28)'
+          : isNorton
+            ? '0 0 30px rgba(64, 196, 255, 0.62), inset 0 0 14px rgba(255, 255, 255, 0.2)'
+            : '0 0 28px rgba(255, 81, 130, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.22)',
         zIndex: 12,
-        opacity: introActive ? '0.98' : '1',
+        opacity:
+          boss.teleportFxTimeLeft && boss.teleportFxTimeLeft > 0
+            ? '0.55'
+            : introActive
+              ? '0.98'
+              : '1',
       }
     })
 
@@ -200,7 +240,7 @@ export default defineComponent({
       emit('state-change', active)
     }
 
-    function spawnBoss() {
+    function spawnMcAffeBoss() {
       const centerX = props.player.x + props.playerSize / 2
       const bossX = Math.max(
         BOSS_MCAFFE_SIZE / 2,
@@ -231,8 +271,45 @@ export default defineComponent({
         introTargetY: targetY,
       })
 
-      bossTriggerArmed = false
+      mcaffeSpawned = true
       requestShake()
+      setBossPresence(true)
+    }
+
+    function spawnNortonBoss() {
+      const centerX = props.player.x + props.playerSize / 2
+      const bossX = Math.max(
+        NORTON_SIZE / 2,
+        Math.min(centerX, props.worldSize.width - NORTON_SIZE / 2),
+      )
+      const targetY = Math.max(0, props.player.y - NORTON_SIZE - 180)
+      const startY = Math.max(-NORTON_SIZE * 1.8, targetY - 560)
+
+      enemies.push({
+        id: nextBossEnemyId++,
+        x: bossX,
+        y: startY,
+        size: NORTON_SIZE,
+        speed: NORTON_SPEED,
+        hp: NORTON_HP,
+        maxHp: NORTON_HP,
+        color: '#6ed8ff',
+        type: 'norton',
+        tornadoTimer: 1.0,
+        tornadoCooldown: NORTON_SHOTGUN_COOLDOWN,
+        introTimeLeft: NORTON_INTRO_DURATION,
+        introDuration: NORTON_INTRO_DURATION,
+        introStartX: bossX,
+        introStartY: startY,
+        introTargetX: bossX,
+        introTargetY: targetY,
+        teleportTimer: 2,
+        teleportCooldown: NORTON_TELEPORT_COOLDOWN,
+        teleportFxTimeLeft: 0,
+      })
+
+      nortonSpawned = true
+      requestShake(1.7, 24)
       setBossPresence(true)
     }
 
@@ -303,9 +380,59 @@ export default defineComponent({
       })
     }
 
+    function spawnNortonShotgun(boss: BossEnemy, targetX: number, targetY: number) {
+      const dx = targetX - boss.x
+      const dy = targetY - boss.y
+      const baseAngle = Math.atan2(dy, dx)
+      const spreadRad = (NORTON_SHOTGUN_SPREAD_DEG * Math.PI) / 180
+
+      for (let i = 0; i < NORTON_SHOTGUN_PELLETS; i += 1) {
+        const factor = i / (NORTON_SHOTGUN_PELLETS - 1) - 0.5
+        const angle = baseAngle + factor * spreadRad
+        bullets.push({
+          id: nextBossBulletId++,
+          weaponId: 'norton-lightning',
+          x: boss.x,
+          y: boss.y,
+          vx: Math.cos(angle) * NORTON_SHOTGUN_SPEED,
+          vy: Math.sin(angle) * NORTON_SHOTGUN_SPEED,
+          angleDeg: (angle * 180) / Math.PI + 90,
+          size: 8,
+          ttl: 1.7,
+          maxTtl: 1.7,
+          damage: NORTON_SHOTGUN_DAMAGE,
+          color: '#d7f6ff',
+          type: 'normal',
+          piercing: false,
+          bouncesLeft: 0,
+          owner: 'enemy',
+          ownerId: boss.id,
+          stun: true,
+          stunDuration: 0.35,
+        })
+      }
+    }
+
+    function teleportNorton(boss: BossEnemy) {
+      const minDist = 260
+      const maxDist = 560
+      const angle = Math.random() * Math.PI * 2
+      const dist = minDist + Math.random() * (maxDist - minDist)
+
+      const targetX = props.player.x + props.playerSize / 2 + Math.cos(angle) * dist
+      const targetY = props.player.y + props.playerSize / 2 + Math.sin(angle) * dist
+
+      boss.x = Math.max(boss.size / 2, Math.min(targetX, props.worldSize.width - boss.size / 2))
+      boss.y = Math.max(boss.size / 2, Math.min(targetY, props.worldSize.height - boss.size / 2))
+      boss.teleportFxTimeLeft = NORTON_TELEPORT_FX
+
+      // Make Norton harder to kill by evading and recovering a bit on each blink.
+      boss.hp = Math.min(boss.maxHp, boss.hp + 8)
+      requestShake(0.35, 10)
+    }
+
     function removeBoss(index: number) {
       enemies.splice(index, 1)
-      bossTriggerArmed = false
       setBossPresence(false)
     }
 
@@ -322,20 +449,32 @@ export default defineComponent({
     function updateBosses(dt: number) {
       if (props.isPaused || props.isGameOver || props.isMenuOpen) return
 
-      if (gameStore.playerStats.kills === 0 && !bossEnemy.value) {
-        bossTriggerArmed = true
+      if (gameStore.playerStats.kills === 0 && !activeBoss.value) {
+        mcaffeSpawned = false
+        nortonSpawned = false
         setBossPresence(false)
       }
 
       if (
-        bossTriggerArmed &&
-        !bossEnemy.value &&
-        gameStore.playerStats.kills >= BOSS_TRIGGER_KILLS
+        !activeBoss.value &&
+        !mcaffeSpawned &&
+        gameStore.playerStats.kills >= MCAFFE_TRIGGER_KILLS
       ) {
-        spawnBoss()
+        spawnMcAffeBoss()
       }
 
-      const bossIndex = enemies.findIndex((enemy) => enemy.type === 'mcaffe')
+      if (
+        !activeBoss.value &&
+        mcaffeSpawned &&
+        !nortonSpawned &&
+        gameStore.playerStats.kills >= NORTON_TRIGGER_KILLS
+      ) {
+        spawnNortonBoss()
+      }
+
+      const bossIndex = enemies.findIndex(
+        (enemy) => enemy.type === 'mcaffe' || enemy.type === 'norton',
+      )
       const boss = bossIndex >= 0 ? enemies[bossIndex] : null
       if (!boss) return
 
@@ -359,9 +498,9 @@ export default defineComponent({
         boss.y = startY + (finalY - startY) * eased
       } else {
         const desiredX = targetX
-        const desiredY = Math.max(boss.size / 2, targetY - 360)
-        boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.8)
-        boss.y += (desiredY - boss.y) * Math.min(1, dt * 2.2)
+        const desiredY = Math.max(boss.size / 2, targetY - (boss.type === 'norton' ? 300 : 360))
+        boss.x += (desiredX - boss.x) * Math.min(1, dt * (boss.type === 'norton' ? 4.4 : 2.8))
+        boss.y += (desiredY - boss.y) * Math.min(1, dt * (boss.type === 'norton' ? 3.2 : 2.2))
       }
 
       boss.x = Math.max(boss.size / 2, Math.min(boss.x, props.worldSize.width - boss.size / 2))
@@ -375,7 +514,7 @@ export default defineComponent({
       const bossHitbox = {
         x: boss.x,
         y: boss.y,
-        radius: boss.size * 0.34,
+        radius: boss.size * (boss.type === 'norton' ? 0.2 : 0.34),
       }
       if (circlesOverlap(bossHitbox, playerHitbox) && contactDamageCooldown <= 0) {
         gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
@@ -384,19 +523,33 @@ export default defineComponent({
 
       boss.tornadoTimer = (boss.tornadoTimer ?? 1.2) - dt
       if (boss.tornadoTimer <= 0) {
-        spawnBossTornado(boss, targetX, targetY)
-        boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
+        if (boss.type === 'norton') {
+          spawnNortonShotgun(boss, targetX, targetY)
+          boss.tornadoTimer = boss.tornadoCooldown ?? NORTON_SHOTGUN_COOLDOWN
+        } else {
+          spawnBossTornado(boss, targetX, targetY)
+          boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
+        }
       }
 
-      boss.explosiveTimer = (boss.explosiveTimer ?? 2.1) - dt
-      if (boss.explosiveTimer <= 0) {
-        spawnBossExplosion(boss, targetX, targetY)
-        boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
+      if (boss.type === 'mcaffe') {
+        boss.explosiveTimer = (boss.explosiveTimer ?? 2.1) - dt
+        if (boss.explosiveTimer <= 0) {
+          spawnBossExplosion(boss, targetX, targetY)
+          boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
+        }
+      } else {
+        boss.teleportTimer = (boss.teleportTimer ?? 1.6) - dt
+        if (boss.teleportTimer <= 0) {
+          teleportNorton(boss)
+          boss.teleportTimer = boss.teleportCooldown ?? NORTON_TELEPORT_COOLDOWN
+        }
+        boss.teleportFxTimeLeft = Math.max(0, (boss.teleportFxTimeLeft ?? 0) - dt)
       }
 
       if (boss.hp <= 0) {
         gameStore.incrementKills()
-        gameStore.addExperience(BOSS_EXPERIENCE)
+        gameStore.addExperience(boss.type === 'norton' ? NORTON_EXPERIENCE : BOSS_EXPERIENCE)
         removeBoss(bossIndex)
       }
     }
@@ -420,6 +573,7 @@ export default defineComponent({
 
     return {
       bossEnemy,
+      bossLabel,
       bossHealthText,
       bossHealthBarStyle,
       bossStyle,
