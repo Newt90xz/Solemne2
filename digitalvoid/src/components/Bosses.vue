@@ -24,7 +24,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, onUnmounted, reactive, type PropType } from 'vue'
+import { computed, defineComponent, onMounted, onUnmounted, reactive, type CSSProperties, type PropType } from 'vue'
 import { useGameStore } from '../stores/game'
 import mcaffeImg from '../assets/bossesimage/mcaffe.png'
 import nortonImg from '../assets/bossesimage/Norton.png'
@@ -295,22 +295,6 @@ const bossStyle = computed(() => {
 
   const img = imgMap[boss.type]
 
-  const glowMap = {
-    mcaffe: {
-      intro: '0 0 38px rgba(255, 81, 130, 0.8)',
-      idle: '0 0 28px rgba(255, 81, 130, 0.55)',
-    },
-    norton: {
-      intro: '0 0 42px rgba(255, 200, 40, 0.85)',
-      idle: '0 0 30px rgba(255, 180, 20, 0.6)',
-    },
-    'windows-defender': {
-      intro: '0 0 44px rgba(88, 200, 255, 0.88)',
-      idle: '0 0 32px rgba(68, 180, 255, 0.65)',
-    },
-  } as Record<string, { intro: string; idle: string }>
-
-  const glow = glowMap[boss.type] ?? glowMap['mcaffe']
 
   return {
     width: `${boss.size}px`,
@@ -330,7 +314,7 @@ const bossStyle = computed(() => {
         : introActive
           ? '0.98'
           : '1',
-  }
+  }as CSSProperties
 })
 
     const enemies = props.enemies as BossEnemy[]
@@ -490,7 +474,7 @@ const bossStyle = computed(() => {
       setBossPresence(true)
     }
 
-function spawnBossTornado(boss: BossEnemy, _targetX: number, _targetY: number) {
+function spawnBossTornado(boss: BossEnemy) {
   const SPIRAL_ARMS = 20      
   const SPIRAL_SPREAD = (Math.PI * 2) / SPIRAL_ARMS  
   const BULLET_SPEED = 480
@@ -803,7 +787,7 @@ function updateBosses(dt: number) {
       spawnWindowsOrbitBullets(boss)
       boss.tornadoTimer = boss.tornadoCooldown ?? WINDOWS_DEFENDER_ORBIT_COOLDOWN
     } else {
-      spawnBossTornado(boss, targetX, targetY)
+      spawnBossTornado(boss)
       boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
     }
   }
