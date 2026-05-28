@@ -42,11 +42,11 @@ jobs:
 
       - name: Upload Pages artifact
         if: ${{ !env.ACT }}
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./digitalvoid/dist
 
       - name: Deploy to GitHub Pages
         if: ${{ !env.ACT }}
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
