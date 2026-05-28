@@ -13,11 +13,18 @@
     </div>
 
     <div class="boss-enemy" :style="bossStyle"></div>
+    <div v-if="escapeIndicatorStyle" class="escape-indicator" :style="escapeIndicatorStyle">
+      <span class="escape-indicator-text">{{ escapeIndicatorText }}</span>
+    </div>
+    <div v-if="escapePointStyle" class="escape-point" :style="escapePointStyle">
+      <span class="escape-point-core"></span>
+      <span class="escape-point-label">SALIDA</span>
+    </div>
   </template>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, onUnmounted, type PropType } from 'vue'
+import { computed, defineComponent, onMounted, onUnmounted, reactive, type PropType } from 'vue'
 import { useGameStore } from '../stores/game'
 
 type Vector2 = { x: number; y: number }
@@ -31,7 +38,7 @@ interface BossEnemy {
   hp: number
   maxHp: number
   color: string
-  type: 'mcaffe' | 'norton' | 'grunt' | 'runner' | 'tank' | 'shooter'
+  type: 'mcaffe' | 'norton' | 'windows-defender' | 'grunt' | 'runner' | 'tank' | 'shooter'
   tornadoTimer?: number
   tornadoCooldown?: number
   explosiveTimer?: number
@@ -125,12 +132,14 @@ export default defineComponent({
     'state-change': (active: boolean) => typeof active === 'boolean',
     shake: (payload: { duration: number; intensity: number }) =>
       typeof payload.duration === 'number' && typeof payload.intensity === 'number',
+    escape: () => true,
   },
   setup(props, { emit }) {
     const gameStore = useGameStore()
 
     const MCAFFE_TRIGGER_KILLS = 100
     const NORTON_TRIGGER_KILLS = 200
+    const WINDOWS_DEFENDER_TRIGGER_KILLS = 300
     const BOSS_MCAFFE_SIZE = 300
     const BOSS_MCAFFE_HP = 520
     const BOSS_MCAFFE_SPEED = 112
@@ -156,6 +165,17 @@ export default defineComponent({
     const NORTON_TELEPORT_COOLDOWN = 2.35
     const NORTON_TELEPORT_FX = 0.16
     const NORTON_EXPERIENCE = 340
+    const WINDOWS_DEFENDER_SIZE = 260
+    const WINDOWS_DEFENDER_SPEED = 118
+    const WINDOWS_DEFENDER_INTRO_DURATION = 1.7
+    const WINDOWS_DEFENDER_ORBIT_BULLETS = 8
+    const WINDOWS_DEFENDER_ORBIT_RADIUS = 128
+    const WINDOWS_DEFENDER_ORBIT_SPEED = Math.PI * 2.1
+    const WINDOWS_DEFENDER_ORBIT_COOLDOWN = 1.35
+    const WINDOWS_DEFENDER_ORBIT_LIFETIME = 6.2
+    const WINDOWS_DEFENDER_ORBIT_DAMAGE = 12
+    const WINDOWS_DEFENDER_ESCAPE_RADIUS = 44
+    const WINDOWS_DEFENDER_ESCAPE_INDICATOR_DURATION = 2.8
     const BOSS_SHAKE_DURATION = 2.2
     const BOSS_SHAKE_INTENSITY = 26
     const BOSS_CONTACT_DAMAGE = 28
@@ -165,30 +185,95 @@ export default defineComponent({
     let nextBossEnemyId = 1_000_000
     let mcaffeSpawned = false
     let nortonSpawned = false
+    let windowsDefenderSpawned = false
     let rafId: number | null = null
     let lastTime = 0
     let contactDamageCooldown = 0
+    const escapePoint = reactive({ x: 0, y: 0, active: false })
+    const escapeIndicator = reactive({
+      active: false,
+      timeLeft: 0,
+      duration: WINDOWS_DEFENDER_ESCAPE_INDICATOR_DURATION,
+    })
 
     const activeBoss = computed(
       () =>
-        props.enemies.find((enemy) => enemy.type === 'mcaffe' || enemy.type === 'norton') ?? null,
+        props.enemies.find(
+          (enemy) =>
+            enemy.type === 'mcaffe' || enemy.type === 'norton' || enemy.type === 'windows-defender',
+        ) ?? null,
     )
     const bossEnemy = computed(() => activeBoss.value)
 
     const bossLabel = computed(() => {
       if (!activeBoss.value) return 'BOSS'
+      if (activeBoss.value.type === 'windows-defender') return 'WINDOWS DEFENDER'
       return activeBoss.value.type === 'norton' ? 'NORTON' : 'MCAFFE'
     })
 
     const bossHealthText = computed(() => {
       if (!activeBoss.value) return '0 / 0'
+      if (activeBoss.value.type === 'windows-defender') return 'INMORTAL'
       return `${activeBoss.value.hp} / ${activeBoss.value.maxHp}`
     })
 
     const bossHealthBarStyle = computed(() => {
       if (!activeBoss.value) return { width: '0%' }
+      if (activeBoss.value.type === 'windows-defender') {
+        return {
+          width: '100%',
+          background: 'linear-gradient(90deg, #8bf5c3, #55d1ff, #b7ff84)',
+        }
+      }
       const pct = Math.max(0, (activeBoss.value.hp / activeBoss.value.maxHp) * 100)
       return { width: `${Math.min(pct, 100)}%` }
+    })
+
+    const escapePointStyle = computed(() => {
+      if (!escapePoint.active) return null
+      const screenX = Math.round(escapePoint.x - props.camera.x)
+      const screenY = Math.round(escapePoint.y - props.camera.y)
+      return {
+        width: '140px',
+        height: '140px',
+        transform: `translate(${screenX - 70}px, ${screenY - 70}px)`,
+      }
+    })
+
+    const escapeIndicatorText = computed(() => {
+      if (!escapeIndicator.active) return ''
+      const progress = 1 - escapeIndicator.timeLeft / Math.max(0.001, escapeIndicator.duration)
+      return progress < 0.72 ? 'ESCAPA' : '➤'
+    })
+
+    const escapeIndicatorStyle = computed(() => {
+      if (
+        !escapeIndicator.active ||
+        !escapePoint.active ||
+        activeBoss.value?.type !== 'windows-defender'
+      ) {
+        return null
+      }
+
+      const progress = 1 - escapeIndicator.timeLeft / Math.max(0.001, escapeIndicator.duration)
+      const clampedProgress = Math.min(1, Math.max(0, progress))
+      const playerCenterX = props.player.x + props.playerSize / 2
+      const playerCenterY = props.player.y + props.playerSize / 2
+      const playerScreenX = Math.round(playerCenterX - props.camera.x)
+      const playerScreenY = Math.round(playerCenterY - props.camera.y)
+      const arrowAngle =
+        (Math.atan2(escapePoint.y - playerCenterY, escapePoint.x - playerCenterX) * 180) / Math.PI
+      const scale = 2.9 - clampedProgress * 2.2
+      const opacity = 1 - clampedProgress * 0.12
+      const arrowMode = clampedProgress >= 0.72
+      const spin = arrowMode ? arrowAngle : 0
+
+      return {
+        left: `${playerScreenX}px`,
+        top: `${playerScreenY - 132}px`,
+        transform: `translate(-50%, -50%) scale(${Math.max(0.7, scale)}) rotate(${spin}deg)`,
+        opacity: `${Math.max(0.68, opacity)}`,
+      }
     })
 
     const bossStyle = computed(() => {
@@ -207,18 +292,26 @@ export default defineComponent({
         transform: `translate(${screenX}px, ${screenY}px)`,
         background: isNorton
           ? 'radial-gradient(circle at 35% 28%, rgba(223, 248, 255, 0.96) 0%, rgba(126, 226, 255, 0.9) 28%, rgba(41, 143, 212, 0.92) 66%, rgba(9, 28, 48, 1) 100%)'
-          : 'radial-gradient(circle at 35% 30%, rgba(255, 238, 245, 0.96) 0%, rgba(255, 109, 142, 0.86) 28%, rgba(175, 28, 76, 0.95) 66%, rgba(33, 7, 18, 1) 100%)',
+          : boss.type === 'windows-defender'
+            ? 'radial-gradient(circle at 35% 28%, rgba(233, 255, 245, 0.98) 0%, rgba(133, 255, 202, 0.88) 28%, rgba(44, 171, 123, 0.92) 66%, rgba(10, 36, 28, 1) 100%)'
+            : 'radial-gradient(circle at 35% 30%, rgba(255, 238, 245, 0.96) 0%, rgba(255, 109, 142, 0.86) 28%, rgba(175, 28, 76, 0.95) 66%, rgba(33, 7, 18, 1) 100%)',
         border: isNorton
           ? '5px solid rgba(212, 247, 255, 0.9)'
-          : '6px solid rgba(255, 220, 230, 0.88)',
+          : boss.type === 'windows-defender'
+            ? '5px solid rgba(218, 255, 235, 0.92)'
+            : '6px solid rgba(255, 220, 230, 0.88)',
         borderRadius: '50%',
         boxShadow: introActive
           ? isNorton
             ? '0 0 42px rgba(84, 213, 255, 0.84), inset 0 0 22px rgba(255, 255, 255, 0.24)'
-            : '0 0 38px rgba(255, 81, 130, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.28)'
+            : boss.type === 'windows-defender'
+              ? '0 0 44px rgba(88, 255, 186, 0.88), inset 0 0 22px rgba(255, 255, 255, 0.25)'
+              : '0 0 38px rgba(255, 81, 130, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.28)'
           : isNorton
             ? '0 0 30px rgba(64, 196, 255, 0.62), inset 0 0 14px rgba(255, 255, 255, 0.2)'
-            : '0 0 28px rgba(255, 81, 130, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.22)',
+            : boss.type === 'windows-defender'
+              ? '0 0 32px rgba(68, 235, 161, 0.7), inset 0 0 14px rgba(255, 255, 255, 0.18)'
+              : '0 0 28px rgba(255, 81, 130, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.22)',
         zIndex: 12,
         opacity:
           boss.teleportFxTimeLeft && boss.teleportFxTimeLeft > 0
@@ -238,6 +331,41 @@ export default defineComponent({
 
     function setBossPresence(active: boolean) {
       emit('state-change', active)
+    }
+
+    function setEscapePointForPlayer() {
+      const playerCenterX = props.player.x + props.playerSize / 2
+      const playerCenterY = props.player.y + props.playerSize / 2
+      const margin = 170
+      const candidates = [
+        { x: margin, y: margin },
+        { x: props.worldSize.width - margin, y: margin },
+        { x: margin, y: props.worldSize.height - margin },
+        { x: props.worldSize.width - margin, y: props.worldSize.height - margin },
+      ]
+
+      let chosen = candidates[0]!
+      let bestDist = -1
+      for (const candidate of candidates) {
+        const dist = Math.hypot(candidate.x - playerCenterX, candidate.y - playerCenterY)
+        if (dist > bestDist) {
+          bestDist = dist
+          chosen = candidate
+        }
+      }
+
+      escapePoint.x = chosen.x
+      escapePoint.y = chosen.y
+      escapePoint.active = true
+      escapeIndicator.active = true
+      escapeIndicator.duration = WINDOWS_DEFENDER_ESCAPE_INDICATOR_DURATION
+      escapeIndicator.timeLeft = WINDOWS_DEFENDER_ESCAPE_INDICATOR_DURATION
+    }
+
+    function clearEscapePoint() {
+      escapePoint.active = false
+      escapeIndicator.active = false
+      escapeIndicator.timeLeft = 0
     }
 
     function spawnMcAffeBoss() {
@@ -310,6 +438,44 @@ export default defineComponent({
 
       nortonSpawned = true
       requestShake(1.7, 24)
+      setBossPresence(true)
+    }
+
+    function spawnWindowsDefenderBoss() {
+      const centerX = props.player.x + props.playerSize / 2
+      const bossX = Math.max(
+        WINDOWS_DEFENDER_SIZE / 2,
+        Math.min(centerX, props.worldSize.width - WINDOWS_DEFENDER_SIZE / 2),
+      )
+      const targetY = Math.max(0, props.player.y - WINDOWS_DEFENDER_SIZE - 180)
+      const startY = Math.max(-WINDOWS_DEFENDER_SIZE * 1.7, targetY - 560)
+
+      enemies.push({
+        id: nextBossEnemyId++,
+        x: bossX,
+        y: startY,
+        size: WINDOWS_DEFENDER_SIZE,
+        speed: WINDOWS_DEFENDER_SPEED,
+        hp: Number.POSITIVE_INFINITY,
+        maxHp: Number.POSITIVE_INFINITY,
+        color: '#68e7b6',
+        type: 'windows-defender',
+        tornadoTimer: 1.0,
+        tornadoCooldown: WINDOWS_DEFENDER_ORBIT_COOLDOWN,
+        introTimeLeft: WINDOWS_DEFENDER_INTRO_DURATION,
+        introDuration: WINDOWS_DEFENDER_INTRO_DURATION,
+        introStartX: bossX,
+        introStartY: startY,
+        introTargetX: bossX,
+        introTargetY: targetY,
+        teleportTimer: 0,
+        teleportCooldown: 0,
+        teleportFxTimeLeft: 0,
+      })
+
+      windowsDefenderSpawned = true
+      setEscapePointForPlayer()
+      requestShake(2.1, 28)
       setBossPresence(true)
     }
 
@@ -413,6 +579,44 @@ export default defineComponent({
       }
     }
 
+    function spawnWindowsOrbitBullets(boss: BossEnemy) {
+      const orbitTargetX = boss.x
+      const orbitTargetY = boss.y
+
+      for (let i = 0; i < WINDOWS_DEFENDER_ORBIT_BULLETS; i += 1) {
+        const phase = (Math.PI * 2 * i) / WINDOWS_DEFENDER_ORBIT_BULLETS
+        bullets.push({
+          id: nextBossBulletId++,
+          weaponId: 'windows-orbit',
+          x: orbitTargetX + Math.cos(phase) * WINDOWS_DEFENDER_ORBIT_RADIUS,
+          y: orbitTargetY + Math.sin(phase) * WINDOWS_DEFENDER_ORBIT_RADIUS,
+          vx: 0,
+          vy: 0,
+          angleDeg: undefined,
+          size: 10,
+          ttl: WINDOWS_DEFENDER_ORBIT_LIFETIME,
+          maxTtl: WINDOWS_DEFENDER_ORBIT_LIFETIME,
+          damage: WINDOWS_DEFENDER_ORBIT_DAMAGE,
+          color: '#aaf8d3',
+          type: 'orbiting',
+          orbitPhase: phase,
+          orbitRadius: WINDOWS_DEFENDER_ORBIT_RADIUS,
+          orbitTimeElapsed: 1.05,
+          orbitSpeed: WINDOWS_DEFENDER_ORBIT_SPEED,
+          initialVx: 0,
+          initialVy: 0,
+          orbitTargetX,
+          orbitTargetY,
+          piercing: false,
+          bouncesLeft: 0,
+          owner: 'enemy',
+          ownerId: boss.id,
+          stun: false,
+          stunDuration: 0,
+        })
+      }
+    }
+
     function teleportNorton(boss: BossEnemy) {
       const minDist = 260
       const maxDist = 560
@@ -449,9 +653,15 @@ export default defineComponent({
     function updateBosses(dt: number) {
       if (props.isPaused || props.isGameOver || props.isMenuOpen) return
 
+      if (escapeIndicator.active && escapeIndicator.timeLeft > 0) {
+        escapeIndicator.timeLeft = Math.max(0, escapeIndicator.timeLeft - dt)
+      }
+
       if (gameStore.playerStats.kills === 0 && !activeBoss.value) {
         mcaffeSpawned = false
         nortonSpawned = false
+        windowsDefenderSpawned = false
+        clearEscapePoint()
         setBossPresence(false)
       }
 
@@ -472,8 +682,18 @@ export default defineComponent({
         spawnNortonBoss()
       }
 
+      if (
+        !activeBoss.value &&
+        nortonSpawned &&
+        !windowsDefenderSpawned &&
+        gameStore.playerStats.kills >= WINDOWS_DEFENDER_TRIGGER_KILLS
+      ) {
+        spawnWindowsDefenderBoss()
+      }
+
       const bossIndex = enemies.findIndex(
-        (enemy) => enemy.type === 'mcaffe' || enemy.type === 'norton',
+        (enemy) =>
+          enemy.type === 'mcaffe' || enemy.type === 'norton' || enemy.type === 'windows-defender',
       )
       const boss = bossIndex >= 0 ? enemies[bossIndex] : null
       if (!boss) return
@@ -484,6 +704,26 @@ export default defineComponent({
       const targetY = props.player.y + props.playerSize / 2
 
       contactDamageCooldown = Math.max(0, contactDamageCooldown - dt)
+
+      if (boss.type === 'windows-defender' && escapePoint.active) {
+        const playerCenter = {
+          x: props.player.x + props.playerSize / 2,
+          y: props.player.y + props.playerSize / 2,
+          radius: props.playerSize * 0.28,
+        }
+        const escapeZone = {
+          x: escapePoint.x,
+          y: escapePoint.y,
+          radius: WINDOWS_DEFENDER_ESCAPE_RADIUS,
+        }
+        if (circlesOverlap(playerCenter, escapeZone)) {
+          enemies.splice(bossIndex, 1)
+          clearEscapePoint()
+          setBossPresence(false)
+          emit('escape')
+          return
+        }
+      }
 
       if ((boss.introTimeLeft ?? 0) > 0) {
         boss.introTimeLeft = Math.max(0, (boss.introTimeLeft ?? 0) - dt)
@@ -497,10 +737,17 @@ export default defineComponent({
         boss.x = startX + (finalX - startX) * eased
         boss.y = startY + (finalY - startY) * eased
       } else {
-        const desiredX = targetX
-        const desiredY = Math.max(boss.size / 2, targetY - (boss.type === 'norton' ? 300 : 360))
-        boss.x += (desiredX - boss.x) * Math.min(1, dt * (boss.type === 'norton' ? 4.4 : 2.8))
-        boss.y += (desiredY - boss.y) * Math.min(1, dt * (boss.type === 'norton' ? 3.2 : 2.2))
+        if (boss.type === 'windows-defender') {
+          const desiredX = targetX
+          const desiredY = Math.max(boss.size / 2, targetY - 360)
+          boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.6)
+          boss.y += (desiredY - boss.y) * Math.min(1, dt * 2)
+        } else {
+          const desiredX = targetX
+          const desiredY = Math.max(boss.size / 2, targetY - (boss.type === 'norton' ? 300 : 360))
+          boss.x += (desiredX - boss.x) * Math.min(1, dt * (boss.type === 'norton' ? 4.4 : 2.8))
+          boss.y += (desiredY - boss.y) * Math.min(1, dt * (boss.type === 'norton' ? 3.2 : 2.2))
+        }
       }
 
       boss.x = Math.max(boss.size / 2, Math.min(boss.x, props.worldSize.width - boss.size / 2))
@@ -514,10 +761,16 @@ export default defineComponent({
       const bossHitbox = {
         x: boss.x,
         y: boss.y,
-        radius: boss.size * (boss.type === 'norton' ? 0.2 : 0.34),
+        radius:
+          boss.size *
+          (boss.type === 'norton' ? 0.2 : boss.type === 'windows-defender' ? 0.28 : 0.34),
       }
       if (circlesOverlap(bossHitbox, playerHitbox) && contactDamageCooldown <= 0) {
-        gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
+        if (boss.type === 'windows-defender') {
+          gameStore.takeDamage(gameStore.playerStats.health)
+        } else {
+          gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
+        }
         contactDamageCooldown = BOSS_CONTACT_COOLDOWN
       }
 
@@ -526,6 +779,9 @@ export default defineComponent({
         if (boss.type === 'norton') {
           spawnNortonShotgun(boss, targetX, targetY)
           boss.tornadoTimer = boss.tornadoCooldown ?? NORTON_SHOTGUN_COOLDOWN
+        } else if (boss.type === 'windows-defender') {
+          spawnWindowsOrbitBullets(boss)
+          boss.tornadoTimer = boss.tornadoCooldown ?? WINDOWS_DEFENDER_ORBIT_COOLDOWN
         } else {
           spawnBossTornado(boss, targetX, targetY)
           boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
@@ -538,16 +794,26 @@ export default defineComponent({
           spawnBossExplosion(boss, targetX, targetY)
           boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
         }
-      } else {
+      } else if (boss.type === 'norton') {
         boss.teleportTimer = (boss.teleportTimer ?? 1.6) - dt
         if (boss.teleportTimer <= 0) {
           teleportNorton(boss)
           boss.teleportTimer = boss.teleportCooldown ?? NORTON_TELEPORT_COOLDOWN
         }
         boss.teleportFxTimeLeft = Math.max(0, (boss.teleportFxTimeLeft ?? 0) - dt)
+      } else if (boss.type === 'windows-defender') {
+        boss.hp = boss.maxHp
+        boss.teleportFxTimeLeft = 0
+        const bossBullets = bullets.filter(
+          (bullet) => bullet.ownerId === boss.id && bullet.type === 'orbiting',
+        )
+        for (const bullet of bossBullets) {
+          bullet.orbitTargetX = boss.x
+          bullet.orbitTargetY = boss.y
+        }
       }
 
-      if (boss.hp <= 0) {
+      if (boss.type !== 'windows-defender' && boss.hp <= 0) {
         gameStore.incrementKills()
         gameStore.addExperience(boss.type === 'norton' ? NORTON_EXPERIENCE : BOSS_EXPERIENCE)
         removeBoss(bossIndex)
@@ -577,6 +843,9 @@ export default defineComponent({
       bossHealthText,
       bossHealthBarStyle,
       bossStyle,
+      escapeIndicatorStyle,
+      escapeIndicatorText,
+      escapePointStyle,
     }
   },
 })
@@ -645,5 +914,87 @@ export default defineComponent({
 .boss-enemy {
   position: absolute;
   image-rendering: pixelated;
+}
+
+.escape-indicator {
+  position: absolute;
+  z-index: 72;
+  pointer-events: none;
+  transform-origin: center;
+  transition: transform 0.08s linear;
+}
+
+.escape-indicator-text {
+  display: inline-block;
+  color: #ecfff4;
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 16px rgba(97, 255, 182, 0.9),
+    0 0 32px rgba(59, 197, 131, 0.62);
+  white-space: nowrap;
+}
+
+.escape-point {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  z-index: 80;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(108, 255, 188, 0.98) 16%,
+    rgba(54, 211, 139, 0.82) 36%,
+    rgba(54, 211, 139, 0.18) 60%,
+    rgba(54, 211, 139, 0) 78%
+  );
+  box-shadow:
+    0 0 30px rgba(96, 255, 183, 0.95),
+    0 0 58px rgba(96, 255, 183, 0.5),
+    0 0 0 6px rgba(203, 255, 232, 0.26) inset;
+  animation: escapePulse 1.1s ease-in-out infinite;
+}
+
+.escape-point-core {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(247, 255, 250, 1) 0%, rgba(124, 255, 195, 1) 100%);
+  box-shadow:
+    0 0 18px rgba(121, 255, 188, 0.95),
+    0 0 0 4px rgba(255, 255, 255, 0.5) inset;
+  margin-top: -6px;
+}
+
+.escape-point-label {
+  margin-top: -6px;
+  color: #effff6;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(48, 169, 113, 0.9);
+}
+
+@keyframes escapePulse {
+  0%,
+  100% {
+    opacity: 0.84;
+    box-shadow:
+      0 0 24px rgba(96, 255, 183, 0.86),
+      0 0 46px rgba(96, 255, 183, 0.42),
+      0 0 0 5px rgba(203, 255, 232, 0.22) inset;
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 36px rgba(96, 255, 183, 1),
+      0 0 70px rgba(96, 255, 183, 0.56),
+      0 0 0 7px rgba(203, 255, 232, 0.3) inset;
+  }
 }
 </style>

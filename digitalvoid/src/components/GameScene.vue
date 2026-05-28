@@ -87,6 +87,7 @@
         :is-menu-open="isMenuOpen"
         @state-change="handleBossStateChange"
         @shake="onBossShake"
+        @escape="handleBossEscape"
       />
 
       <!-- Upgrade Menu Overlay Centered -->
@@ -346,7 +347,7 @@ interface Enemy {
   hp: number
   maxHp: number
   color: string
-  type: 'grunt' | 'runner' | 'tank' | 'shooter' | 'mcaffe' | 'norton'
+  type: 'grunt' | 'runner' | 'tank' | 'shooter' | 'mcaffe' | 'norton' | 'windows-defender'
   // optional runtime fields for special enemies
   shootTimer?: number
   shootCooldown?: number
@@ -686,6 +687,7 @@ const ENEMY_DAMAGE = {
   tank: 15,
   shooter: 18,
   mcaffe: 26,
+  'windows-defender': 42,
 }
 const ENEMY_EXPERIENCE = {
   grunt: 25,
@@ -693,13 +695,17 @@ const ENEMY_EXPERIENCE = {
   tank: 50,
   shooter: 55,
   mcaffe: 250,
+  'windows-defender': 0,
 }
 const ENEMY_SPAWN_INTERVAL_MS = 1
 const MIN_ACTIVE_ENEMIES = 15
 const MAX_ACTIVE_ENEMIES = 30
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
 const normalEnemies = computed(() =>
-  enemies.filter((enemy) => enemy.type !== 'mcaffe' && enemy.type !== 'norton'),
+  enemies.filter(
+    (enemy) =>
+      enemy.type !== 'mcaffe' && enemy.type !== 'norton' && enemy.type !== 'windows-defender',
+  ),
 )
 const bossActive = ref(false)
 const screenShake = reactive({ x: 0, y: 0, timeLeft: 0, intensity: 0, duration: 0 })
@@ -1043,6 +1049,7 @@ function enemyStyle(e: Enemy) {
     shooter: 3,
     mcaffe: 0,
     norton: 1,
+    'windows-defender': 2,
   }
 
   const frameIndex = frameIndexByType[e.type] ?? 0
@@ -1072,7 +1079,7 @@ function updateEnemies(dt: number) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i]
     if (!e) continue
-    if (e.type === 'mcaffe' || e.type === 'norton') continue
+    if (e.type === 'mcaffe' || e.type === 'norton' || e.type === 'windows-defender') continue
     const px = player.x + playerSize.value / 2
     const py = player.y + playerSize.value / 2
     const dx = px - e.x
@@ -1307,18 +1314,24 @@ function bulletStyle(bullet: Bullet) {
 
   if (bullet.type === 'orbiting') {
     const isBossTornado = bullet.weaponId === 'mcaffe'
+    const isWindowsOrbit = bullet.weaponId === 'windows-orbit'
     return {
       width: `${bullet.size}px`,
       height: `${bullet.size}px`,
-      backgroundImage: `url(${bulletTexture})`,
+      backgroundImage: isWindowsOrbit ? 'none' : `url(${bulletTexture})`,
+      background: isWindowsOrbit
+        ? 'radial-gradient(circle, rgba(248,255,250,1) 0%, rgba(152,255,204,0.95) 45%, rgba(84,226,158,0.92) 100%)'
+        : undefined,
       backgroundSize: 'cover',
       backgroundRepeat: 'no-repeat',
-      borderRadius: '2px',
+      borderRadius: isWindowsOrbit ? '50%' : '2px',
       transform: `translate3d(${screenX}px, ${screenY}px, 0px)`,
       imageRendering: 'pixelated',
-      boxShadow: isBossTornado
-        ? '0 0 16px rgba(255, 120, 160, 0.8)'
-        : '0 0 10px rgba(255,255,255,0.22)',
+      boxShadow: isWindowsOrbit
+        ? '0 0 18px rgba(115, 255, 184, 0.9)'
+        : isBossTornado
+          ? '0 0 16px rgba(255, 120, 160, 0.8)'
+          : '0 0 10px rgba(255,255,255,0.22)',
     } as CSSProperties
   }
 
@@ -1630,6 +1643,63 @@ function handleBossStateChange(active: boolean) {
   bossActive.value = active
 }
 
+function resetRunAfterEscape() {
+  // Keep player progression/stats after escaping the immortal boss.
+  // Only restart the world loop and infection progress.
+  gameStore.playerStats.kills = 0
+
+  weaponUnlockMenu.visible = false
+  upgradeMenu.visible = false
+  upgradeMenu.buildingId = null
+  bossActive.value = false
+
+  keys.up = false
+  keys.down = false
+  keys.left = false
+  keys.right = false
+  mouse.down = false
+  mouseScreen.active = false
+  shootAccumulator = 0
+  lastDamageTime = 0
+  dashRechargeTimer.value = 0
+  dashTimeLeft = 0
+  isDashing.value = false
+  isStunned.value = false
+  stunTimeLeft.value = 0
+  akimboTimeLeft.value = 0
+
+  screenShake.x = 0
+  screenShake.y = 0
+  screenShake.timeLeft = 0
+  screenShake.duration = 0
+  screenShake.intensity = 0
+
+  player.x = 2500
+  player.y = 2500
+  camera.x = 0
+  camera.y = 0
+
+  buildings.length = 0
+  obstacles.length = 0
+  bullets.length = 0
+  explosions.length = 0
+  enemies.length = 0
+
+  spawnBuildings(10)
+  spawnBuildings(10)
+  spawnObstacles(8)
+  spawnEnemies(MIN_ACTIVE_ENEMIES)
+
+  showObjective.value = true
+  window.setTimeout(() => {
+    showObjective.value = false
+  }, 5000)
+}
+
+function handleBossEscape() {
+  resetRunAfterEscape()
+}
+
 function onBossShake(payload: { duration: number; intensity: number }) {
   screenShake.timeLeft = payload.duration
   screenShake.duration = payload.duration
@@ -1936,6 +2006,12 @@ function updateBullets(dt: number) {
         if (!enemy || enemy.hp <= 0) continue
         const overlap = circlesOverlap(bulletHitbox, getEnemyHitbox(enemy))
         if (!overlap.overlapping) continue
+
+        if (enemy.type === 'windows-defender') {
+          destroyBullet = true
+          hitEnemy = true
+          break
+        }
 
         enemy.hp -= bullet.damage
         hitEnemy = true

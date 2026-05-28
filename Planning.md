@@ -88,21 +88,20 @@
 
 - [ ] Music and Sound Effects
   - [ ] Main music
-  
-- [ ] Bosses
-  - [ ] Spawn Condition (Very important)
-  - [ ] Boss hitbox
-  - [ ] Creates obstacules in front of player 
-    - [ ] McAffe
-      - [ ] Tornado attacks 
-      - [ ] Expansive Bullets 
-    - [ ] Norton 
-      - [ ] Lighting Shotgun Attack 
-      - [ ] Dissapear then reappears elsewhere 
-      - [ ] Difficult to hit 
-    - [ ] Windows Defender 
-      - [ ] Inmortal (Must run/survive its orbit) 
-      - [ ] Touches you, you die. 
-      - [ ] Bullets orbit around him
+- [x] Bosses
+  - [x] Spawn Condition (Very important)
+  - [x] Boss hitbox
+  - [x] Creates obstacules in front of player
+    - [x] McAffe
+      - [x] Tornado attacks
+      - [x] Expansive Bullets
+    - [x] Norton
+      - [x] Lighting Shotgun Attack
+      - [x] Dissapear then reappears elsewhere
+      - [x] Difficult to hit
+    - [x] Windows Defender
+      - [x] Inmortal (Must run/survive its orbit)
+      - [x] Touches you, you die.
+      - [x] Bullets orbit around him
 
 - [] Error corrections and Quality of life changes.
