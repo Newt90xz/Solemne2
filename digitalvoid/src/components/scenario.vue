@@ -6,24 +6,30 @@ import Configuración from './Configuración.vue'
 import GameScene from './GameScene.vue'
 import { ref, onMounted, watch } from 'vue'
 import { useGameStore, type GameSettings } from '../stores/game'
-import gameMusicTrack from '../assets/Into The Void (feat. Jordan Lindley).mp4'
+import gameMusicTrack from '../assets/audio/Into The Void (feat. Jordan Lindley).mp4'
 
-const currentView = ref<'menu' | 'instructions' | 'settings' | 'game'>('menu')
+const currentView = ref<'menu' | 'instructions' | 'game'>('menu')
+const showSettingsOverlay = ref(false)
+const settingsOrigin = ref<'menu' | 'game'>('menu')
 
 const handleOpenInstructions = () => {
+  showSettingsOverlay.value = false
   currentView.value = 'instructions'
 }
 
 const handleBackToMenu = () => {
+  showSettingsOverlay.value = false
   stopGameMusic()
   currentView.value = 'menu'
 }
 
 const handleOpenSettings = () => {
-  currentView.value = 'settings'
+  settingsOrigin.value = currentView.value === 'game' ? 'game' : 'menu'
+  showSettingsOverlay.value = true
 }
 
 const handleNewGameView = () => {
+  showSettingsOverlay.value = false
   currentView.value = 'game'
 }
 
@@ -32,7 +38,8 @@ let gameMusic: HTMLAudioElement | null = null
 
 function getMusicVolume() {
   const volume = gameStore.settings.musicVolume
-  return typeof volume === 'number' ? Math.min(1, Math.max(0, volume)) : 0.1
+  // Scale down global music volume for calmer playback
+  return typeof volume === 'number' ? Math.min(1, Math.max(0, volume * 0.15)) : 0.015
 }
 
 function ensureGameMusic() {
@@ -92,7 +99,17 @@ onMounted(() => {
 function handleSaveSettings(payload: GameSettings) {
   gameStore.setSettings(payload)
   gameStore.saveToLocal()
-  currentView.value = 'menu'
+  showSettingsOverlay.value = false
+  if (settingsOrigin.value === 'menu') {
+    currentView.value = 'menu'
+  }
+}
+
+function handleCloseSettings() {
+  showSettingsOverlay.value = false
+  if (settingsOrigin.value === 'menu') {
+    currentView.value = 'menu'
+  }
 }
 
 function handleStartGame() {
@@ -108,10 +125,20 @@ function handleStartGame() {
     @new-game="handleStartGame"
   />
   <Instrucciones v-else-if="currentView === 'instructions'" @go-back="handleBackToMenu" />
-  <Configuración
-    v-else-if="currentView === 'settings'"
-    @save="handleSaveSettings"
-    @go-back="handleBackToMenu"
+  <GameScene
+    v-else-if="currentView === 'game'"
+    @exit="handleBackToMenu"
+    @open-settings="handleOpenSettings"
   />
-  <GameScene v-else-if="currentView === 'game'" @exit="handleBackToMenu" />
+  <div v-if="showSettingsOverlay" class="settings-overlay">
+    <Configuración @save="handleSaveSettings" @go-back="handleCloseSettings" />
+  </div>
 </template>
+
+<style scoped>
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+</style>

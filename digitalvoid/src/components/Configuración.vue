@@ -51,6 +51,19 @@
           </label>
         </div>
 
+        <div class="field field-full">
+          <label for="musicVolume">Volumen de la música</label>
+          <input
+            id="musicVolume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            v-model.number="settings.musicVolume"
+          />
+          <p class="field-hint">{{ Math.round(settings.musicVolume * 100) }}%</p>
+        </div>
+
         <div class="actions field-full">
           <button class="primary" type="submit">Guardar</button>
           <button type="button" @click="reset">Restablecer</button>
@@ -93,7 +106,7 @@ const defaultSettings: GameSettings = {
   mode: 'solitario',
   timeLimit: 60,
   sound: true,
-  musicVolume: 0.7,
+  musicVolume: 0.05,
 }
 
 const settings = reactive<GameSettings>({ ...defaultSettings })

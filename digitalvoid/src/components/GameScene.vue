@@ -42,31 +42,13 @@
       </section>
 
       <button
-        class="music-circle"
+        class="menu-toggle-button"
+        type="button"
+        :aria-label="isPaused ? 'Cerrar menú' : 'Abrir menú del sistema'"
         @click="togglePause"
-        :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
       >
-        {{ isPaused ? '▶' : '⏸' }}
+        {{ isPaused ? '×' : '☰' }}
       </button>
-
-      <div class="hud-actions">
-        <button
-          class="hud-button"
-          type="button"
-          :aria-label="isPaused ? 'Reanudar' : 'Pausar'"
-          @click="togglePause"
-        >
-          {{ isPaused ? '⏵' : '⏸' }}
-        </button>
-        <button
-          class="hud-button hud-button-secondary"
-          type="button"
-          aria-label="Salir"
-          @click="exitGame"
-        >
-          ⎋
-        </button>
-      </div>
 
       <div class="top-score">
         <div class="score-card">
@@ -162,8 +144,20 @@
 
       <div v-if="isPaused" class="pause-overlay">
         <div class="pause-card">
-          <p class="pause-title">Juego en pausa</p>
-          <p class="pause-text">Pulsa reanudar para continuar o salir para volver al menú.</p>
+          <p class="pause-title">Menú del sistema</p>
+          <p class="pause-text">Elige una acción para seguir.</p>
+          <div class="pause-actions">
+            <button class="pause-action-button" type="button" @click="openSettingsFromGame">
+              Ajustes del sistema
+            </button>
+            <button
+              class="pause-action-button pause-action-button-secondary"
+              type="button"
+              @click="exitGame"
+            >
+              Salir al menú principal
+            </button>
+          </div>
         </div>
       </div>
 
@@ -365,6 +359,7 @@ interface CircleHitbox {
 
 const emit = defineEmits<{
   (e: 'exit'): void
+  (e: 'open-settings'): void
 }>()
 
 const viewportRef = ref<HTMLElement | null>(null)
@@ -1640,6 +1635,11 @@ function exitGame() {
   emit('exit')
 }
 
+function openSettingsFromGame() {
+  persistHighScore()
+  emit('open-settings')
+}
+
 function updateCamera() {
   if (!sceneRef.value) return
   const vw = sceneRef.value.clientWidth
@@ -2359,11 +2359,6 @@ onUnmounted(() => {
   position: absolute;
   right: 12px;
   z-index: 20;
-  display: flex;
-  gap: 10px;
-}
-
-.hud-button {
   width: 48px;
   height: 48px;
   display: grid;
@@ -2383,8 +2378,11 @@ onUnmounted(() => {
     0 0 18px rgba(189, 77, 255, 0.18);
 }
 
-.hud-button-secondary {
-  background: rgba(32, 12, 56, 0.94);
+.menu-toggle-button:hover {
+  border-color: rgba(255, 155, 235, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 18px rgba(189, 77, 255, 0.28);
 }
 
 .pause-overlay {
@@ -2405,6 +2403,44 @@ onUnmounted(() => {
   text-align: center;
   max-width: 320px;
   box-shadow: 0 0 20px rgba(206, 89, 255, 0.22);
+}
+
+.pause-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.pause-text {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pause-action-button {
+  min-width: 240px;
+  padding: 12px 16px;
+  border: 1px solid rgba(207, 84, 255, 0.55);
+  background: linear-gradient(90deg, rgba(122, 56, 172, 0.96), rgba(56, 18, 108, 0.96));
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(206, 89, 255, 0.18);
+}
+
+.pause-action-button:hover {
+  border-color: rgba(255, 165, 245, 0.8);
+  box-shadow: 0 0 20px rgba(206, 89, 255, 0.28);
+}
+
+.pause-action-button-secondary {
+  background: rgba(32, 12, 56, 0.94);
 }
 
 .lose-overlay {
@@ -2717,30 +2753,6 @@ onUnmounted(() => {
   color: #bcecff;
   font-size: 0.62rem;
   letter-spacing: 0.08em;
-}
-
-.music-circle {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 15;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 111, 211, 0.4);
-  color: #ffd6f7;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: all 0.2s ease;
-}
-
-.music-circle:hover {
-  background: rgba(0, 0, 0, 0.5);
-  border-color: rgba(255, 111, 211, 0.7);
-  box-shadow: 0 0 18px rgba(255, 111, 211, 0.3);
 }
 
 .custom-cursor {

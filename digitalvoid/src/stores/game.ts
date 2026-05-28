@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   mode: 'solitario',
   timeLimit: 60,
   sound: true,
-  musicVolume: 0.7,
+  musicVolume: 0.05,
 }
 
 const DEFAULT_PLAYER_STATS: PlayerStats = {

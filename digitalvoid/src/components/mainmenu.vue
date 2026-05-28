@@ -1,7 +1,9 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import malwareLogo from '../assets/malware.png'
+// import audio from assets
+import menuTrack from '../assets/audio/Hands of God.mp4'
 import { useGameStore } from '../stores/game'
 
 const emit = defineEmits<{
@@ -26,6 +28,31 @@ const gameStore = useGameStore()
 const displayUserName = computed(() => gameStore.settings.playerName.trim() || 'VIRUS_23A')
 const HIGH_SCORE_KEY = 'digitalvoidHighScore'
 const bestScore = ref(0)
+
+// Main menu audio
+let menuAudio: HTMLAudioElement | null = null
+
+function getMenuVolume() {
+  const volume = gameStore.settings.musicVolume
+  return typeof volume === 'number' ? Math.min(1, Math.max(0, volume * 0.15)) : 0.02
+}
+
+function syncMenuAudio() {
+  if (!menuAudio) return
+
+  menuAudio.volume = getMenuVolume()
+
+  if (!gameStore.settings.sound) {
+    menuAudio.pause()
+    return
+  }
+
+  if (menuAudio.paused) {
+    menuAudio.play().catch(() => {
+      // Ignore autoplay restrictions if the browser blocks playback.
+    })
+  }
+}
 
 // Matrix background
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -87,7 +114,28 @@ onMounted(() => {
   window.addEventListener('resize', resizeCanvas)
   window.addEventListener('resize', updateColumns)
   animationInterval = window.setInterval(draw, 33)
+
+  // Setup menu audio (place file at public/audio/hands-of-god.mp4)
+  try {
+    menuAudio = new Audio(menuTrack)
+    menuAudio.loop = true
+    menuAudio.volume = getMenuVolume()
+    menuAudio.muted = false
+    menuAudio.play().catch(() => {
+      // Autoplay might be blocked; remain paused until user interacts
+    })
+    syncMenuAudio()
+  } catch {
+    menuAudio = null
+  }
 })
+
+watch(
+  () => [gameStore.settings.sound, gameStore.settings.musicVolume],
+  () => {
+    syncMenuAudio()
+  },
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeCanvas)
@@ -95,6 +143,14 @@ onBeforeUnmount(() => {
   if (animationInterval) {
     clearInterval(animationInterval)
     animationInterval = null
+  }
+
+  if (menuAudio) {
+    try {
+      menuAudio.pause()
+      menuAudio.src = ''
+    } catch {}
+    menuAudio = null
   }
 })
 </script>
@@ -154,8 +210,8 @@ onBeforeUnmount(() => {
         <p>&gt; CONSEJO: MUEVETE CONSTANTEMENTE.</p>
         <p>EL SISTEMA SIEMPRE TE SIGUE.</p>
       </div>
-      <div class="hud-box firewall-box">
-        <p>FIREWALL PROXIMO</p>
+      <div class="hud-box WindowsDefender-box">
+        <p>WINDOWS DEFENDER PROXIMO</p>
         <div class="progress"><span /></div>
         <p>ESCAPA. NO PUEDES DERROTARLO.</p>
       </div>
