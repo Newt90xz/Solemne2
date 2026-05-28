@@ -1854,9 +1854,6 @@ function updateBullets(dt: number) {
     const bullet = bullets[i]
     if (!bullet) continue
 
-    const prevX = bullet.x
-    const prevY = bullet.y
-
     bullet.ttl -= dt
 
     if (bullet.type === 'orbiting') {
