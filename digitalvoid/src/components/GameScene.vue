@@ -371,6 +371,7 @@ const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 
+
 const player = reactive({ x: 2500, y: 2500 })
 
 const playerSize = computed(() => gameStore.playerStats.playerSize)
@@ -1352,6 +1353,17 @@ function bulletStyle(bullet: Bullet) {
   if (bullet.type === 'normal') {
     const rotationDeg = bullet.angleDeg ?? Math.atan2(bullet.vy, bullet.vx) * (180 / Math.PI) + 90
 
+    if (bullet.weaponId === 'mcaffe' && bullet.owner === 'enemy') {
+      return {
+        width: `${bullet.size}px`,
+        height: `${bullet.size}px`,
+        background: `radial-gradient(circle, rgba(255,255,255,0.92) 0%, ${bullet.color} 42%, rgba(0,0,0,0) 100%)`,
+        borderRadius: '50%',
+        boxShadow: '0 0 14px rgba(255, 120, 160, 0.65)',
+        transform: `translate3d(${screenX}px, ${screenY}px, 0px) rotate(${rotationDeg}deg)`,
+      } as CSSProperties
+    }
+
     if (bullet.weaponId === 'norton-lightning') {
       const width = Math.max(12, Math.round(bullet.size * 2.2))
       const height = Math.max(3, Math.round(bullet.size * 0.8))
@@ -1842,6 +1854,9 @@ function updateBullets(dt: number) {
     const bullet = bullets[i]
     if (!bullet) continue
 
+    const prevX = bullet.x
+    const prevY = bullet.y
+
     bullet.ttl -= dt
 
     if (bullet.type === 'orbiting') {
@@ -1907,6 +1922,8 @@ function updateBullets(dt: number) {
       bullet.x += bullet.vx * dt
       bullet.y += bullet.vy * dt
     }
+
+    // (Eliminado) Corrupción del mapa.
 
     let destroyBullet = false
 
@@ -2303,6 +2320,7 @@ onUnmounted(() => {
   if (rafId) cancelAnimationFrame(rafId)
   if (enemySpawnInterval) clearInterval(enemySpawnInterval)
 })
+
 </script>
 
 <style scoped>
@@ -2335,10 +2353,11 @@ onUnmounted(() => {
   z-index: 0;
 }
 
+
+
 .hud-actions {
   position: absolute;
   right: 12px;
-  top: 12px;
   z-index: 20;
   display: flex;
   gap: 10px;

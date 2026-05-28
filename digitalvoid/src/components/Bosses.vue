@@ -26,6 +26,11 @@
 <script lang="ts">
 import { computed, defineComponent, onMounted, onUnmounted, reactive, type PropType } from 'vue'
 import { useGameStore } from '../stores/game'
+import mcaffeImg from '../assets/bossesimage/mcaffe.png'
+import nortonImg from '../assets/bossesimage/Norton.png'
+import windowsDefenderImg from '../assets/bossesimage/MicrosoftDefender.png'
+
+let mcaffeTornadoAngle = 0
 
 type Vector2 = { x: number; y: number }
 
@@ -144,11 +149,8 @@ export default defineComponent({
     const BOSS_MCAFFE_HP = 520
     const BOSS_MCAFFE_SPEED = 112
     const BOSS_INTRO_DURATION = 1.9
-    const BOSS_TORNADO_COOLDOWN = 2.8
-    const BOSS_EXPLOSIVE_COOLDOWN = 4.4
-    const BOSS_TORNADO_ORBIT_RADIUS = 96
-    const BOSS_TORNADO_SPEED = Math.PI * 2.2 * 1.2
-    const BOSS_TORNADO_SPEED_BULLET = 420
+    const BOSS_TORNADO_COOLDOWN = 1.5
+    const BOSS_EXPLOSIVE_COOLDOWN = 0.5
     const BOSS_EXPLOSIVE_SPEED = 280
     const BOSS_EXPLOSIVE_RADIUS = 150
     const BOSS_EXPLOSIVE_DAMAGE = 28
@@ -174,7 +176,8 @@ export default defineComponent({
     const WINDOWS_DEFENDER_ORBIT_COOLDOWN = 1.35
     const WINDOWS_DEFENDER_ORBIT_LIFETIME = 6.2
     const WINDOWS_DEFENDER_ORBIT_DAMAGE = 12
-    const WINDOWS_DEFENDER_ESCAPE_RADIUS = 44
+    // Un poco más grande para que "escapar" sea consistente y no se sienta bug.
+    const WINDOWS_DEFENDER_ESCAPE_RADIUS = 72
     const WINDOWS_DEFENDER_ESCAPE_INDICATOR_DURATION = 2.8
     const BOSS_SHAKE_DURATION = 2.2
     const BOSS_SHAKE_INTENSITY = 26
@@ -276,51 +279,59 @@ export default defineComponent({
       }
     })
 
-    const bossStyle = computed(() => {
-      const boss = activeBoss.value
-      if (!boss) return {}
+const bossStyle = computed(() => {
+  const boss = activeBoss.value
+  if (!boss) return {}
 
-      const screenX = Math.round(boss.x - props.camera.x - boss.size / 2)
-      const screenY = Math.round(boss.y - props.camera.y - boss.size / 2)
-      const introActive = (boss.introTimeLeft ?? 0) > 0
+  const screenX = Math.round(boss.x - props.camera.x - boss.size / 2)
+  const screenY = Math.round(boss.y - props.camera.y - boss.size / 2)
+  const introActive = (boss.introTimeLeft ?? 0) > 0
 
-      const isNorton = boss.type === 'norton'
+  const imgMap = {
+    mcaffe: mcaffeImg,
+    norton: nortonImg,
+    'windows-defender': windowsDefenderImg,
+  } as Record<string, string>
 
-      return {
-        width: `${boss.size}px`,
-        height: `${boss.size}px`,
-        transform: `translate(${screenX}px, ${screenY}px)`,
-        background: isNorton
-          ? 'radial-gradient(circle at 35% 28%, rgba(223, 248, 255, 0.96) 0%, rgba(126, 226, 255, 0.9) 28%, rgba(41, 143, 212, 0.92) 66%, rgba(9, 28, 48, 1) 100%)'
-          : boss.type === 'windows-defender'
-            ? 'radial-gradient(circle at 35% 28%, rgba(233, 255, 245, 0.98) 0%, rgba(133, 255, 202, 0.88) 28%, rgba(44, 171, 123, 0.92) 66%, rgba(10, 36, 28, 1) 100%)'
-            : 'radial-gradient(circle at 35% 30%, rgba(255, 238, 245, 0.96) 0%, rgba(255, 109, 142, 0.86) 28%, rgba(175, 28, 76, 0.95) 66%, rgba(33, 7, 18, 1) 100%)',
-        border: isNorton
-          ? '5px solid rgba(212, 247, 255, 0.9)'
-          : boss.type === 'windows-defender'
-            ? '5px solid rgba(218, 255, 235, 0.92)'
-            : '6px solid rgba(255, 220, 230, 0.88)',
-        borderRadius: '50%',
-        boxShadow: introActive
-          ? isNorton
-            ? '0 0 42px rgba(84, 213, 255, 0.84), inset 0 0 22px rgba(255, 255, 255, 0.24)'
-            : boss.type === 'windows-defender'
-              ? '0 0 44px rgba(88, 255, 186, 0.88), inset 0 0 22px rgba(255, 255, 255, 0.25)'
-              : '0 0 38px rgba(255, 81, 130, 0.8), inset 0 0 24px rgba(255, 255, 255, 0.28)'
-          : isNorton
-            ? '0 0 30px rgba(64, 196, 255, 0.62), inset 0 0 14px rgba(255, 255, 255, 0.2)'
-            : boss.type === 'windows-defender'
-              ? '0 0 32px rgba(68, 235, 161, 0.7), inset 0 0 14px rgba(255, 255, 255, 0.18)'
-              : '0 0 28px rgba(255, 81, 130, 0.55), inset 0 0 16px rgba(255, 255, 255, 0.22)',
-        zIndex: 12,
-        opacity:
-          boss.teleportFxTimeLeft && boss.teleportFxTimeLeft > 0
-            ? '0.55'
-            : introActive
-              ? '0.98'
-              : '1',
-      }
-    })
+  const img = imgMap[boss.type]
+
+  const glowMap = {
+    mcaffe: {
+      intro: '0 0 38px rgba(255, 81, 130, 0.8)',
+      idle: '0 0 28px rgba(255, 81, 130, 0.55)',
+    },
+    norton: {
+      intro: '0 0 42px rgba(255, 200, 40, 0.85)',
+      idle: '0 0 30px rgba(255, 180, 20, 0.6)',
+    },
+    'windows-defender': {
+      intro: '0 0 44px rgba(88, 200, 255, 0.88)',
+      idle: '0 0 32px rgba(68, 180, 255, 0.65)',
+    },
+  } as Record<string, { intro: string; idle: string }>
+
+  const glow = glowMap[boss.type] ?? glowMap['mcaffe']
+
+  return {
+    width: `${boss.size}px`,
+    height: `${boss.size}px`,
+    transform: `translate(${screenX}px, ${screenY}px)`,
+    backgroundImage: `url(${img})`,
+    backgroundSize: 'contain',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+    imageRendering: 'pixelated',
+    borderRadius: '0px',
+    border: 'none',
+    zIndex: 12,
+    opacity:
+      boss.teleportFxTimeLeft && boss.teleportFxTimeLeft > 0
+        ? '0.55'
+        : introActive
+          ? '0.98'
+          : '1',
+  }
+})
 
     const enemies = props.enemies as BossEnemy[]
     const bullets = props.bullets as BossBullet[]
@@ -479,41 +490,39 @@ export default defineComponent({
       setBossPresence(true)
     }
 
-    function spawnBossTornado(boss: BossEnemy, targetX: number, targetY: number) {
-      const dx = targetX - boss.x
-      const dy = targetY - boss.y
-      const angle = Math.atan2(dy, dx)
+function spawnBossTornado(boss: BossEnemy, _targetX: number, _targetY: number) {
+  const SPIRAL_ARMS = 20      
+  const SPIRAL_SPREAD = (Math.PI * 2) / SPIRAL_ARMS  
+  const BULLET_SPEED = 480
 
-      bullets.push({
-        id: nextBossBulletId++,
-        weaponId: 'mcaffe',
-        x: boss.x,
-        y: boss.y,
-        vx: Math.cos(angle) * BOSS_TORNADO_SPEED_BULLET,
-        vy: Math.sin(angle) * BOSS_TORNADO_SPEED_BULLET,
-        angleDeg: (angle * 180) / Math.PI + 90,
-        size: 20,
-        ttl: 4.2,
-        maxTtl: 4.2,
-        damage: 16,
-        color: '#ffbfd0',
-        type: 'orbiting',
-        orbitPhase: Math.random() * Math.PI * 2,
-        orbitRadius: BOSS_TORNADO_ORBIT_RADIUS,
-        orbitTimeElapsed: 0,
-        orbitSpeed: BOSS_TORNADO_SPEED,
-        initialVx: Math.cos(angle) * BOSS_TORNADO_SPEED_BULLET,
-        initialVy: Math.sin(angle) * BOSS_TORNADO_SPEED_BULLET,
-        orbitTargetX: targetX,
-        orbitTargetY: targetY,
-        piercing: false,
-        bouncesLeft: 0,
-        owner: 'enemy',
-        ownerId: boss.id,
-        stun: false,
-        stunDuration: 0,
-      })
-    }
+  for (let i = 0; i < SPIRAL_ARMS; i++) {
+    const angle = mcaffeTornadoAngle + SPIRAL_SPREAD * i
+    bullets.push({
+      id: nextBossBulletId++,
+      weaponId: 'mcaffe',
+      x: boss.x,
+      y: boss.y,
+      vx: Math.cos(angle) * BULLET_SPEED,
+      vy: Math.sin(angle) * BULLET_SPEED,
+      angleDeg: (angle * 180) / Math.PI + 90,
+      size: 40,
+      ttl: 3.5,
+      maxTtl: 3.5,
+      damage: 16,
+      color: '#ffbfd0',
+      type: 'normal',
+      piercing: false,
+      bouncesLeft: 0,
+      owner: 'enemy',
+      ownerId: boss.id,
+      stun: false,
+      stunDuration: 0,
+    })
+  }
+
+  // Rotar el ángulo base para la próxima salva — esto crea la espiral
+  mcaffeTornadoAngle += Math.PI / 5
+}
 
     function spawnBossExplosion(boss: BossEnemy, targetX: number, targetY: number) {
       const dx = targetX - boss.x
@@ -527,13 +536,13 @@ export default defineComponent({
         y: boss.y,
         vx: Math.cos(angle) * BOSS_EXPLOSIVE_SPEED,
         vy: Math.sin(angle) * BOSS_EXPLOSIVE_SPEED,
-        size: 18,
-        ttl: 4.2,
+        size: 80,   
+        ttl: 4.0,    
+        damage: 16,
         maxTtl: 4.2,
-        damage: 14,
         color: '#ffd0d8',
         type: 'explosive',
-        explosiveDeceleration: 220,
+        explosiveDeceleration: 100,
         flashTimeElapsed: 0,
         piercing: false,
         bouncesLeft: 0,
@@ -650,175 +659,187 @@ export default defineComponent({
       return dx * dx + dy * dy < minDist * minDist
     }
 
-    function updateBosses(dt: number) {
-      if (props.isPaused || props.isGameOver || props.isMenuOpen) return
+function updateBosses(dt: number) {
+  if (props.isPaused || props.isGameOver || props.isMenuOpen) return
 
-      if (escapeIndicator.active && escapeIndicator.timeLeft > 0) {
-        escapeIndicator.timeLeft = Math.max(0, escapeIndicator.timeLeft - dt)
-      }
+  if (escapeIndicator.active && escapeIndicator.timeLeft > 0) {
+    escapeIndicator.timeLeft = Math.max(0, escapeIndicator.timeLeft - dt)
+  }
 
-      if (gameStore.playerStats.kills === 0 && !activeBoss.value) {
-        mcaffeSpawned = false
-        nortonSpawned = false
-        windowsDefenderSpawned = false
-        clearEscapePoint()
-        setBossPresence(false)
-      }
+  if (gameStore.playerStats.kills === 0 && !activeBoss.value) {
+    mcaffeSpawned = false
+    nortonSpawned = false
+    windowsDefenderSpawned = false
+    clearEscapePoint()
+    setBossPresence(false)
+  }
 
-      if (
-        !activeBoss.value &&
-        !mcaffeSpawned &&
-        gameStore.playerStats.kills >= MCAFFE_TRIGGER_KILLS
-      ) {
-        spawnMcAffeBoss()
-      }
+  if (
+    !activeBoss.value &&
+    !mcaffeSpawned &&
+    gameStore.playerStats.kills >= MCAFFE_TRIGGER_KILLS
+  ) {
+    spawnMcAffeBoss()
+  }
 
-      if (
-        !activeBoss.value &&
-        mcaffeSpawned &&
-        !nortonSpawned &&
-        gameStore.playerStats.kills >= NORTON_TRIGGER_KILLS
-      ) {
-        spawnNortonBoss()
-      }
+  if (
+    !activeBoss.value &&
+    mcaffeSpawned &&
+    !nortonSpawned &&
+    gameStore.playerStats.kills >= NORTON_TRIGGER_KILLS
+  ) {
+    spawnNortonBoss()
+  }
 
-      if (
-        !activeBoss.value &&
-        nortonSpawned &&
-        !windowsDefenderSpawned &&
-        gameStore.playerStats.kills >= WINDOWS_DEFENDER_TRIGGER_KILLS
-      ) {
-        spawnWindowsDefenderBoss()
-      }
+  if (
+    !activeBoss.value &&
+    nortonSpawned &&
+    !windowsDefenderSpawned &&
+    gameStore.playerStats.kills >= WINDOWS_DEFENDER_TRIGGER_KILLS
+  ) {
+    spawnWindowsDefenderBoss()
+  }
 
-      const bossIndex = enemies.findIndex(
-        (enemy) =>
-          enemy.type === 'mcaffe' || enemy.type === 'norton' || enemy.type === 'windows-defender',
-      )
-      const boss = bossIndex >= 0 ? enemies[bossIndex] : null
-      if (!boss) return
+  const bossIndex = enemies.findIndex(
+    (enemy) =>
+      enemy.type === 'mcaffe' || enemy.type === 'norton' || enemy.type === 'windows-defender',
+  )
+  const boss = bossIndex >= 0 ? enemies[bossIndex] : null
+  if (!boss) return
 
-      setBossPresence(true)
+  setBossPresence(true)
 
-      const targetX = props.player.x + props.playerSize / 2
-      const targetY = props.player.y + props.playerSize / 2
+  const targetX = props.player.x + props.playerSize / 2
+  const targetY = props.player.y + props.playerSize / 2
 
-      contactDamageCooldown = Math.max(0, contactDamageCooldown - dt)
+  contactDamageCooldown = Math.max(0, contactDamageCooldown - dt)
 
-      if (boss.type === 'windows-defender' && escapePoint.active) {
-        const playerCenter = {
-          x: props.player.x + props.playerSize / 2,
-          y: props.player.y + props.playerSize / 2,
-          radius: props.playerSize * 0.28,
-        }
-        const escapeZone = {
-          x: escapePoint.x,
-          y: escapePoint.y,
-          radius: WINDOWS_DEFENDER_ESCAPE_RADIUS,
-        }
-        if (circlesOverlap(playerCenter, escapeZone)) {
-          enemies.splice(bossIndex, 1)
-          clearEscapePoint()
-          setBossPresence(false)
-          emit('escape')
-          return
-        }
-      }
-
-      if ((boss.introTimeLeft ?? 0) > 0) {
-        boss.introTimeLeft = Math.max(0, (boss.introTimeLeft ?? 0) - dt)
-        const introDuration = boss.introDuration ?? BOSS_INTRO_DURATION
-        const progress = 1 - boss.introTimeLeft / Math.max(0.001, introDuration)
-        const eased = 1 - Math.pow(1 - progress, 3)
-        const startX = boss.introStartX ?? boss.x
-        const startY = boss.introStartY ?? boss.y
-        const finalX = boss.introTargetX ?? boss.x
-        const finalY = boss.introTargetY ?? boss.y
-        boss.x = startX + (finalX - startX) * eased
-        boss.y = startY + (finalY - startY) * eased
-      } else {
-        if (boss.type === 'windows-defender') {
-          const desiredX = targetX
-          const desiredY = Math.max(boss.size / 2, targetY - 360)
-          boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.6)
-          boss.y += (desiredY - boss.y) * Math.min(1, dt * 2)
-        } else {
-          const desiredX = targetX
-          const desiredY = Math.max(boss.size / 2, targetY - (boss.type === 'norton' ? 300 : 360))
-          boss.x += (desiredX - boss.x) * Math.min(1, dt * (boss.type === 'norton' ? 4.4 : 2.8))
-          boss.y += (desiredY - boss.y) * Math.min(1, dt * (boss.type === 'norton' ? 3.2 : 2.2))
-        }
-      }
-
-      boss.x = Math.max(boss.size / 2, Math.min(boss.x, props.worldSize.width - boss.size / 2))
-      boss.y = Math.max(boss.size / 2, Math.min(boss.y, props.worldSize.height - boss.size / 2))
-
-      const playerHitbox = {
-        x: props.player.x + props.playerSize / 2.5,
-        y: props.player.y + props.playerSize / 2,
-        radius: props.playerSize * 0.25,
-      }
-      const bossHitbox = {
-        x: boss.x,
-        y: boss.y,
-        radius:
-          boss.size *
-          (boss.type === 'norton' ? 0.2 : boss.type === 'windows-defender' ? 0.28 : 0.34),
-      }
-      if (circlesOverlap(bossHitbox, playerHitbox) && contactDamageCooldown <= 0) {
-        if (boss.type === 'windows-defender') {
-          gameStore.takeDamage(gameStore.playerStats.health)
-        } else {
-          gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
-        }
-        contactDamageCooldown = BOSS_CONTACT_COOLDOWN
-      }
-
-      boss.tornadoTimer = (boss.tornadoTimer ?? 1.2) - dt
-      if (boss.tornadoTimer <= 0) {
-        if (boss.type === 'norton') {
-          spawnNortonShotgun(boss, targetX, targetY)
-          boss.tornadoTimer = boss.tornadoCooldown ?? NORTON_SHOTGUN_COOLDOWN
-        } else if (boss.type === 'windows-defender') {
-          spawnWindowsOrbitBullets(boss)
-          boss.tornadoTimer = boss.tornadoCooldown ?? WINDOWS_DEFENDER_ORBIT_COOLDOWN
-        } else {
-          spawnBossTornado(boss, targetX, targetY)
-          boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
-        }
-      }
-
-      if (boss.type === 'mcaffe') {
-        boss.explosiveTimer = (boss.explosiveTimer ?? 2.1) - dt
-        if (boss.explosiveTimer <= 0) {
-          spawnBossExplosion(boss, targetX, targetY)
-          boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
-        }
-      } else if (boss.type === 'norton') {
-        boss.teleportTimer = (boss.teleportTimer ?? 1.6) - dt
-        if (boss.teleportTimer <= 0) {
-          teleportNorton(boss)
-          boss.teleportTimer = boss.teleportCooldown ?? NORTON_TELEPORT_COOLDOWN
-        }
-        boss.teleportFxTimeLeft = Math.max(0, (boss.teleportFxTimeLeft ?? 0) - dt)
-      } else if (boss.type === 'windows-defender') {
-        boss.hp = boss.maxHp
-        boss.teleportFxTimeLeft = 0
-        const bossBullets = bullets.filter(
-          (bullet) => bullet.ownerId === boss.id && bullet.type === 'orbiting',
-        )
-        for (const bullet of bossBullets) {
-          bullet.orbitTargetX = boss.x
-          bullet.orbitTargetY = boss.y
-        }
-      }
-
-      if (boss.type !== 'windows-defender' && boss.hp <= 0) {
-        gameStore.incrementKills()
-        gameStore.addExperience(boss.type === 'norton' ? NORTON_EXPERIENCE : BOSS_EXPERIENCE)
-        removeBoss(bossIndex)
-      }
+  if (boss.type === 'windows-defender' && escapePoint.active) {
+    const playerCenter = {
+      x: props.player.x + props.playerSize / 2,
+      y: props.player.y + props.playerSize / 2,
+      radius: props.playerSize * 0.28,
     }
+    const escapeZone = {
+      x: escapePoint.x,
+      y: escapePoint.y,
+      radius: WINDOWS_DEFENDER_ESCAPE_RADIUS,
+    }
+    if (circlesOverlap(playerCenter, escapeZone)) {
+      enemies.splice(bossIndex, 1)
+      clearEscapePoint()
+      setBossPresence(false)
+      emit('escape')
+      return
+    }
+  }
+
+  if ((boss.introTimeLeft ?? 0) > 0) {
+    boss.introTimeLeft = Math.max(0, (boss.introTimeLeft ?? 0) - dt)
+    const introDuration = boss.introDuration ?? BOSS_INTRO_DURATION
+    const progress = 1 - boss.introTimeLeft / Math.max(0.001, introDuration)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    const startX = boss.introStartX ?? boss.x
+    const startY = boss.introStartY ?? boss.y
+    const finalX = boss.introTargetX ?? boss.x
+    const finalY = boss.introTargetY ?? boss.y
+    boss.x = startX + (finalX - startX) * eased
+    boss.y = startY + (finalY - startY) * eased
+  } else {
+    if (boss.type === 'windows-defender') {
+      const desiredX = targetX
+      const desiredY = Math.max(boss.size / 2, targetY - 360)
+      boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.6)
+      boss.y += (desiredY - boss.y) * Math.min(1, dt * 2)
+    } else if (boss.type === 'norton') {
+      // Norton: que funcione como un enemigo más "chico" (persigue al player)
+      // y que el TP sea lo que le da personalidad, no quedarse fijo arriba.
+      const dx = targetX - boss.x
+      const dy = targetY - boss.y
+      const dist = Math.hypot(dx, dy) || 1
+      const nx = dx / dist
+      const ny = dy / dist
+      const moveSpeed = boss.speed ?? NORTON_SPEED
+      boss.x += nx * moveSpeed * dt
+      boss.y += ny * moveSpeed * dt
+    } else {
+      const desiredX = targetX
+      const desiredY = Math.max(boss.size / 2, targetY - 360)
+      boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.8)
+      boss.y += (desiredY - boss.y) * Math.min(1, dt * 2.2)
+    }
+  }
+
+  boss.x = Math.max(boss.size / 2, Math.min(boss.x, props.worldSize.width - boss.size / 2))
+  boss.y = Math.max(boss.size / 2, Math.min(boss.y, props.worldSize.height - boss.size / 2))
+
+  const playerHitbox = {
+    x: props.player.x + props.playerSize / 2.5,
+    y: props.player.y + props.playerSize / 2,
+    radius: props.playerSize * 0.25,
+  }
+  const bossHitbox = {
+    x: boss.x,
+    y: boss.y,
+    radius:
+      boss.size *
+      (boss.type === 'norton' ? 0.2 : boss.type === 'windows-defender' ? 0.28 : 0.34),
+  }
+  if (circlesOverlap(bossHitbox, playerHitbox) && contactDamageCooldown <= 0) {
+    if (boss.type === 'windows-defender') {
+      gameStore.takeDamage(gameStore.playerStats.health)
+    } else {
+      gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
+    }
+    contactDamageCooldown = BOSS_CONTACT_COOLDOWN
+  }
+
+  boss.tornadoTimer = (boss.tornadoTimer ?? 1.2) - dt
+  if (boss.tornadoTimer <= 0) {
+    if (boss.type === 'norton') {
+      spawnNortonShotgun(boss, targetX, targetY)
+      boss.tornadoTimer = boss.tornadoCooldown ?? NORTON_SHOTGUN_COOLDOWN
+    } else if (boss.type === 'windows-defender') {
+      spawnWindowsOrbitBullets(boss)
+      boss.tornadoTimer = boss.tornadoCooldown ?? WINDOWS_DEFENDER_ORBIT_COOLDOWN
+    } else {
+      spawnBossTornado(boss, targetX, targetY)
+      boss.tornadoTimer = boss.tornadoCooldown ?? BOSS_TORNADO_COOLDOWN
+    }
+  }
+
+  if (boss.type === 'mcaffe') {
+    boss.explosiveTimer = (boss.explosiveTimer ?? 2.1) - dt
+    if (boss.explosiveTimer <= 0) {
+      spawnBossExplosion(boss, targetX, targetY)
+      boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
+    }
+  } else if (boss.type === 'norton') {
+    boss.teleportTimer = (boss.teleportTimer ?? 1.6) - dt
+    if (boss.teleportTimer <= 0) {
+      teleportNorton(boss)
+      boss.teleportTimer = boss.teleportCooldown ?? NORTON_TELEPORT_COOLDOWN
+    }
+    boss.teleportFxTimeLeft = Math.max(0, (boss.teleportFxTimeLeft ?? 0) - dt)
+  } else if (boss.type === 'windows-defender') {
+    boss.hp = boss.maxHp
+    boss.teleportFxTimeLeft = 0
+    const bossBullets = bullets.filter(
+      (bullet) => bullet.ownerId === boss.id && bullet.type === 'orbiting',
+    )
+    for (const bullet of bossBullets) {
+      bullet.orbitTargetX = boss.x
+      bullet.orbitTargetY = boss.y
+    }
+  }
+  // ↑ FIN BLOQUE CAMBIADO ↑
+
+  if (boss.type !== 'windows-defender' && boss.hp <= 0) {
+    gameStore.incrementKills()
+    gameStore.addExperience(boss.type === 'norton' ? NORTON_EXPERIENCE : BOSS_EXPERIENCE)
+    removeBoss(bossIndex)
+  }
+}
 
     function loop(ts: number) {
       if (!lastTime) lastTime = ts
@@ -906,7 +927,6 @@ export default defineComponent({
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #ff89ac, #ff3369);
-  box-shadow: 0 0 16px rgba(255, 72, 122, 0.66);
   transform-origin: left center;
   transition: width 0.18s ease;
 }

@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20.19.0-alpine
+FROM node:20.19.0-alpine AS builder
 WORKDIR /app/digitalvoid
 
 # Copy package manifests for layer caching
