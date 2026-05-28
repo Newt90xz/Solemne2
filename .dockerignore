@@ -1,3 +1,11 @@
+node_modules
+dist
+.git
+.github
+*.log
+*.lock
+**/node_modules
+**/dist
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudio,java,vue,vuejs
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudio,java,vue,vuejs
 
@@ -7,7 +15,7 @@
 
 # Log file
 *.log
-.secrets 
+
 # BlueJ files
 *.ctxt
 
@@ -438,7 +446,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
-
+.secrets
 # JetBrains Rider
 *.sln.iml
 

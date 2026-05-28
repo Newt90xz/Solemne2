@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -18,16 +24,29 @@ jobs:
         with:
           node-version: "20.19.0"
 
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
       - name: Install dependencies
         working-directory: ./digitalvoid
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         working-directory: ./digitalvoid
-        run: npm run build
+        run: pnpm build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        if: ${{ !env.ACT }}
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./digitalvoid/dist
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./digitalvoid/dist
+        if: ${{ !env.ACT }}
+        id: deployment
+        uses: actions/deploy-pages@v1

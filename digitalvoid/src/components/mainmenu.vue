@@ -179,12 +179,15 @@ onBeforeUnmount(() => {
 
 .main-menu {
   width: 100%;
+  min-height: 100vh;
+  max-height: 100vh;
   height: 100vh;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
   background: transparent;
   padding: 0;
-  position: relative;
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   color: #33ff99;
 }
@@ -264,7 +267,7 @@ onBeforeUnmount(() => {
 .hud-top {
   display: flex;
   justify-content: space-between;
-  padding: 2rem 2.2rem 0;
+  padding: 1.4rem 1.5rem 0;
 }
 
 .hud-box {
@@ -375,8 +378,8 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 2rem;
-  padding: 1rem 2.2rem;
+  gap: 1.5rem;
+  padding: 0.9rem 1.5rem;
 }
 
 .buttons-container {
@@ -458,8 +461,8 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 2.2rem 1.6rem;
-  gap: 1.4rem;
+  padding: 0 1.5rem 1.2rem;
+  gap: 1.2rem;
 }
 
 .tip-box,

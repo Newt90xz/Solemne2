@@ -1068,7 +1068,6 @@ function enemyStyle(e: Enemy) {
     imageRendering: 'pixelated',
     borderRadius: '0px',
     zIndex: 7,
-    boxShadow: '0 0 12px rgba(0,0,0,0.35)',
   } as CSSProperties
 }
 
@@ -2664,7 +2663,6 @@ onUnmounted(() => {
     radial-gradient(circle at center, rgba(255, 88, 220, 0.2), rgba(0, 0, 0, 0.28)),
     linear-gradient(180deg, rgba(30, 14, 52, 0.96), rgba(10, 8, 22, 0.96));
   overflow: hidden;
-  box-shadow: 0 0 18px rgba(255, 109, 245, 0.12);
 }
 
 .weapon-image {
@@ -2760,7 +2758,6 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   top: 0;
-  border-radius: 999px;
   pointer-events: none;
 }
 

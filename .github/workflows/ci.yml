@@ -24,22 +24,47 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
       - name: Install dependencies
         working-directory: ./digitalvoid
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Type checking
         working-directory: ./digitalvoid
-        run: npm run type-check
+        run: pnpm run type-check
 
       - name: Linting
         working-directory: ./digitalvoid
-        run: npm run lint
+        run: pnpm lint
 
       - name: Unit tests
         working-directory: ./digitalvoid
-        run: npm run test:unit
+        run: pnpm test:unit -- --run
 
       - name: Build
         working-directory: ./digitalvoid
-        run: npm run build
+        run: pnpm build
+
+      - name: Build Docker image
+        run: docker build -t digitalvoid .
+
+      - name: Login to DockerHub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Push Docker image to DockerHub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/digitalvoid:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/digitalvoid:${{ github.sha }}
