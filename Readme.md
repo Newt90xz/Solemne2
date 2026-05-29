@@ -18,7 +18,7 @@ Digital Void es un juego web desarrollado con Vue 3 y Vite, y usa Pinia para el 
 1. Clona el repositorio:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Newt90xz/Solemne2
 cd digitalvoid
 ```
 
@@ -74,4 +74,14 @@ Se abrirá la aplicación en `http://localhost:10081`.
 
 ## Imagen en DockerHub
 
+Ejecutar la imagen desde dockerhud:
+
 https://hub.docker.com/r/mrireal/digitalvoid
+
+```bash
+docker pull mrireal/digitalvoid:1.0
+
+docker run --rm -p 10081:10081 mrireal/digitalvoid:1.0
+```
+
+La aplicación estara en `http://localhost:10081`.
