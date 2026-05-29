@@ -1,11 +1,11 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import Mainmenu from './mainmenu.vue'
-import Instrucciones from './Instrucciones.vue'
-import Configuración from './Configuración.vue'
+import Instrucciones from './Instructions.vue'
+import Configuración from './Configuration.vue'
 import GameScene from './GameScene.vue'
 import { ref, onMounted, watch } from 'vue'
-import { useGameStore, type GameSettings } from '../stores/game'
+import { useGameStore, type GameSettings } from '../stores/game.ts'
 import gameMusicTrack from '../assets/audio/Into The Void (feat. Jordan Lindley).mp4'
 
 const currentView = ref<'menu' | 'instructions' | 'game'>('menu')

@@ -7,10 +7,8 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <section
-          v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
-          class="neon-card objective-panel"
-        >
+        <section v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
+          class="neon-card objective-panel">
           <div class="panel-heading">
             <span class="panel-mark">⌬</span>
             <p class="panel-title">OBJETIVO</p>
@@ -41,12 +39,8 @@
         </div>
       </section>
 
-      <button
-        class="menu-toggle-button"
-        type="button"
-        :aria-label="isPaused ? 'Cerrar menú' : 'Abrir menú del sistema'"
-        @click="togglePause"
-      >
+      <button class="menu-toggle-button" type="button" :aria-label="isPaused ? 'Cerrar menú' : 'Abrir menú del sistema'"
+        @click="togglePause">
         {{ isPaused ? '×' : '☰' }}
       </button>
 
@@ -57,20 +51,9 @@
         </div>
       </div>
 
-      <Bosses
-        :enemies="enemies"
-        :bullets="bullets"
-        :player="player"
-        :player-size="playerSize"
-        :camera="camera"
-        :world-size="worldSize"
-        :is-paused="isPaused"
-        :is-game-over="isGameOver"
-        :is-menu-open="isMenuOpen"
-        @state-change="handleBossStateChange"
-        @shake="onBossShake"
-        @escape="handleBossEscape"
-      />
+      <Bosses :enemies="enemies" :bullets="bullets" :player="player" :player-size="playerSize" :camera="camera"
+        :world-size="worldSize" :is-paused="isPaused" :is-game-over="isGameOver" :is-menu-open="isMenuOpen"
+        @state-change="handleBossStateChange" @shake="onBossShake" @escape="handleBossEscape" />
 
       <!-- Upgrade Menu Overlay Centered -->
       <div v-if="weaponUnlockMenu.visible || upgradeMenu.visible" class="upgrade-overlay">
@@ -85,18 +68,11 @@
             </section>
 
             <div class="upgrade-cards-row">
-              <button
-                v-for="weaponId in availableWeaponUnlocks"
-                :key="weaponId"
-                class="neon-card upgrade-card"
-                @click="selectWeaponUnlock(weaponId)"
-              >
+              <button v-for="weaponId in availableWeaponUnlocks" :key="weaponId" class="neon-card upgrade-card"
+                @click="selectWeaponUnlock(weaponId)">
                 <div class="panel-heading">
-                  <img
-                    :src="WEAPON_CATALOG[weaponId].image"
-                    :alt="WEAPON_CATALOG[weaponId].name"
-                    class="panel-mark-icon"
-                  />
+                  <img :src="WEAPON_CATALOG[weaponId].image" :alt="WEAPON_CATALOG[weaponId].name"
+                    class="panel-mark-icon" />
                   <p class="panel-title">{{ WEAPON_CATALOG[weaponId].name }}</p>
                 </div>
                 <p class="objective-copy">
@@ -146,15 +122,16 @@
         <div class="pause-card">
           <p class="pause-title">Menú del sistema</p>
           <p class="pause-text">Elige una acción para seguir.</p>
+          <br>
           <div class="pause-actions">
-            <button class="pause-action-button" type="button" @click="openSettingsFromGame">
+            <button class="pause-action-button pause-action-button-secondary" type="button" @click="togglePause">
+              Continuar
+            </button>
+            <button class="pause-action-button pause-action-button-secondary" type="button"
+              @click="openSettingsFromGame">
               Ajustes del sistema
             </button>
-            <button
-              class="pause-action-button pause-action-button-secondary"
-              type="button"
-              @click="exitGame"
-            >
+            <button class="pause-action-button pause-action-button-secondary" type="button" @click="exitGame">
               Salir al menú principal
             </button>
           </div>
@@ -179,12 +156,7 @@
         <div>Presiona <strong>F</strong> para capturar</div>
       </div>
 
-      <div
-        v-for="b in buildings"
-        :key="'area-' + b.id"
-        class="building-area"
-        :style="buildingAreaStyle(b)"
-      ></div>
+      <div v-for="b in buildings" :key="'area-' + b.id" class="building-area" :style="buildingAreaStyle(b)"></div>
 
       <div v-for="b in buildings" :key="b.id" class="building" :style="buildingStyle(b)">
         <!--<div class="building-icon">{{ b.icon }}</div>
@@ -192,43 +164,20 @@
         <div v-if="b.captured" class="building-captured">Capturado</div>-->
       </div>
 
-      <div
-        v-for="o in obstacles"
-        :key="'obstacle-' + o.id"
-        class="obstacle"
-        :style="obstacleStyle(o)"
-      ></div>
+      <div v-for="o in obstacles" :key="'obstacle-' + o.id" class="obstacle" :style="obstacleStyle(o)"></div>
 
-      <div
-        v-for="bullet in bullets"
-        :key="bullet.id"
-        class="bullet"
-        :style="bulletStyle(bullet)"
-      ></div>
+      <div v-for="bullet in bullets" :key="bullet.id" class="bullet" :style="bulletStyle(bullet)"></div>
 
-      <div
-        v-for="e in normalEnemies"
-        :key="'enemy-' + e.id"
-        class="enemy"
-        :class="`enemy-${e.type}`"
-        :style="enemyStyle(e)"
-      ></div>
+      <div v-for="e in normalEnemies" :key="'enemy-' + e.id" class="enemy" :class="`enemy-${e.type}`"
+        :style="enemyStyle(e)">
+      </div>
 
       <template v-if="showHitboxes">
-        <div
-          v-for="e in normalEnemies"
-          :key="'enemy-hitbox-' + e.id"
-          class="hitbox hitbox-enemy"
-          :style="enemyHitboxStyle(e)"
-        ></div>
+        <div v-for="e in normalEnemies" :key="'enemy-hitbox-' + e.id" class="hitbox hitbox-enemy"
+          :style="enemyHitboxStyle(e)"></div>
       </template>
 
-      <div
-        v-for="exp in explosions"
-        :key="exp.id"
-        class="explosion"
-        :style="explosionStyle(exp)"
-      ></div>
+      <div v-for="exp in explosions" :key="exp.id" class="explosion" :style="explosionStyle(exp)"></div>
 
       <div class="player" :style="playerStyle"></div>
       <div v-if="isStunned" class="stun-ring" :style="stunStyle"></div>
@@ -250,23 +199,23 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
-import escenarioImg from '../assets/escenario.png'
+import escenarioImg from '../assets/other/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
 import { useGameStore } from '../stores/game'
 import PlayerHub from './PlayerHub.vue'
 import Bosses from './Bosses.vue'
-import spritesheetImg from '../assets/buggy.png'
-import cursorImg from '../assets/cursorfire.png'
-import buildingSpritesheet from '../assets/buildings.png'
-import upgradeDashIcon from '../assets/upgrade_dash.png'
-import upgradeHealthIcon from '../assets/upgrade_health.png'
-import upgradeAkimboIcon from '../assets/upgrade_akimbo.png'
-import bulletTexture from '../assets/Orbital.png'
-import troyanoBulletSpritesheet from '../assets/troyanobullet.png'
-import memoriaBulletSpritesheet from '../assets/memorybulletsprite.png'
-import martilloBulletTexture from '../assets/martillobullet.png'
-import gusanoBulletSpritesheet from '../assets/gusanosprite.png'
-import enemySpritesheet from '../assets/enemy_spritesheet.png'
+import spritesheetImg from '../assets/charactersprites/buggy.png'
+import cursorImg from '../assets/other/cursorfire.png'
+import buildingSpritesheet from '../assets/other/buildings.png'
+import upgradeDashIcon from '../assets/icons/upgrade_dash.png'
+import upgradeHealthIcon from '../assets/icons/upgrade_health.png'
+import upgradeAkimboIcon from '../assets/icons/upgrade_akimbo.png'
+import bulletTexture from '../assets/weaponsprites/Orbital.png'
+import troyanoBulletSpritesheet from '../assets/weaponsprites/troyanobullet.png'
+import memoriaBulletSpritesheet from '../assets/weaponsprites/memorybulletsprite.png'
+import martilloBulletTexture from '../assets/weaponsprites/martillobullet.png'
+import gusanoBulletSpritesheet from '../assets/weaponsprites/gusanosprite.png'
+import enemySpritesheet from '../assets/charactersprites/enemy_spritesheet.png'
 
 interface Bullet {
   id: number
@@ -301,6 +250,7 @@ interface Bullet {
   ownerId?: number
   stun?: boolean
   stunDuration?: number
+  hitEnemyIds?: Set<number>
 }
 
 interface Explosion {
@@ -694,8 +644,8 @@ const ENEMY_EXPERIENCE = {
   'windows-defender': 0,
 }
 const ENEMY_SPAWN_INTERVAL_MS = 1
-const MIN_ACTIVE_ENEMIES = 15
-const MAX_ACTIVE_ENEMIES = 30
+const MIN_ACTIVE_ENEMIES = 40
+const MAX_ACTIVE_ENEMIES = 60
 const ENEMY_TYPES: Enemy['type'][] = ['grunt', 'runner', 'tank', 'shooter']
 const normalEnemies = computed(() =>
   enemies.filter(
@@ -1310,6 +1260,23 @@ function bulletStyle(bullet: Bullet) {
   if (bullet.type === 'orbiting') {
     const isBossTornado = bullet.weaponId === 'mcaffe'
     const isWindowsOrbit = bullet.weaponId === 'windows-orbit'
+    const isPlayerOrbit = bullet.weaponId === 'tormenta_anuncios'
+
+    if (isPlayerOrbit) {
+      const rotationDeg = bullet.angleDeg ?? 0
+      return {
+        width: `${bullet.size}px`,
+        height: `${bullet.size}px`,
+        backgroundImage: `url(${bulletTexture})`,  // o el sprite que uses para orbiting
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        borderRadius: '0px',
+        imageRendering: 'pixelated',
+        transform: `translate3d(${screenX}px, ${screenY}px, 0px) rotate(${rotationDeg}deg)`,
+      } as CSSProperties
+    }
+
     return {
       width: `${bullet.size}px`,
       height: `${bullet.size}px`,
@@ -1331,6 +1298,19 @@ function bulletStyle(bullet: Bullet) {
   }
 
   if (bullet.type === 'explosive') {
+    if (bullet.weaponId === 'mcaffe-explosive') {
+      const pulse = Math.sin((bullet.flashTimeElapsed ?? 0) * 12) * 0.5 + 0.5
+      const innerAlpha = 0.85 + pulse * 0.15
+      return {
+        width: `${bullet.size}px`,
+        height: `${bullet.size}px`,
+        background: `radial-gradient(circle, rgba(255,255,255,${innerAlpha}) 0%, rgba(255,140,20,0.95) 35%, rgba(220,40,10,0.88) 65%, rgba(80,0,0,0) 100%)`,
+        borderRadius: '50%',
+        boxShadow: `0 0 ${18 + pulse * 10}px rgba(255, 80, 0, 0.85)`,
+        transform: `translate3d(${screenX}px, ${screenY}px, 0px)`,
+      } as CSSProperties
+    }
+
     const frame = Math.floor((bullet.flashTimeElapsed ?? 0) / TROYANO_FLASH_INTERVAL) % 2
     const backgroundX = frame === 0 ? '0%' : '100%'
     return {
@@ -1920,8 +1900,6 @@ function updateBullets(dt: number) {
       bullet.y += bullet.vy * dt
     }
 
-    // (Eliminado) Corrupción del mapa.
-
     let destroyBullet = false
 
     if (
@@ -2026,10 +2004,20 @@ function updateBullets(dt: number) {
           break
         }
 
-        enemy.hp -= bullet.damage
-        hitEnemy = true
+        if (bullet.piercing) {
+          // Only damage each enemy once — skip if already hit this enemy
+          if (!bullet.hitEnemyIds) bullet.hitEnemyIds = new Set()
+          if (bullet.hitEnemyIds.has(enemy.id)) continue
 
-        if (!bullet.piercing) {
+          enemy.hp -= bullet.damage
+          bullet.hitEnemyIds.add(enemy.id)
+          hitEnemy = true
+
+          // Once bullet leaves the enemy's hitbox, clear it so it can hit again on re-entry
+          // (handled naturally since we only add on overlap)
+        } else {
+          enemy.hp -= bullet.damage
+          hitEnemy = true
           if (bullet.type === 'explosive') {
             spawnExplosion(bullet.x, bullet.y, EXPLOSION_MAX_RADIUS)
           }
@@ -2037,6 +2025,15 @@ function updateBullets(dt: number) {
         }
       }
     }
+
+  if (bullet.piercing && bullet.hitEnemyIds && bullet.hitEnemyIds.size > 0) {
+    for (const id of bullet.hitEnemyIds) {
+      const stillOverlapping = enemies.some(
+        (e) => e.id === id && circlesOverlap(bulletHitbox, getEnemyHitbox(e)).overlapping,
+      )
+      if (!stillOverlapping) bullet.hitEnemyIds.delete(id)
+    }
+  }
 
     // bullets collide with buildings -> bounce or explode
     for (let bi = 0; bi < buildings.length; bi++) {
@@ -2448,13 +2445,11 @@ onUnmounted(() => {
   place-items: center;
   background:
     radial-gradient(circle at 50% 35%, rgba(35, 255, 150, 0.14), rgba(0, 0, 0, 0.72) 62%),
-    repeating-linear-gradient(
-      to bottom,
+    repeating-linear-gradient(to bottom,
       rgba(35, 255, 150, 0.03) 0,
       rgba(35, 255, 150, 0.03) 1px,
       transparent 1px,
-      transparent 4px
-    );
+      transparent 4px);
   backdrop-filter: blur(3px);
 }
 
@@ -2469,16 +2464,14 @@ onUnmounted(() => {
     0 0 0 1px rgba(140, 255, 206, 0.12) inset,
     0 0 26px rgba(48, 255, 162, 0.28);
   text-align: center;
-  clip-path: polygon(
-    0 10px,
-    10px 0,
-    calc(100% - 12px) 0,
-    100% 12px,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    12px 100%,
-    0 calc(100% - 12px)
-  );
+  clip-path: polygon(0 10px,
+      10px 0,
+      calc(100% - 12px) 0,
+      100% 12px,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      12px 100%,
+      0 calc(100% - 12px));
 }
 
 .lose-title,
@@ -2597,16 +2590,14 @@ onUnmounted(() => {
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 0 22px rgba(202, 82, 255, 0.26),
     0 0 38px rgba(108, 51, 255, 0.1);
-  clip-path: polygon(
-    0 12px,
-    12px 0,
-    calc(100% - 16px) 0,
-    100% 16px,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    16px 100%,
-    0 calc(100% - 16px)
-  );
+  clip-path: polygon(0 12px,
+      12px 0,
+      calc(100% - 16px) 0,
+      100% 16px,
+      100% calc(100% - 12px),
+      calc(100% - 12px) 100%,
+      16px 100%,
+      0 calc(100% - 16px));
 }
 
 .neon-card::before {
@@ -3135,6 +3126,7 @@ onUnmounted(() => {
 }
 
 @keyframes bossPulse {
+
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);

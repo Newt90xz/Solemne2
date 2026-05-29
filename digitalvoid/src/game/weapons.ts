@@ -24,11 +24,11 @@ export interface WeaponDefinition {
   explosive?: boolean
 }
 
-import arma1 from '../assets/weaponicons/Mem.png'
-import arma2 from '../assets/weaponicons/Ham.png'
-import arma3 from '../assets/weaponicons/Gus.png'
-import arma4 from '../assets/weaponicons/Orb.png'
-import arma5 from '../assets/weaponicons/Troy.png'
+import arma1 from '../assets/icons/Mem.png'
+import arma2 from '../assets/icons/Ham.png'
+import arma3 from '../assets/icons/Gus.png'
+import arma4 from '../assets/icons/Orb.png'
+import arma5 from '../assets/icons/Troy.png'
 
 
 export const DEFAULT_WEAPON_ID: WeaponId = 'Disparo_Memoria'
@@ -106,15 +106,15 @@ export const WEAPON_CATALOG: Record<WeaponId, WeaponDefinition> = {
   },
   virus_troyano: {
     id: 'virus_troyano',
-    name: 'Virus Troayno',
+    name: 'Virus Troyano',
     alias: 'Amenaza inminente',
     role: 'Balas lentas que explotan al detenerse',
     image: arma5,
     fireRate: 2,
-    damage: 8,
+    damage: 20,
     projectileSpeed: 420,
     projectileLifetime: 3.5,
-    projectileSize: 40,
+    projectileSize: 50,
     projectileColor: '#a8dadc',
     pellets: 1,
     spreadDeg: 0,

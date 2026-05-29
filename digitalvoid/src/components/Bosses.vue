@@ -150,8 +150,8 @@ export default defineComponent({
     const BOSS_MCAFFE_SPEED = 112
     const BOSS_INTRO_DURATION = 1.9
     const BOSS_TORNADO_COOLDOWN = 1.5
-    const BOSS_EXPLOSIVE_COOLDOWN = 0.5
-    const BOSS_EXPLOSIVE_SPEED = 280
+    const BOSS_EXPLOSIVE_COOLDOWN = 1.0
+    const BOSS_EXPLOSIVE_SPEED = 250
     const BOSS_EXPLOSIVE_RADIUS = 150
     const BOSS_EXPLOSIVE_DAMAGE = 28
     const BOSS_EXPERIENCE = 250
@@ -168,7 +168,7 @@ export default defineComponent({
     const NORTON_TELEPORT_FX = 0.16
     const NORTON_EXPERIENCE = 340
     const WINDOWS_DEFENDER_SIZE = 260
-    const WINDOWS_DEFENDER_SPEED = 118
+    const WINDOWS_DEFENDER_SPEED = 200
     const WINDOWS_DEFENDER_INTRO_DURATION = 1.7
     const WINDOWS_DEFENDER_ORBIT_BULLETS = 8
     const WINDOWS_DEFENDER_ORBIT_RADIUS = 128
@@ -526,7 +526,7 @@ function spawnBossTornado(boss: BossEnemy) {
         maxTtl: 4.2,
         color: '#ffd0d8',
         type: 'explosive',
-        explosiveDeceleration: 100,
+        explosiveDeceleration: 50,
         flashTimeElapsed: 0,
         piercing: false,
         bouncesLeft: 0,
@@ -731,10 +731,17 @@ function updateBosses(dt: number) {
     boss.y = startY + (finalY - startY) * eased
   } else {
     if (boss.type === 'windows-defender') {
-      const desiredX = targetX
-      const desiredY = Math.max(boss.size / 2, targetY - 360)
-      boss.x += (desiredX - boss.x) * Math.min(1, dt * 2.6)
-      boss.y += (desiredY - boss.y) * Math.min(1, dt * 2)
+  const desiredX = targetX
+  const desiredY = Math.max(boss.size / 2, targetY - 280)
+  const dx = desiredX - boss.x
+  const dy = desiredY - boss.y
+  const dist = Math.hypot(dx, dy) || 1
+  const moveSpeed = boss.speed ?? WINDOWS_DEFENDER_SPEED
+  // Only move if far enough — avoids jitter when close
+  if (dist > 12) {
+    boss.x += (dx / dist) * moveSpeed * dt
+    boss.y += (dy / dist) * moveSpeed * dt
+  }
     } else if (boss.type === 'norton') {
       // Norton: que funcione como un enemigo más "chico" (persigue al player)
       // y que el TP sea lo que le da personalidad, no quedarse fijo arriba.

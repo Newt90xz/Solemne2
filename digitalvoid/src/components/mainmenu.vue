@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import malwareLogo from '../assets/malware.png'
+import malwareLogo from '../assets/other/malware.png'
 // import audio from assets
 import menuTrack from '../assets/audio/Hands of God.mp4'
 import { useGameStore } from '../stores/game'
