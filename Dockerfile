@@ -17,5 +17,6 @@ RUN pnpm build
 # Production stage
 FROM nginx:1.27-alpine
 COPY --from=builder /app/digitalvoid/dist /usr/share/nginx/html
-EXPOSE 80
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 10081
 CMD ["nginx", "-g", "daemon off;"]

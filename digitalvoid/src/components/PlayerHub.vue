@@ -30,6 +30,8 @@
         <div class="stat-row infection-row">
           <span class="label">PROGRESO INFECCIÓN</span>
           <div class="track track-infection">
+            <span class="infection-marker infection-marker-100"></span>
+            <span class="infection-marker infection-marker-200"></span>
             <div class="fill fill-infection" :style="infectionBarStyle"></div>
           </div>
           <span class="bar-text">{{ infectionText }}</span>
@@ -52,7 +54,9 @@ const expText = computed(
   () => `${playerStats.value.experience} / ${playerStats.value.experienceToLevel}`,
 )
 
-const infectionText = computed(() => `${playerStats.value.kills} / 100`)
+const INFECTION_TARGET = 300
+
+const infectionText = computed(() => `${playerStats.value.kills} / ${INFECTION_TARGET}`)
 
 const expBarStyle = computed(() => {
   const percentage = (playerStats.value.experience / playerStats.value.experienceToLevel) * 100
@@ -62,7 +66,7 @@ const expBarStyle = computed(() => {
 })
 
 const infectionBarStyle = computed(() => {
-  const percentage = (playerStats.value.kills / 100) * 100
+  const percentage = (playerStats.value.kills / INFECTION_TARGET) * 100
   return {
     width: `${Math.min(percentage, 100)}%`,
   }
@@ -161,6 +165,46 @@ const healthBarStyle = computed(() => {
   min-width: 128px;
 }
 
+.track-infection::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(33.333% - 1px),
+    rgba(255, 255, 255, 0.22) calc(33.333% - 1px),
+    rgba(255, 255, 255, 0.22) calc(33.333% + 1px),
+    transparent calc(33.333% + 1px),
+    transparent calc(66.666% - 1px),
+    rgba(255, 255, 255, 0.22) calc(66.666% - 1px),
+    rgba(255, 255, 255, 0.22) calc(66.666% + 1px),
+    transparent calc(66.666% + 1px)
+  );
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.infection-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(210, 255, 210, 0.55);
+  box-shadow: 0 0 6px rgba(144, 238, 144, 0.8);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.infection-marker-100 {
+  left: 33.333%;
+}
+
+.infection-marker-200 {
+  left: 66.666%;
+}
+
 .fill {
   height: 100%;
   border-radius: inherit;
@@ -178,8 +222,18 @@ const healthBarStyle = computed(() => {
 }
 
 .fill-infection {
-  background: linear-gradient(90deg, #90ee90, #32cd32);
+  background: repeating-linear-gradient(
+    90deg,
+    #90ee90 0,
+    #90ee90 6px,
+    rgba(50, 205, 50, 0.92) 6px,
+    rgba(50, 205, 50, 0.92) 10px
+  );
+  background-size: 20px 100%;
   box-shadow: 0 0 12px rgba(50, 205, 50, 0.6);
+  animation:
+    infectionPulse 2.2s ease-in-out infinite,
+    infectionShift 1s linear infinite;
 }
 
 .bar-text {
@@ -188,5 +242,24 @@ const healthBarStyle = computed(() => {
   letter-spacing: 0.08em;
   min-width: 52px;
   text-align: right;
+}
+
+@keyframes infectionShift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
+}
+
+@keyframes infectionPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3);
+  }
 }
 </style>

@@ -86,8 +86,8 @@
 
 ## Semana 4, 25 de mayo - 28 de mayo:
 
-- [ ] Music and Sound Effects
-  - [ ] Main music
+- [x] Music and Sound Effects
+  - [x] Main music
 - [x] Bosses
   - [x] Spawn Condition (Very important)
   - [x] Boss hitbox

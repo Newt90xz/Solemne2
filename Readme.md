@@ -19,14 +19,13 @@ Digital Void es un juego web desarrollado con Vue 3 y Vite, y usa Pinia para el 
 
 ```bash
 git clone <repo-url>
-cd <repo-folder>/digitalvoid
+cd digitalvoid
 ```
 
-2. Habilita Corepack y activa `pnpm` (si no está activo):
+2. Instalar `pnpm` si no está activo:
 
 ```bash
-corepack enable
-corepack prepare pnpm@latest --activate
+npm install pnpm
 ```
 
 3. Instala dependencias y ejecuta en modo desarrollo:
@@ -51,15 +50,19 @@ pnpm run preview
 
 1. Construir la imagen:
 
-```bash
-docker build -t solemne2 .
-```
-
-2. Ejecutar el contenedor (puerto 80):
+Para construir la imagen de Docker, asegúrate de tener abierto docker y debes estar en la raíz del proyecto (donde se encuentra el `Dockerfile`) en este caso es en solemne2, luego ejecuta:
 
 ```bash
-docker run --rm -p 80:80 solemne2
+docker build -t mrireal/digitalvoid:1.0 .
 ```
+
+2. Ejecutar el contenedor (puerto 10081):
+
+```bash
+docker run --rm -p 10081:10081 mrireal/digitalvoid:1.0
+```
+
+Se abrirá la aplicación en `http://localhost:10081`.
 
 3. Uso con Docker Compose:
 
@@ -67,21 +70,8 @@ docker run --rm -p 80:80 solemne2
 docker compose up --build
 ```
 
+Se abrirá la aplicación en `http://localhost:10081`.
+
 ## Imagen en DockerHub
 
-La imagen se publica en Docker Hub en (reemplaza `<usuario>` por tu usuario de Docker Hub):
-
-https://hub.docker.com/r/<usuario>/digitalvoid
-
-Ejemplo de etiqueta utilizada en CI/CD:
-
-```
-<usuario>/digitalvoid:latest
-```
-
-## Notas y buenas prácticas
-
-- Este proyecto usa `pnpm` y el lockfile `pnpm-lock.yaml` para instalaciones reproducibles.
-- Si usas `act` para testear GitHub Actions localmente, ejecuta `docker login` antes si se requieren pulls autenticados.
-
-Si quieres, puedo actualizar la URL de Docker Hub con tu nombre de usuario y agregar instrucciones para publicar la imagen automáticamente desde GitHub Actions.
+https://hub.docker.com/r/mrireal/digitalvoid
