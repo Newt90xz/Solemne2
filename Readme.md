@@ -53,13 +53,13 @@ pnpm run preview
 Para construir la imagen de Docker, asegúrate de tener abierto docker y debes estar en la raíz del proyecto (donde se encuentra el `Dockerfile`) en este caso es en solemne2, luego ejecuta:
 
 ```bash
-docker build -t mrireal/digitalvoid:1.0 .
+docker build -t TU-USUARIO/digitalvoid:1.0 .
 ```
 
 2. Ejecutar el contenedor (puerto 10081):
 
 ```bash
-docker run --rm -p 10081:10081 mrireal/digitalvoid:1.0
+docker run --rm -p 10081:10081 TU-USUARIO/digitalvoid:1.0
 ```
 
 Se abrirá la aplicación en `http://localhost:10081`.
