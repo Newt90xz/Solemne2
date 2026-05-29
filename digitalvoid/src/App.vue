@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Escenario from './components/Scenario.vue';
+import Escenario from './components/scenario.vue';
 
 </script>
 
