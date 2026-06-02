@@ -109,7 +109,7 @@
 
 ## Upgrades and updates
 - [ ] Instructions in the beginning when new game.
-- [ ] Enemy waves
+- [ ] Enemy waves, enemy events.
 - [ ] Enciclopedia of enemies
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [ ] Visual damage response to enemies and player.
