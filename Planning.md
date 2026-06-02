@@ -105,3 +105,33 @@
       - [x] Bullets orbit around him
 
 - [x] Error corrections and Quality of life changes.
+
+
+## Upgrades and updates
+- [ ] Instructions in the beginning when new game.
+- [ ] Enemy waves
+- [ ] Enciclopedia of enemies
+- [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
+- [ ] Visual damage response to enemies and player.
+- [ ] Enemy pattern for movement, maybe make some enemies go through walls or make them zigzag when they fast.
+- [ ] Enemy sprites changes.
+- [ ] Obstacle attack
+- [ ] Boss behaviours. (make them more fair to fight against)
+      - [] McAffe
+      - [] Norton
+      - [] Windows Defender
+- [ ] Gun, enemy and player sound effects.
+      - [ ] Gun sound effects
+        - [ ] Disk
+        - [ ] Hammer
+        - [ ] Worm
+        - [ ] Ads
+        - [ ] Horse
+      - [ ] Enemy sound effects
+      - [ ] Player sound effects
+      - [ ] Boss music.
+- [ ] Scoreboard and leaderboard.
+- [ ] Separete Enemy stucture from main (its currently inside the main game)
+
+
+Puntaje añadido: 0.75
