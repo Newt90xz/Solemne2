@@ -84,7 +84,7 @@
   - [x] BugDash
   - [x] Building capture buff
 
-## Semana 4, 25 de mayo - 28 de mayo:
+## Semana 4, 25 de mayo - 28 de mayo
 
 - [x] Music and Sound Effects
   - [x] Main music
@@ -106,32 +106,53 @@
 
 - [x] Error corrections and Quality of life changes.
 
+Puntaje añadido: ~~0.75~~
 
 ## Upgrades and updates
-- [ ] Instructions in the beginning when new game.
-- [ ] Enemy waves, enemy events.
-- [ ] Enciclopedia of enemies
+
+## Semana 1, 15 de junio - 19 de junio (Replaning phase)
+
+- [ ] Update Design.md and Planning.md to reflect on the current state of the repository and for future changes implemented
+- [ ] Change component, folder, and file names to lowercase. Making sure to also change inside code to redirect to the correct file.
+- [ ] Implement the initial backend folder: express.js and mongodb image
+- [ ] Create workflows to test backend
+  - [ ] Start backend
+  - [ ] Connect to mongodb
+  - [ ] Test api route
+
+## Semana 2, 22 de junio - 26 de junio
+
+- [ ] Fix starting up screen, so that it displays controls.
+- [ ] Scoreboard and leaderboard.
+  - [ ] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user, user setting, etc.
+  - [ ] After, manage the GET and POST functions so that it publishes the previous scores and check them.
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [ ] Visual damage response to enemies and player.
-- [ ] Enemy pattern for movement, maybe make some enemies go through walls or make them zigzag when they fast.
-- [ ] Enemy sprites changes.
-- [ ] Obstacle attack
+- [ ] Separete Enemy stucture from main (its currently inside the main game)
+- [ ] Change enemy sprites slightly
+
+## Semana 3, 29 de junio - 2 de julio (jueves)
+
+- [ ] Enemy waves, enemy events
+- [ ] Enciclopedia of enemies
+
+- [ ] Gun, enemy and player sound effects.
+  - [ ] Gun sound effects
+    - [ ] Disk
+    - [ ] Hammer
+    - [ ] Worm
+    - [ ] Ads
+    - [ ] Horse
+  - [ ] Enemy sound effects
+  - [ ] Player sound effects
+  - [ ] Boss music
+
+- [ ] Obstacle attack and make an obstacle sprite
 - [ ] Boss behaviours. (make them more fair to fight against)
       - [] McAffe
       - [] Norton
+        - [] Make the teleport more reactable by making it a dash instead
+        - [] Change stun duration  
       - [] Windows Defender
-- [ ] Gun, enemy and player sound effects.
-      - [ ] Gun sound effects
-        - [ ] Disk
-        - [ ] Hammer
-        - [ ] Worm
-        - [ ] Ads
-        - [ ] Horse
-      - [ ] Enemy sound effects
-      - [ ] Player sound effects
-      - [ ] Boss music.
-- [ ] Scoreboard and leaderboard.
-- [ ] Separete Enemy stucture from main (its currently inside the main game)
+        - Disables weapon 
 
-
-Puntaje añadido: 0.75
