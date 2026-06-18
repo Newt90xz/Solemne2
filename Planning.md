@@ -122,22 +122,21 @@ Puntaje añadido: ~~0.75~~
 
 ## Semana 2, 22 de junio - 26 de junio
 
-- [] Create the auth token for admin, and the cookie management for users
 - [ ] Fix starting up screen, so that it displays controls.
 - [ ] Scoreboard and leaderboard.
   - [ ] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user, user setting, etc.
-  - [ ] After, manage the GET and POST functions so that it publishes the previous scores and check them.
+  - [ ] Manage the GET and POST functions so that it publishes the previous scores and check them.
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [ ] Visual damage response to enemies and player.
 - [ ] Separete Enemy stucture from main (its currently inside the main game)
 - [ ] Change enemy sprites slightly
-- [ ] Add control modality
+- [ ] Add control modality (keybinds)
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 
+- Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
 - [ ] Enemy waves, enemy events
 - [ ] Enciclopedia of enemies
-
 - [ ] Gun, enemy and player sound effects.
   - [ ] Gun sound effects
     - [ ] Disk
@@ -148,7 +147,6 @@ Puntaje añadido: ~~0.75~~
   - [ ] Enemy sound effects
   - [ ] Player sound effects
   - [ ] Boss music
-
 - [ ] Obstacle attack and make an obstacle sprite
 - [ ] Boss behaviours. (make them more fair to fight against)
       - [] McAffe
@@ -156,5 +154,5 @@ Puntaje añadido: ~~0.75~~
         - [] Make the teleport more reactable by making it a dash instead
         - [] Change stun duration  
       - [] Windows Defender
-        - Disables weapon 
+        - [] Disables weapon
 

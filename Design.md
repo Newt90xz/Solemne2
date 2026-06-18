@@ -4,12 +4,6 @@
 
 Digital Void
 
-<!--#### Mockup
- <img src="digitalvoid/mockup/mockup1.jpeg" alt="mockup 1" width="400" height="300">
-<img src="digitalvoid/mockup/mockup2.jpeg" alt="mockup 2" width="400" height="300"> 
-Make new mockups for the visuals.
--->
-
 ## Descripción del juego
 
 Juego 2D estilo top-down shooter roguelike, inspirado en
@@ -17,15 +11,15 @@ Alien Shooter,
 Vampire Survivors y
 Picayune Dreams.
 
-El jugador controla un pequeño bicho malware que se inyecto dentro del sistema de archivos de de una computadora local, con el objetivo de robar informacion de la computadora (edificios), corromperla y sobrevivir ante protocolos de cuarentena que intenten neutralizarla para poder seguir infectando otras computadoras .
-Al matar enemigos el malware se vuelve mas fuerte, hasta desbloquear nuevos metodos de ataque de malware como armas.
+El jugador controla un pequeño bicho malware que se inyectó dentro del sistema de archivos de una computadora local, con el objetivo de robar información de la computadora (edificios), corromperla y sobrevivir ante protocolos de cuarentena que intenten neutralizarla para poder seguir infectando otras computadoras.
+Al matar enemigos el malware se vuelve más fuerte, hasta desbloquear nuevos métodos de ataque de malware como armas.
 
 ### Mecanicas
 
 1.- Captura de edificios / zonas que dan potenciadores.  
-2.- Subir de nivel da un arma nueva o mejora una actual.
-3.- Una barra extra se rellena. Al completarse un jefe aparece.
-4.- Jefe inmortal aparece al azar y te persigue por el mapa. La unica opcion es escapar de el.
+2.- Subir de nivel da un arma nueva o mejora una actual.  
+3.- Una barra extra se rellena. Al completarse un jefe aparece.  
+4.- Jefe inmortal aparece al azar y te persigue por el mapa. La única opción es escapar de él.
 
 ### Reglas
 
@@ -37,7 +31,7 @@ Al matar enemigos el malware se vuelve mas fuerte, hasta desbloquear nuevos meto
 ### Flujo de juego (Game Loop)
 
 1) Pantalla de inicio.  
-2) Aparece en el mapa y instrucciones aparecen en la pantalla
+2) Aparece en el mapa y instrucciones aparecen en la pantalla.
 3) El jugador inicia la partida con un personaje con su arma predeterminada y sin mejoras.
 4) Enemigos comienzan a aparecer en oleadas, cada vez más difíciles.  
 5) El jugador se mueve y ataca.  
@@ -45,11 +39,11 @@ Al matar enemigos el malware se vuelve mas fuerte, hasta desbloquear nuevos meto
 7) Al subir de nivel, el jugador puede elegir entre varias mejoras para su arma.  
 8) El jugador puede explorar el mapa para encontrar edificios que puede capturar para obtener potenciadores.  
 9) Al llenar una barra secundaria, un jefe aparece en el mapa.  
-10) El jugador debe derrotar al jefe para avanzar a la siguiente etapa, donde las oleadas de enemigos serán más difíciles y el mapa se corrompe aun mas.
-11) Al llegar al tercer jefe, que es inmortal, ya habras corrompido todo y tendras que encontrar un "puerto de escape" o una "red adyacente" donde tu malware escapara para poder corromper otra computadora.
-12) Al pasar a la siguiente computadora, pierdes toda tu experiencia y armas que se traduce en puntos de mejora, que puedes gastar para mejorar tus capacidades iniciales.
-13) Al estar listo, el jugador presiona siguiente inyeccion y el empieza de 0 con las nuevas mejoras.
-14) El juego continúa hasta que el jugador muere, se pierde todo, y se muestra la pantalla de fin de juego con la puntuación obtenida. Esta puntuacion, mas la cantidad de computadoras corrompidas, mas de oleadas derrotadas, seran guardadas en un leaderboard con el nombre de usuario.
+10) El jugador debe derrotar al jefe para avanzar a la siguiente etapa, donde las oleadas de enemigos seran mas dificiles y el mapa se corrompe aun mas.  
+11) Al llegar al tercer jefe, que es inmortal, ya habrás corrompido todo y tendrás que encontrar un "puerto de escape" o una "red adyacente" donde tu malware escapara para poder corromper otra computadora.  
+12) Al pasar a la siguiente computadora, pierdes toda tu experiencia y armas, que se traduce en puntos de mejora que puedes gastar para mejorar tus capacidades iniciales.  
+13) Al estar listo, el jugador presiona "siguiente inyección" y empieza de 0 con las nuevas mejoras.  
+14) El juego continúa hasta que el jugador muere, se pierde todo, y se muestra la pantalla de fin de juego con la puntuacion obtenida. Esta puntuación, más la cantidad de computadoras corrompidas y oleadas derrotadas, serán guardadas en un leaderboard con el nombre de usuario.
 
 ## Comportamiento de enemigos
 
@@ -60,7 +54,7 @@ Al matar enemigos el malware se vuelve mas fuerte, hasta desbloquear nuevos meto
 
 ## Especificaciones técnicas
 
-Framework elegido: Vue + vite para el desarrollo del juego.
+Framework elegido: Vue + Vite para el desarrollo del juego.
 
 Renderizado del juego utilizando HTML5 Canvas para gráficos 2D, flexibilidad en el diseño visual.
 
@@ -101,71 +95,219 @@ src/
 - pinia (estado global)
 - howler.js (audio)
 
-### Descripcion de armas
+### Descripción de armas
 
 - Memoria corrupta (Arma por defecto)
 - Ransomware (Arma penetrante)
 - Gusano/Worm (Disparo disperso/Escopeta)
 - Tormenta de Popups (Arma que orbita alrededor del mouse)
-- Virus Troyano (Disparo explosivo) Ps: ningun caballo (troyano o no) fue herido en el proceso de crear esta arma.
+- Virus Troyano (Disparo explosivo)
+
 
 ## Fase 2
 
-## Mejoras y correcciones
+### Mejoras y correcciones
 
-Principalmente, las mejoras que se quieren implementar son correciones visuales y la experiencia de first-time players (explicacion de controles y otras mecanicas).
+Principalmente, las mejoras que se quieren implementar son correcciones visuales y la experiencia de first-time players (explicación de controles y otras mecánicas).
 
-Otras que valen mencionar serian la falta de un indicador visual del daño causado a enemigos y del jugador.
-
-### Mockup nuevo escenario
-
-- [Redacted]
+- Indicador visual del daño causado a enemigos (número flotante sobre el enemigo al recibir daño).
+- Indicador visual del daño recibido por el jugador (flash de personaje).
+- Pantalla de tutorial o instrucciones al iniciar la primera partida.
 
 ### Nuevas mecánicas o pantallas de juego
 
-De las correciones visuales, se noto la falta de progreso del mapa, por lo que se preparara implementar diferentes fases del mapa cuando se derrotan cierta cantidad de enemigos.
+- Fases visuales del mapa: el escenario cambia progresivamente (más corrupto) conforme se derroten cierta cantidad de enemigos.
+- Fase intermedia/descanso: Al completar un loop, el jugador es transportado a otro escenario y destripado de sus mejoras. Dentro de esta pantalla antes de seguir al siguiente loop, el jugador gasta puntos para potenciar las capacidades basicas del malware que controla.
 
 ## Arquitectura fullstack
 
-### Descripcion
+### Descripción
 
-La siguiente fase de el diseño sera la implementacion del backend. Su uso siendo orientado para registrar:
+La siguiente fase del diseño es la implementación del backend. Su uso está orientado a:
 
-- Usuario unico
-- Contraseña
-- Record/Puntaje Maximo (empieza como 0)
-- Computadoras infectadas (empieza como 0, cantidad de reinicios al terminar un escenario, para registrar los loops)
-- Preferencias de opciones (si no hay, deja por defecto)
+- Registro y autenticación de usuarios.
+- Persistencia del puntaje máximo y loops (computadoras infectadas).
+- Leaderboard global consultable por cualquier usuario.
+- Preferencias de configuración por usuario.
+- Gestión de usuarios por parte del administrador.
 
-### Estructura
+### Autenticación y autorización
+
+El sistema diferencia dos tipos de usuarios: `user` y `admin`, definidos por el campo `role` en MongoDB.
+
+#### Registro
+
+Al registrarse, el frontend envía `username` y `password`. El backend hashea la contraseña con bcrypt y crea el usuario en MongoDB con `role: "user"`, `maxscore: 0` y `loops: 0`. El rol nunca viene del frontend.
 
 ```
-backend/  
-│  
-├── App.js    
-│  
-├── routes/  
-│   ├── users.js
+POST /api/register { username, password }
+  → Hashea password con bcrypt
+    → Crea usuario con role: "user", maxscore: 0, loops: 0
+    → Responde { ok: true }
 ```
 
-- URL: `/api/dv/users`
-- PortUsed: `6139`
+#### Login de Usuario
 
-- Mongodb Schema:
-  - username: String (Obligatorio)
-  - password: String (Obligatorio)
-  - maxscore: Interger
-  - loops: Interger
-  - keybind-up: String
-  - keybind-down: String
-  - keybind-left: String
-  - keybind-right: String
-  - keybind-dash: String
-  - keybind-shoot: String
-  - keybind-weaponnext: String
-  - keybind-weaponback: String
+Al hacer login, el backend genera un JWT y lo almacena en una **cookie `httpOnly`**. El browser la envía automáticamente en cada request. 
+El usuario nunca manipula el token directamente.
 
-### Dependencias fase 2
+```
+POST /api/login { username, password }
+  → Backend verifica credenciales
+    → Detecta role: "user"
+      → Setea cookie httpOnly con el JWT
+        → Responde { ok: true }
+```
+
+#### Login de Admin
+
+Al hacer login con una cuenta de rol `admin`, el backend también responde con el JWT en el **body de la respuesta**, además de la cookie. El admin usa ese token manualmente en herramientas como Postman o Thunder Client mediante el header `Authorization: Bearer <token>`.
+
+```
+POST /api/login { username, password }
+  → Backend verifica credenciales
+    → Detecta role: "admin"
+      → Setea cookie httpOnly con el JWT
+        → Responde { ok: true, token: "xxxx" }
+```
+
+#### Middleware de autorización
+
+Un único middleware `auth` maneja ambos roles. Recibe un parámetro opcional `requiredRole` (por defecto `'user'`).
+ 
+```js
+const auth = (requiredRole = 'user') => {
+  return (req, res, next) => {
+ 
+    // Lee el token desde la cookie (usuario) o desde el header (admin)
+    const token = req.cookies.session
+      || req.headers.authorization?.split(' ')[1]
+ 
+    if (!token) {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+ 
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+ 
+      // Si la ruta requiere admin, verifica el rol
+      if (requiredRole === 'admin' && decoded.role !== 'admin') {
+        return res.status(403).json({ error: 'Acceso denegado' })
+      }
+ 
+      req.user = decoded  // datos del usuario disponibles en el endpoint en json
+      next() //continuar
+    } catch {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+  }
+}
+```
+
+Uso en rutas:
+
+```
+auth()          → cualquier usuario logueado (user o admin)
+auth('admin')   → solo admin
+```
+
+## Estructura
+
+### Frontend
+```
+Stack: Vue.js + Pinia (estado global). 
+Comunicación con el backend vía axios sobre HTTPS. 
+Gestión de cookies delegada al browser (httpOnly, automática en cada request)
+```
+---
+
+### Backend
+
+```
+- Framework: "Node.js con Express.js"
+- Lenguaje: "JavaScript"
+- Entry point: `app.js` — inicializa conexión a MongoDB y levanta el servidor HTTP. Utiliza la biblioteca de mongoose.
+- Puerto del backend: "6139"
+- Ruta base: "/api/"
+```
+
+---
+
+### MongoDB
+
+Base de datos: `digitalvoiddb`.
+
+#### Schema del usuario:
+
+
+| Campo           | Tipo    | Requerido | Valor por defecto |
+|-----------------|---------|-----------|-------------------|
+| username        | String  | Sí        | —                 |
+| password        | String  | Sí        | —                 |
+| role            | String  | Sí        | `"user"`          |
+| maxscore        | Integer | No        | `0`               |
+| loops           | Integer | No        | `0`               |
+| keybind-up      | String  | No        | `"w"`             |
+| keybind-down    | String  | No        | `"s"`             |
+| keybind-left    | String  | No        | `"a"`             |
+| keybind-right   | String  | No        | `"d"`             |
+| keybind-dash    | String  | No        | `"shift"`         |
+| keybind-shoot   | String  | No        | `"mouse1"`        |
+| keybind-weaponnext | String | No     | `"e"`             |
+| keybind-weaponback | String | No     | `"q"`             |
+
+### Endpoints
+---
+#### Públicos (sin autenticación)
+
+| Método | Ruta               | Descripción                                      |
+|--------|--------------------|--------------------------------------------------|
+| POST   | `/api/register`    | Crea un nuevo usuario con maxscore y loops en 0  |
+| POST   | `/api/login`       | Autentica al usuario, setea cookie (o token si es admin) |
+| GET    | `/api/leaderboard` | Retorna el ranking global de todos los usuarios  |
+
+#### Usuario autenticado (requiere cookie)
+
+| Método | Ruta             | Descripción                                                  |
+|--------|------------------|--------------------------------------------------------------|
+| GET    | `/api/profile`   | Retorna los datos del usuario logueado (score, loops, keybinds) |
+| PUT    | `/api/game/end`  | Actualiza maxscore y loops si el nuevo score supera el anterior |
+| PUT    | `/api/settings`  | Actualiza las preferencias de keybinds del usuario           |
+| POST   | `/api/logout`    | Elimina la cookie de sesión                                  |
+
+#### Admin (requiere Bearer token)
+
+| Método | Ruta                  | Descripción                              |
+|--------|-----------------------|------------------------------------------|
+| GET    | `/api/admin/users`    | Lista todos los usuarios registrados     |
+| DELETE | `/api/admin/users/:id`| Elimina un usuario por ID                |
+
+### Lógica de actualización de score
+---  
+
+El usuario nunca envía su score directamente al endpoint de registro. El flujo es:
+
+1. Al registrarse (`POST /api/register`), se crea el usuario con `maxscore: 0` y `loops: 0`.
+2. Al terminar una partida, el frontend llama a `PUT /api/game/end` con el score obtenido.
+3. El backend compara el score recibido con el `maxscore` almacenado:
+   - Si el nuevo score es mayor → actualiza `maxscore` y `loops`.
+   - Si es menor o igual → no modifica nada.
+
+### Dependencias definidas en la fase 2
+
+---
+
+#### Dependencia de Frontend
+
+- axios
+
+#### Dependencias de Backend
 
 - express.js
+- mongoose
+- bcrypt
+- jsonwebtoken
+- cookie-parser
 - axios
+- cors
+- dotenv
