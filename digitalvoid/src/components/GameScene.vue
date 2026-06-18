@@ -200,8 +200,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import escenarioImg from '../assets/other/escenario.png'
-import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons'
-import { useGameStore } from '../stores/game'
+import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons.ts'
+import { useGameStore } from '../stores/game.ts'
 import PlayerHub from './PlayerHub.vue'
 import Bosses from './Bosses.vue'
 import spritesheetImg from '../assets/charactersprites/buggy.png'

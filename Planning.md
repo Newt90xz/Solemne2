@@ -112,8 +112,8 @@ Puntaje añadido: ~~0.75~~
 
 ## Semana 1, 15 de junio - 19 de junio (Replaning phase)
 
-- [ ] Update Design.md and Planning.md to reflect on the current state of the repository and for future changes implemented
-- [ ] Change component, folder, and file names to lowercase. Making sure to also change inside code to redirect to the correct file.
+- [x] Update Design.md and Planning.md to reflect on the current state of the repository and for future changes implemented
+- [x] Change component, folder, and file names to lowercase. Making sure to also change inside code to redirect to the correct file.
 - [ ] Implement the initial backend folder: express.js and mongodb image
 - [ ] Create workflows to test backend
   - [ ] Start backend
@@ -122,6 +122,7 @@ Puntaje añadido: ~~0.75~~
 
 ## Semana 2, 22 de junio - 26 de junio
 
+- [] Create the auth token for admin, and the cookie management for users
 - [ ] Fix starting up screen, so that it displays controls.
 - [ ] Scoreboard and leaderboard.
   - [ ] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user, user setting, etc.
@@ -130,6 +131,7 @@ Puntaje añadido: ~~0.75~~
 - [ ] Visual damage response to enemies and player.
 - [ ] Separete Enemy stucture from main (its currently inside the main game)
 - [ ] Change enemy sprites slightly
+- [ ] Add control modality
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 

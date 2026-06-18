@@ -145,13 +145,25 @@ backend/
 ├── App.js    
 │  
 ├── routes/  
-│   ├── 
-│    
-
+│   ├── users.js
 ```
 
 - URL: `/api/dv/users`
+- PortUsed: `6139`
 
+- Mongodb Schema:
+  - username: String (Obligatorio)
+  - password: String (Obligatorio)
+  - maxscore: Interger
+  - loops: Interger
+  - keybind-up: String
+  - keybind-down: String
+  - keybind-left: String
+  - keybind-right: String
+  - keybind-dash: String
+  - keybind-shoot: String
+  - keybind-weaponnext: String
+  - keybind-weaponback: String
 
 ### Dependencias fase 2
 
