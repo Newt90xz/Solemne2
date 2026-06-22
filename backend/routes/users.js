@@ -1,9 +1,11 @@
 var express = require('express');
+var { UsersModel } = require('../app.js')
 var router = express.Router();
 
 
 // No authorization
 router.post('/register', function(req, res, next) {
+
   res.send('respond with a resource');
 });
 
@@ -33,4 +35,5 @@ router.put('/settings', function(req, res, next) {
 router.post('/logout', function(req, res, next) {
   res.send('respond with a resource');
 });
+
 module.exports = router;
