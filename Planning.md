@@ -114,11 +114,11 @@ Puntaje añadido: ~~0.75~~
 
 - [x] Update Design.md and Planning.md to reflect on the current state of the repository and for future changes implemented
 - [x] Change component, folder, and file names to lowercase. Making sure to also change inside code to redirect to the correct file.
-- [ ] Implement the initial backend folder: express.js and mongodb image
-- [ ] Create workflows to test backend
-  - [ ] Start backend
-  - [ ] Connect to mongodb
-  - [ ] Test api route
+- [x] Implement the initial backend folder: express.js and mongodb image
+- [X] Create workflows to test backend
+  - [X] Start backend
+  - [X] Connect to mongodb
+  - [X] Test api route
 
 ## Semana 2, 22 de junio - 26 de junio
 
@@ -134,7 +134,9 @@ Puntaje añadido: ~~0.75~~
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 
-- Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
+- [ ] Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
+  - [ ] Add lobby properties
+  - [ ] Add the lobby screen to enter other new stages
 - [ ] Enemy waves, enemy events
 - [ ] Enciclopedia of enemies
 - [ ] Gun, enemy and player sound effects.

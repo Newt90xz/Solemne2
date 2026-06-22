@@ -15,7 +15,7 @@ const conectarMongoDB = async () => {
   }
 };
 
-var usersRouter = require("./routes/users");
+var usersRouter = require("./routes/users.js");
 var app = express();
 app.use(logger("dev"));
 app.use(express.json());

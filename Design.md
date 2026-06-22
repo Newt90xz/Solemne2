@@ -41,8 +41,8 @@ Al matar enemigos el malware se vuelve más fuerte, hasta desbloquear nuevos mé
 9) Al llenar una barra secundaria, un jefe aparece en el mapa.  
 10) El jugador debe derrotar al jefe para avanzar a la siguiente etapa, donde las oleadas de enemigos seran mas dificiles y el mapa se corrompe aun mas.  
 11) Al llegar al tercer jefe, que es inmortal, ya habrás corrompido todo y tendrás que encontrar un "puerto de escape" o una "red adyacente" donde tu malware escapara para poder corromper otra computadora.  
-12) Al pasar a la siguiente computadora, pierdes toda tu experiencia y armas, que se traduce en puntos de mejora que puedes gastar para mejorar tus capacidades iniciales.  
-13) Al estar listo, el jugador presiona "siguiente inyección" y empieza de 0 con las nuevas mejoras.  
+12) Al escapar, pierdes toda tu experiencia y armas, que se traduce en puntos de mejora que puedes gastar para mejorar tus capacidades iniciales.  
+13) Al estar listo, el jugador es mostrado una pantalla para el siguiente escenario, donde puede decidir si jugar con otra persona que ya esta infectando una computadora o ir a una sin tocar, al decidi presiona "siguiente inyección" y empieza de 0 con las nuevas mejoras.  
 14) El juego continúa hasta que el jugador muere, se pierde todo, y se muestra la pantalla de fin de juego con la puntuacion obtenida. Esta puntuación, más la cantidad de computadoras corrompidas y oleadas derrotadas, serán guardadas en un leaderboard con el nombre de usuario.
 
 ## Comportamiento de enemigos
@@ -282,15 +282,58 @@ Base de datos: `digitalvoiddb`.
 | GET    | `/api/admin/users`    | Lista todos los usuarios registrados     |
 | DELETE | `/api/admin/users/:id`| Elimina un usuario por ID                |
 
+### WebSockets
+
+---
+
+Planeamos utilizar Websockets para establecer una conexión estable entre el cliente y servidor para futura implementacion de lobbies y cooperativo en tiempo real.
+
+### Servicio Rest Externo
+
+---
+
+Random User Generator API: Genera un json de un usuario aleatorio, devolviendo nombre, genero, edad, etc.  
+Esta api sera utilizada para dar un nombre de usuario a las computadoras/lobbies que estemos infectando.
+
+```
+curl https://randomuser.me//api
+```
+
+Devuelve:
+
+```
+{
+  "results": [
+    {
+      "gender": "female",
+      "name": {
+        "title": "Ms",
+        "first": "Addison",
+        "last": "Johnson"
+      },
+      "location": {
+        "street": {
+          "number": 3790,
+          "name": "George St"
+        },
+        "city": "Georgetown",
+        "state": "Saskatchewan",
+        "country": "Canada",
+        "postcode": "P0V 2J9",
+        }...
+    }]
+}
+```
+
 ### Lógica de actualización de score
 ---  
 
 El usuario nunca envía su score directamente al endpoint de registro. El flujo es:
 
-1. Al registrarse (`POST /api/register`), se crea el usuario con `maxscore: 0` y `loops: 0`.
-2. Al terminar una partida, el frontend llama a `PUT /api/game/end` con el score obtenido.
-3. El backend compara el score recibido con el `maxscore` almacenado:
-   - Si el nuevo score es mayor → actualiza `maxscore` y `loops`.
+1. Al registrarse (`POST /api/register`), se crea el usuario con nombre, contraseña, el resto de los campos vacios.
+2. Al terminar una partida, el frontend llama a `PUT /api/game/end` actualizando el puntaje obtenido y los loops realizados.
+3. El backend compara el puntaje recibido con el `maxscore` almacenado:
+   - Si el nuevo puntaje es mayor → actualiza `maxscore` y `loops`.
    - Si es menor o igual → no modifica nada.
 
 ### Dependencias definidas en la fase 2
@@ -300,6 +343,7 @@ El usuario nunca envía su score directamente al endpoint de registro. El flujo 
 #### Dependencia de Frontend
 
 - axios
+- socket.io-client
 
 #### Dependencias de Backend
 
@@ -311,3 +355,5 @@ El usuario nunca envía su score directamente al endpoint de registro. El flujo 
 - axios
 - cors
 - dotenv
+- socket.io
+- cookie (parseo de cookies en el handshake del socket)

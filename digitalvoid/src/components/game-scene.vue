@@ -457,6 +457,14 @@ watch(
   },
 )
 
+watch(
+  isGameOver, (Over) => {
+    if (Over){
+      return console.log("Subiendo puntaje....")
+    }
+  }
+)
+
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
 const showObjective = ref(false)
 const finalScore = computed(() => gameStore.playerStats.score)
