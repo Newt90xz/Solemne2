@@ -240,21 +240,21 @@ Base de datos: `digitalvoiddb`.
 #### Schema del usuario:
 
 
-| Campo           | Tipo    | Requerido | Valor por defecto |
-|-----------------|---------|-----------|-------------------|
-| username        | String  | Sí        | —                 |
-| password        | String  | Sí        | —                 |
-| role            | String  | Sí        | `"user"`          |
-| maxscore        | Integer | No        | `0`               |
-| loops           | Integer | No        | `0`               |
-| keybind-up      | String  | No        | `"w"`             |
-| keybind-down    | String  | No        | `"s"`             |
-| keybind-left    | String  | No        | `"a"`             |
-| keybind-right   | String  | No        | `"d"`             |
-| keybind-dash    | String  | No        | `"shift"`         |
-| keybind-shoot   | String  | No        | `"mouse1"`        |
-| keybind-weaponnext | String | No     | `"e"`             |
-| keybind-weaponback | String | No     | `"q"`             |
+| Campo           | Tipo    | Requerido | Valor por defecto | Unico |
+|-----------------|---------|-----------|-------------------|-------|
+| username        | String  | Sí        | —                 | Sí    |
+| password        | String  | Sí        | —                 | No    |
+| role            | String  | Sí        | `"user"`          | No    |
+| maxscore        | Integer | No        | `0`               | No    |
+| loops           | Integer | No        | `0`               | No    |
+| keybind-up      | String  | No        | `"w"`             | No    |
+| keybind-down    | String  | No        | `"s"`             | No    |
+| keybind-left    | String  | No        | `"a"`             | No    |
+| keybind-right   | String  | No        | `"d"`             | No    |
+| keybind-dash    | String  | No        | `"shift"`         | No    |
+| keybind-shoot   | String  | No        | `"mouse1"`        | No    |
+| keybind-weaponnext | String | No     | `"e"`             | No    |
+| keybind-weaponback | String | No     | `"q"`             | No    |
 
 ### Endpoints
 ---

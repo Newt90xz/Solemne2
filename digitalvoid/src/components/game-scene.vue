@@ -7,6 +7,7 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
+        <!-- Objetive -->
         <section v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
           class="neon-card objective-panel">
           <div class="panel-heading">
@@ -16,7 +17,7 @@
           <p class="objective-copy">{{ objectiveText }}</p>
         </section>
       </div>
-
+      <!-- Weapon selector -->
       <section class="neon-card weapon-panel">
         <div class="weapon-visual">
           <img :src="selectedWeapon.image" :alt="selectedWeapon.name" class="weapon-image" />
@@ -199,6 +200,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
+import axios from 'axios'
 import escenarioImg from '../assets/other/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons.ts'
 import { useGameStore } from '../stores/game.ts'
@@ -460,6 +462,7 @@ watch(
 watch(
   isGameOver, (Over) => {
     if (Over){
+      
       return console.log("Subiendo puntaje....")
     }
   }
