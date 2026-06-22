@@ -1,0 +1,53 @@
+name: Test MongoDB Connection
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-mongo-connection:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:latest
+        ports:
+          - 3095:27017
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.0"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install dependencies
+        working-directory: ./digitalvoid
+        run: pnpm install --frozen-lockfile
+
+      - name: Test MongoDB connection
+        working-directory: ./digitalvoid
+        run: |
+          node -e "
+            const mongoose = require('mongoose');
+            async function testConnection() {
+              try {
+                await mongoose.connect('mongodb://localhost:3095/digitalvoiddb');
+                console.log('Conexion exitosa con MongoDB');
+                await mongoose.disconnect();
+              } catch (error) {
+                console.error('Conexion fallida con MongoDB:', error);
+                process.exit(1);
+              }
+            }
+            testConnection();
+          "
