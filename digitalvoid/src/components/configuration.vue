@@ -66,10 +66,48 @@
 
         <div class="actions field-full">
           <button class="primary" type="submit">Guardar</button>
+          <button type="button" @click="openControls">Controles</button>
           <button type="button" @click="reset">Restablecer</button>
           <button class="ghost" type="button" @click="goBack">Volver</button>
         </div>
       </form>
+    </div>
+
+    <div v-if="isControlsOpen" class="controls-modal">
+      <div class="controls-panel">
+        <header class="controls-header">
+          <div>
+            <p class="eyebrow">CONTROLES DEL SISTEMA</p>
+            <h3>Remapea tus teclas</h3>
+            <p class="subtitle">
+              Pulsa cambiar y luego presiona cualquier tecla para asignarla. Presiona Esc para
+              cancelar.
+            </p>
+          </div>
+          <button class="close-button" type="button" @click="closeControls">Cerrar</button>
+        </header>
+
+        <div class="controls-list">
+          <div v-for="control in controlConfig" :key="control.key" class="control-row">
+            <div>
+              <p class="control-name">{{ control.label }}</p>
+              <p class="field-hint">{{ control.description }}</p>
+            </div>
+
+            <div class="control-actions">
+              <span class="control-key">{{ formatControl(settings.controls[control.key]) }}</span>
+              <button type="button" @click="startRebinding(control.key)">
+                {{ awaitingControl === control.key ? 'Presiona una tecla...' : 'Cambiar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p class="rebinding-note" v-if="awaitingControl">
+          Esperando nueva tecla para
+          {{ controlConfig.find((control) => control.key === awaitingControl)?.label }}.
+        </p>
+      </div>
     </div>
 
     <div class="corner tl" />
@@ -81,35 +119,72 @@
 
 <script setup lang="ts">
 import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
-import { useGameStore } from '../stores/game'
+import {
+  DEFAULT_CONTROLS,
+  useGameStore,
+  type ControlBindings,
+  type GameSettings as StoreGameSettings,
+} from '../stores/game'
 
-type Difficulty = 'facil' | 'medio' | 'dificil'
-type Mode = 'solitario' | 'multijugador'
-
-interface GameSettings {
-  playerName: string
-  difficulty: Difficulty
-  mode: Mode
-  timeLimit: number
-  sound: boolean
-  musicVolume: number
-}
+type GameSettings = StoreGameSettings
 
 const emit = defineEmits<{
   (e: 'save', payload: GameSettings): void
   (e: 'go-back'): void
 }>()
 
-const defaultSettings: GameSettings = {
-  playerName: '',
-  difficulty: 'medio',
-  mode: 'solitario',
-  timeLimit: 60,
-  sound: true,
-  musicVolume: 0.05,
+type ControlAction = keyof ControlBindings
+
+const controlConfig: Array<{ key: ControlAction; label: string; description: string }> = [
+  { key: 'moveUp', label: 'Avanzar arriba', description: 'Movimiento vertical hacia arriba.' },
+  { key: 'moveDown', label: 'Avanzar abajo', description: 'Movimiento vertical hacia abajo.' },
+  {
+    key: 'moveLeft',
+    label: 'Avanzar izquierda',
+    description: 'Movimiento horizontal a la izquierda.',
+  },
+  {
+    key: 'moveRight',
+    label: 'Avanzar derecha',
+    description: 'Movimiento horizontal a la derecha.',
+  },
+  {
+    key: 'interact',
+    label: 'Interactuar',
+    description: 'Abrir terminales u objetos de interacción.',
+  },
+  { key: 'pause', label: 'Pausa', description: 'Abrir o cerrar el menú del sistema.' },
+  { key: 'weaponPrev', label: 'Arma anterior', description: 'Cambiar al arma anterior.' },
+  { key: 'weaponNext', label: 'Arma siguiente', description: 'Cambiar al arma siguiente.' },
+]
+
+function createDefaultSettings(): GameSettings {
+  return {
+    playerName: '',
+    difficulty: 'medio',
+    mode: 'solitario',
+    timeLimit: 60,
+    sound: true,
+    musicVolume: 0.05,
+    controls: { ...DEFAULT_CONTROLS },
+  }
 }
 
-const settings = reactive<GameSettings>({ ...defaultSettings })
+function normalizeSettings(source: Partial<GameSettings> = {}): GameSettings {
+  return {
+    ...createDefaultSettings(),
+    ...source,
+    controls: {
+      ...DEFAULT_CONTROLS,
+      ...(source.controls ?? {}),
+    },
+  }
+}
+
+const settings = reactive<GameSettings>(createDefaultSettings())
+
+const isControlsOpen = ref(false)
+const awaitingControl = ref<ControlAction | null>(null)
 
 const gameStore = useGameStore()
 
@@ -120,6 +195,59 @@ const fontSize = 16
 let columns = 0
 let drops: number[] = []
 let animationInterval: number | null = null
+
+function formatControl(binding: string) {
+  const labels: Record<string, string> = {
+    Escape: 'Esc',
+    Space: 'Espacio',
+    Enter: 'Enter',
+    Tab: 'Tab',
+    ShiftLeft: 'Shift',
+    ShiftRight: 'Shift',
+    ControlLeft: 'Ctrl',
+    ControlRight: 'Ctrl',
+    AltLeft: 'Alt',
+    AltRight: 'Alt',
+    ArrowUp: 'Flecha arriba',
+    ArrowDown: 'Flecha abajo',
+    ArrowLeft: 'Flecha izquierda',
+    ArrowRight: 'Flecha derecha',
+  }
+
+  if (labels[binding]) return labels[binding]
+  if (binding.startsWith('Key')) return binding.slice(3)
+  if (binding.startsWith('Digit')) return binding.slice(5)
+  return binding
+}
+
+function openControls() {
+  isControlsOpen.value = true
+  awaitingControl.value = null
+}
+
+function closeControls() {
+  isControlsOpen.value = false
+  awaitingControl.value = null
+}
+
+function startRebinding(action: ControlAction) {
+  awaitingControl.value = action
+}
+
+function captureControlKey(event: KeyboardEvent) {
+  if (!awaitingControl.value) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  if (event.key === 'Escape') {
+    awaitingControl.value = null
+    return
+  }
+
+  settings.controls[awaitingControl.value] = event.code
+  awaitingControl.value = null
+}
 
 function updateColumns() {
   const canvas = canvasRef.value
@@ -159,7 +287,7 @@ function draw() {
 
 onMounted(() => {
   gameStore.loadFromLocal()
-  Object.assign(settings, gameStore.settings)
+  Object.assign(settings, normalizeSettings(gameStore.settings))
 
   const canvas = canvasRef.value
   if (!canvas) return
@@ -168,12 +296,14 @@ onMounted(() => {
   updateColumns()
   window.addEventListener('resize', resizeCanvas)
   window.addEventListener('resize', updateColumns)
+  window.addEventListener('keydown', captureControlKey)
   animationInterval = window.setInterval(draw, 33)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeCanvas)
   window.removeEventListener('resize', updateColumns)
+  window.removeEventListener('keydown', captureControlKey)
   if (animationInterval) {
     clearInterval(animationInterval)
     animationInterval = null
@@ -184,10 +314,12 @@ function apply() {
   emit('save', { ...settings })
   gameStore.setSettings({ ...settings })
   gameStore.saveToLocal()
+  closeControls()
 }
 
 function reset() {
-  Object.assign(settings, defaultSettings)
+  Object.assign(settings, createDefaultSettings())
+  closeControls()
 }
 
 function goBack() {
@@ -433,6 +565,109 @@ function goBack() {
   background: rgba(0, 18, 8, 0.35);
 }
 
+.controls-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.controls-panel {
+  width: min(100%, 720px);
+  max-height: min(84vh, 860px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.92);
+  box-shadow:
+    0 0 24px rgba(0, 255, 136, 0.16),
+    inset 0 0 18px rgba(0, 255, 136, 0.08);
+}
+
+.controls-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.controls-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-button {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.55);
+  color: #7bffb5;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.controls-list {
+  display: grid;
+  gap: 12px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(63, 255, 155, 0.24);
+  background: rgba(2, 26, 12, 0.45);
+}
+
+.control-name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #9affc5;
+}
+
+.control-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.control-key {
+  min-width: 92px;
+  padding: 10px 12px;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.62);
+  color: #d0ffe9;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.control-actions button {
+  padding: 10px 14px;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.65);
+  color: #7bffb5;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rebinding-note {
+  margin: 16px 0 0;
+  color: rgba(188, 255, 217, 0.85);
+}
+
 .corner {
   position: absolute;
   width: 28px;
@@ -480,6 +715,25 @@ function goBack() {
   .toggle-field {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .controls-panel {
+    padding: 18px;
+  }
+
+  .controls-header,
+  .control-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .control-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .control-key {
+    min-width: 0;
   }
 }
 </style>

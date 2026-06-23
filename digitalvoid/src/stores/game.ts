@@ -5,6 +5,17 @@ import { DEFAULT_WEAPON_ID, type WeaponId } from '../game/weapons.ts'
 type Difficulty = 'facil' | 'medio' | 'dificil'
 type Mode = 'solitario' | 'multijugador'
 
+export interface ControlBindings {
+  moveUp: string
+  moveDown: string
+  moveLeft: string
+  moveRight: string
+  interact: string
+  pause: string
+  weaponPrev: string
+  weaponNext: string
+}
+
 export interface GameSettings {
   playerName: string
   difficulty: Difficulty
@@ -12,6 +23,7 @@ export interface GameSettings {
   timeLimit: number
   sound: boolean
   musicVolume: number
+  controls: ControlBindings
 }
 
 export interface PlayerStats {
@@ -46,6 +58,33 @@ const DEFAULT_SETTINGS: GameSettings = {
   timeLimit: 60,
   sound: true,
   musicVolume: 0.05,
+  controls: {
+    moveUp: 'KeyW',
+    moveDown: 'KeyS',
+    moveLeft: 'KeyA',
+    moveRight: 'KeyD',
+    interact: 'KeyF',
+    pause: 'Escape',
+    weaponPrev: 'KeyQ',
+    weaponNext: 'KeyE',
+  },
+}
+
+export const DEFAULT_CONTROLS: ControlBindings = { ...DEFAULT_SETTINGS.controls }
+
+function normalizeControls(controls?: Partial<ControlBindings>): ControlBindings {
+  return {
+    ...DEFAULT_CONTROLS,
+    ...(controls ?? {}),
+  }
+}
+
+function normalizeSettings(payload: Partial<GameSettings> = {}): GameSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...payload,
+    controls: normalizeControls(payload.controls),
+  }
 }
 
 const DEFAULT_PLAYER_STATS: PlayerStats = {
@@ -68,16 +107,20 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
 }
 
 export const useGameStore = defineStore('game', () => {
-  const settings = ref<GameSettings>({ ...DEFAULT_SETTINGS })
+  const settings = ref<GameSettings>(normalizeSettings())
   const playerStats = reactive<PlayerStats>({ ...DEFAULT_PLAYER_STATS })
   const activeBuffs = reactive<ActiveBuff[]>([])
 
-  function setSettings(payload: Partial<GameSettings> | GameSettings) {
-    settings.value = { ...settings.value, ...payload }
+  function setSettings(payload: Partial<GameSettings>) {
+    settings.value = normalizeSettings({
+      ...settings.value,
+      ...payload,
+      controls: normalizeControls(payload.controls ?? settings.value.controls),
+    })
   }
 
   function resetSettings() {
-    settings.value = { ...DEFAULT_SETTINGS }
+    settings.value = normalizeSettings()
     saveToLocal()
   }
 
@@ -189,14 +232,14 @@ export const useGameStore = defineStore('game', () => {
         const legacyMusicVolume =
           parsed.musicVolumeMode === 'low' ? 0.25 : parsed.musicVolumeMode === 'high' ? 0.7 : undefined
 
-        settings.value = {
-          ...DEFAULT_SETTINGS,
+        settings.value = normalizeSettings({
           ...parsed,
           musicVolume:
             typeof parsed.musicVolume === 'number'
               ? Math.min(1, Math.max(0, parsed.musicVolume))
               : legacyMusicVolume ?? DEFAULT_SETTINGS.musicVolume,
-        }
+          controls: normalizeControls(parsed.controls),
+        })
       }
     } catch {
       // ignore
@@ -215,6 +258,7 @@ export const useGameStore = defineStore('game', () => {
     settings,
     playerStats,
     activeBuffs,
+    DEFAULT_CONTROLS,
     setSettings,
     resetSettings,
     resetPlayerStats,
