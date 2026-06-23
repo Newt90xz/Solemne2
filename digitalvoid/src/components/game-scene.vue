@@ -243,6 +243,19 @@
         :style="explosionStyle(exp)"
       ></div>
 
+      <div
+        v-for="dn in damageNumbers"
+        :key="dn.id"
+        class="damage-number"
+        :style="{
+          left: `${Math.round(dn.x - camera.x)}px`,
+          top: `${Math.round(dn.y - camera.y)}px`,
+          opacity: dn.ttl / dn.maxTtl,
+        }"
+      >
+        {{ dn.damage }}
+      </div>
+
       <div class="player" :style="playerStyle"></div>
       <div v-if="isStunned" class="stun-ring" :style="stunStyle"></div>
       <div v-if="showDashBar || showAkimboBar" class="cooldown-bars" :style="cooldownBarsStyle">
@@ -328,6 +341,16 @@ interface Explosion {
   maxTtl: number
 }
 
+interface DamageNumber {
+  id: number
+  x: number
+  y: number
+  damage: number
+  ttl: number
+  maxTtl: number
+  velocityY: number
+}
+
 interface Building {
   id: number
   x: number
@@ -406,9 +429,12 @@ let nextObstacleId = 1
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
 const explosions = reactive<Explosion[]>([])
+const damageNumbers = reactive<DamageNumber[]>([])
 const enemies = reactive<Enemy[]>([])
 const isPaused = ref(false)
 const showHitboxes = ref(false)
+const playerDamageFlash = ref(false)
+const playerDamageFlashTimer = ref(0)
 const isGameOver = computed(() => gameStore.playerStats.health <= 0)
 const isStunned = ref(false)
 const stunTimeLeft = ref(0)
@@ -599,6 +625,7 @@ const playerStyle = computed(() => {
     transform: `translate(${Math.round(player.x - camera.x)}px, ${Math.round(
       player.y - camera.y,
     )}px) rotate(${aimAngleDeg.value}deg)`,
+    filter: playerDamageFlash.value ? 'brightness(2) hue-rotate(320deg)' : 'none',
   } as CSSProperties
 })
 
@@ -1170,6 +1197,8 @@ function updateEnemies(dt: number) {
         const damageAmount = ENEMY_DAMAGE[e.type]
         gameStore.takeDamage(damageAmount)
         lastDamageTime = DAMAGE_COOLDOWN
+        playerDamageFlash.value = true
+        playerDamageFlashTimer.value = 0.2
       }
 
       // Push del enemigo hacia atrás
@@ -1537,11 +1566,27 @@ function spawnExplosion(x: number, y: number, maxRadius = EXPLOSION_MAX_RADIUS) 
   })
 }
 
+let nextDamageNumberId = 1
+
+function spawnDamageNumber(x: number, y: number, damage: number) {
+  damageNumbers.push({
+    id: nextDamageNumberId++,
+    x: x + (Math.random() * 20 - 10),
+    y: y - 20,
+    damage,
+    ttl: 1,
+    maxTtl: 1,
+    velocityY: -60,
+  })
+}
+
 function applyAreaDamageToPlayer(x: number, y: number, radius: number, damage: number) {
   const playerHitbox = getPlayerHitbox()
   const overlap = circlesOverlap({ x, y, radius }, playerHitbox)
   if (overlap.overlapping) {
     gameStore.takeDamage(damage)
+    playerDamageFlash.value = true
+    playerDamageFlashTimer.value = 0.2
   }
 }
 
@@ -2091,6 +2136,8 @@ function updateBullets(dt: number) {
           )
         } else if (bullet.damage && bullet.damage > 0) {
           gameStore.takeDamage(bullet.damage)
+          playerDamageFlash.value = true
+          playerDamageFlashTimer.value = 0.2
         }
         if (bullet.stun) {
           isStunned.value = true
@@ -2123,12 +2170,14 @@ function updateBullets(dt: number) {
           enemy.hp -= bullet.damage
           bullet.hitEnemyIds.add(enemy.id)
           hitEnemy = true
+          spawnDamageNumber(enemy.x, enemy.y, bullet.damage)
 
           // Once bullet leaves the enemy's hitbox, clear it so it can hit again on re-entry
           // (handled naturally since we only add on overlap)
         } else {
           enemy.hp -= bullet.damage
           hitEnemy = true
+          spawnDamageNumber(enemy.x, enemy.y, bullet.damage)
           if (bullet.type === 'explosive') {
             spawnExplosion(bullet.x, bullet.y, EXPLOSION_MAX_RADIUS)
           }
@@ -2218,6 +2267,19 @@ function updateExplosions(dt: number) {
     exp.radius = 4 + (exp.maxRadius - 4) * progress
     if (exp.ttl <= 0) {
       explosions.splice(i, 1)
+    }
+  }
+}
+
+function updateDamageNumbers(dt: number) {
+  for (let i = damageNumbers.length - 1; i >= 0; i--) {
+    const dn = damageNumbers[i]
+    if (!dn) continue
+    dn.ttl -= dt
+    dn.y += dn.velocityY * dt
+    dn.velocityY += 40 * dt
+    if (dn.ttl <= 0) {
+      damageNumbers.splice(i, 1)
     }
   }
 }
@@ -2373,8 +2435,17 @@ function loop(ts: number) {
   updateAutoShoot(dt)
   updateBullets(dt)
   updateExplosions(dt)
+  updateDamageNumbers(dt)
   updateEnemies(dt)
   updateCamera()
+
+  // Update player damage flash
+  if (playerDamageFlashTimer.value > 0) {
+    playerDamageFlashTimer.value -= dt
+    if (playerDamageFlashTimer.value <= 0) {
+      playerDamageFlash.value = false
+    }
+  }
 
   rafId = requestAnimationFrame(loop)
 }
@@ -2912,6 +2983,20 @@ onUnmounted(() => {
   top: 0;
   pointer-events: none;
   z-index: 6;
+}
+
+.damage-number {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 25;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #ff7de9;
+  text-shadow:
+    0 0 8px rgba(255, 125, 233, 0.9),
+    0 0 16px rgba(255, 125, 233, 0.6);
 }
 
 .building {
