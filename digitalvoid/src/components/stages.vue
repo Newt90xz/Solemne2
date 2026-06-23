@@ -4,11 +4,12 @@ import Mainmenu from './mainmenu.vue'
 import Instrucciones from './instructions.vue'
 import Configuración from './configuration.vue'
 import GameScene from './game-scene.vue'
+import Leaderboard from './leader-board.vue'
 import { ref, onMounted, watch } from 'vue'
 import { useGameStore, type GameSettings } from '../stores/game.ts'
 import gameMusicTrack from '../assets/audio/Into The Void (feat. Jordan Lindley).mp4'
 
-const currentView = ref<'menu' | 'instructions' | 'game'>('menu')
+const currentView = ref<'menu' | 'instructions' | 'game' | 'leaderboard'>('menu')
 const showSettingsOverlay = ref(false)
 const settingsOrigin = ref<'menu' | 'game'>('menu')
 
@@ -31,6 +32,11 @@ const handleOpenSettings = () => {
 const handleNewGameView = () => {
   showSettingsOverlay.value = false
   currentView.value = 'game'
+}
+
+const handleOpenLeaderboard = () => {
+  showSettingsOverlay.value = false
+  currentView.value = 'leaderboard'
 }
 
 const gameStore = useGameStore()
@@ -122,9 +128,11 @@ function handleStartGame() {
     v-if="currentView === 'menu'"
     @open-instructions="handleOpenInstructions"
     @open-settings="handleOpenSettings"
+    @open-leaderboard="handleOpenLeaderboard"
     @new-game="handleStartGame"
   />
   <Instrucciones v-else-if="currentView === 'instructions'" @go-back="handleBackToMenu" />
+  <Leaderboard v-else-if="currentView === 'leaderboard'" @go-back="handleBackToMenu" />
   <GameScene
     v-else-if="currentView === 'game'"
     @exit="handleBackToMenu"

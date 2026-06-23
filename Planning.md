@@ -123,9 +123,12 @@ Puntaje añadido: ~~0.75~~
 ## Semana 2, 22 de junio - 26 de junio
 
 - [ ] Fix starting up screen, so that it displays controls.
-- [ ] Scoreboard and leaderboard.
-  - [ ] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user, user setting, etc.
-  - [ ] Manage the GET and POST functions so that it publishes the previous scores and check them.
+- [] Scoreboard and leaderboard.
+  - [x] User register
+  - [X] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user.
+  - [ ] User Login and cookie behaviours
+  - [ ] Admin Login and authentication
+  - [ ] Manage the GET and POST functions so that it publishes the previous scores.
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [ ] Visual damage response to enemies and player.
 - [ ] Separete Enemy stucture from main (its currently inside the main game)

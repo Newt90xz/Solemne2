@@ -10,6 +10,7 @@ const emit = defineEmits<{
   (e: 'new-game'): void
   (e: 'open-instructions'): void
   (e: 'open-settings'): void
+  (e: 'open-leaderboard'): void
 }>()
 
 const handleNewGame = () => {
@@ -22,6 +23,10 @@ const handleLoadGame = () => {
 
 const handleSettings = () => {
   emit('open-settings')
+}
+
+const handleLeaderboard = () => {
+  emit('open-leaderboard')
 }
 
 const gameStore = useGameStore()
@@ -195,6 +200,10 @@ onBeforeUnmount(() => {
         </button>
         <button class="menu-button" type="button" @click="handleSettings">
           &gt;_ AJUSTES DEL SISTEMA
+        </button>
+        <!-- Leaderboard button -->
+        <button class="menu-button" type="button" @click="handleLeaderboard">
+          &gt;_ LEADERBOARD
         </button>
       </nav>
 

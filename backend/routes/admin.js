@@ -7,7 +7,7 @@ router.get('/users', function(req, res, next) {
   res.send('respond with a resource');
 });
 
-router.delete('/users', function(req, res, next) {
+router.delete('/users/:id', function(req, res, next) {
   res.send('respond with a resource');
 });
 

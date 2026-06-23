@@ -200,7 +200,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
-import axios from 'axios'
+// import axios from 'axios'
 import escenarioImg from '../assets/other/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons.ts'
 import { useGameStore } from '../stores/game.ts'
