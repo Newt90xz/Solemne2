@@ -232,7 +232,12 @@
         :style="bulletStyle(bullet)"
       ></div>
 
-      <Enemy v-for="e in normalEnemies" :key="'enemy-' + e.id" :enemy="e" :camera="camera" />
+      <EnemyCharacter
+        v-for="e in normalEnemies"
+        :key="'enemy-' + e.id"
+        :enemy="e"
+        :camera="camera"
+      />
 
       <template v-if="showHitboxes">
         <div
@@ -289,7 +294,7 @@ import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '
 import { DEFAULT_CONTROLS, useGameStore } from '../stores/game.ts'
 import PlayerHub from './player-hub.vue'
 import Bosses from './boss-enemies.vue'
-import Enemy from './Enemy.vue'
+import EnemyCharacter from './EnemyCharacter.vue'
 import spritesheetImg from '../assets/charactersprites/buggy.png'
 import cursorImg from '../assets/other/cursorfire.png'
 import buildingSpritesheet from '../assets/other/buildings.png'
@@ -412,7 +417,7 @@ const sceneRef = ref<HTMLElement | null>(null)
 const gameStore = useGameStore()
 const controlBindings = computed(() => ({
   ...DEFAULT_CONTROLS,
-  ...(gameStore.settings.controls ?? {}),
+  ...gameStore.settings.controls,
 }))
 
 const player = reactive({ x: 2500, y: 2500 })

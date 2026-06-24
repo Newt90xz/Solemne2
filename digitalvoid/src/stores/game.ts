@@ -75,7 +75,7 @@ export const DEFAULT_CONTROLS: ControlBindings = { ...DEFAULT_SETTINGS.controls 
 function normalizeControls(controls?: Partial<ControlBindings>): ControlBindings {
   return {
     ...DEFAULT_CONTROLS,
-    ...(controls ?? {}),
+    ...controls,
   }
 }
 

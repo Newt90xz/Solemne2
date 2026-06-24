@@ -176,7 +176,7 @@ function normalizeSettings(source: Partial<GameSettings> = {}): GameSettings {
     ...source,
     controls: {
       ...DEFAULT_CONTROLS,
-      ...(source.controls ?? {}),
+      ...source.controls,
     },
   }
 }
