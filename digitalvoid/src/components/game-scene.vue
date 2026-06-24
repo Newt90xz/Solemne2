@@ -7,7 +7,7 @@
       <div class="hud-stack hud-stack-left">
         <PlayerHub />
 
-        <!-- Objetive -->
+        <!-- OBJETIVO (primero) -->
         <section
           v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
           class="neon-card objective-panel"
@@ -17,6 +17,19 @@
             <p class="panel-title">OBJETIVO</p>
           </div>
           <p class="objective-copy">{{ objectiveText }}</p>
+        </section>
+        <!-- DISPLAY CONTROLS (segundo) -->
+        <section
+          v-if="showObjective && !weaponUnlockMenu.visible && !upgradeMenu.visible"
+          class="neon-card objective-panel"
+        >
+          <div class="panel-heading">
+            <span class="panel-mark">⌬</span>
+            <p class="panel-title">Display Controls</p>
+          </div>
+          <p class="Mostrar-Controles">
+            W / A / S / D movimiento arriba, izquierda, abajo y derecha.
+          </p>
         </section>
       </div>
       <!-- Weapon selector -->
@@ -219,13 +232,7 @@
         :style="bulletStyle(bullet)"
       ></div>
 
-      <div
-        v-for="e in normalEnemies"
-        :key="'enemy-' + e.id"
-        class="enemy"
-        :class="`enemy-${e.type}`"
-        :style="enemyStyle(e)"
-      ></div>
+      <Enemy v-for="e in normalEnemies" :key="'enemy-' + e.id" :enemy="e" :camera="camera" />
 
       <template v-if="showHitboxes">
         <div
@@ -282,6 +289,7 @@ import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '
 import { DEFAULT_CONTROLS, useGameStore } from '../stores/game.ts'
 import PlayerHub from './player-hub.vue'
 import Bosses from './boss-enemies.vue'
+import Enemy from './Enemy.vue'
 import spritesheetImg from '../assets/charactersprites/buggy.png'
 import cursorImg from '../assets/other/cursorfire.png'
 import buildingSpritesheet from '../assets/other/buildings.png'
@@ -293,7 +301,6 @@ import troyanoBulletSpritesheet from '../assets/weaponsprites/troyanobullet.png'
 import memoriaBulletSpritesheet from '../assets/weaponsprites/memorybulletsprite.png'
 import martilloBulletTexture from '../assets/weaponsprites/martillobullet.png'
 import gusanoBulletSpritesheet from '../assets/weaponsprites/gusanosprite.png'
-import enemySpritesheet from '../assets/charactersprites/enemy_spritesheet.png'
 
 interface Bullet {
   id: number
@@ -1082,40 +1089,6 @@ function spawnEnemyTick() {
   }
 
   if (enemies.length < MAX_ACTIVE_ENEMIES) spawnEnemy()
-}
-
-function enemyStyle(e: Enemy) {
-  const screenX = Math.round(e.x - camera.x - e.size / 2)
-  const screenY = Math.round(e.y - camera.y - e.size / 2)
-
-  // Spritesheet order: grunt, runner, tank, shooter
-  const frameIndexByType: Record<Enemy['type'], number> = {
-    grunt: 0,
-    runner: 1,
-    tank: 2,
-    shooter: 3,
-    mcaffe: 0,
-    norton: 1,
-    'windows-defender': 2,
-  }
-
-  const frameIndex = frameIndexByType[e.type] ?? 0
-  const frameSize = e.size
-
-  return {
-    width: `${frameSize}px`,
-    height: `${frameSize}px`,
-    transform: `translate(${screenX}px, ${screenY}px)`,
-    backgroundImage: `url(${enemySpritesheet})`,
-    // scale the whole sheet so each frame becomes frameSize x frameSize
-    backgroundSize: `${frameSize * 4}px ${frameSize}px`,
-    backgroundPosition: `-${frameIndex * frameSize}px 0px`,
-    backgroundRepeat: 'no-repeat',
-    backgroundColor: 'transparent',
-    imageRendering: 'pixelated',
-    borderRadius: '0px',
-    zIndex: 7,
-  } as CSSProperties
 }
 
 function updateEnemies(dt: number) {
@@ -2951,13 +2924,6 @@ onUnmounted(() => {
   z-index: 4;
 }
 
-.enemy {
-  position: absolute;
-  left: 0;
-  top: 0;
-  pointer-events: none;
-}
-
 .hitbox {
   position: absolute;
   left: 0;
@@ -3288,10 +3254,6 @@ onUnmounted(() => {
   box-shadow: 0 0 16px rgba(255, 72, 122, 0.66);
   transform-origin: left center;
   transition: width 0.18s ease;
-}
-
-.enemy-mcaffe {
-  filter: saturate(1.15);
 }
 
 .stun-ring {

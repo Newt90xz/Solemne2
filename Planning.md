@@ -115,25 +115,25 @@ Puntaje añadido: ~~0.75~~
 - [x] Update Design.md and Planning.md to reflect on the current state of the repository and for future changes implemented
 - [x] Change component, folder, and file names to lowercase. Making sure to also change inside code to redirect to the correct file.
 - [x] Implement the initial backend folder: express.js and mongodb image
-- [X] Create workflows to test backend
-  - [X] Start backend
-  - [X] Connect to mongodb
-  - [X] Test api route
+- [x] Create workflows to test backend
+  - [x] Start backend
+  - [x] Connect to mongodb
+  - [x] Test api route
 
 ## Semana 2, 22 de junio - 26 de junio
 
-- [ ] Fix starting up screen, so that it displays controls.
+- [x] Fix starting up screen, so that it displays controls.
 - [] Scoreboard and leaderboard.
   - [x] User register
-  - [X] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user.
+  - [x] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user.
   - [ ] User Login and cookie behaviours
   - [ ] Admin Login and authentication
   - [ ] Manage the GET and POST functions so that it publishes the previous scores.
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
-- [ ] Visual damage response to enemies and player.
-- [ ] Separete Enemy stucture from main (its currently inside the main game)
+- [x] Visual damage response to enemies and player.
+- [x] Separate Enemy structure from main (its currently inside the main game)
 - [ ] Change enemy sprites slightly
-- [ ] Add control modality (keybinds)
+- [x] Add control modality (keybinds)
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 
@@ -153,11 +153,5 @@ Puntaje añadido: ~~0.75~~
   - [ ] Player sound effects
   - [ ] Boss music
 - [ ] Obstacle attack and make an obstacle sprite
-- [ ] Boss behaviours. (make them more fair to fight against)
-      - [] McAffe
-      - [] Norton
-        - [] Make the teleport more reactable by making it a dash instead
-        - [] Change stun duration  
-      - [] Windows Defender
-        - [] Disables weapon
-
+- [ ] Boss behaviours. (make them more fair to fight against) - [] McAffe - [] Norton - [] Make the teleport more reactable by making it a dash instead - [] Change stun duration  
+       - [] Windows Defender - [] Disables weapon
