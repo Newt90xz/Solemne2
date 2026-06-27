@@ -1,4 +1,4 @@
-<!-- eslint-disable vue/multi-word-component-names -->
+﻿<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
@@ -106,7 +106,7 @@ onBeforeUnmount(() => {
           <li><strong>Click Derecho</strong>: dash por unos segundos para esquivar amenazas.</li>
           <li><strong>F</strong>: interactuar con objetos y terminales.</li>
           <li><strong>Esc</strong>: pausar y abrir menu rapido.</li>
-          <li><strong> 1-5 / Q / E </strong>: accion principal (ataque o habilidad, segun equipo).</li>
+          <li><strong>1-5 / Q / E</strong>: accion principal (ataque o habilidad, segun equipo).</li>
         </ul>
       </article>
 
@@ -121,6 +121,45 @@ onBeforeUnmount(() => {
           Cada sector del vacio guarda secretos sobre el origen de la caida. Mientras avanzas,
           descubriras que no solo estas intentando salvarte: tambien reconstruyes tu identidad.
         </p>
+      </article>
+    </div>
+
+    <div class="title-wrap" style="margin-top: 1.5rem;">
+      <h2 class="title" style="font-size: clamp(1.8rem, 6vw, 3.5rem);">ENCICLOPEDIA DE ENEMIGOS</h2>
+    </div>
+
+    <div class="instructions-content">
+      <article class="panel">
+        <h3>Enemigos comunes</h3>
+        <ul class="enemy-list">
+          <li>
+            <strong>Grunt</strong>: El enemigo basico. Se acerca al jugador y le causa 10 puntos de daño. Vida: 60 HP. Experiencia: 25.
+          </li>
+          <li>
+            <strong>Runner</strong>: Enemigo rapido. Corre hacia el jugador y le causa 8 puntos de daño. Vida: 20 HP. Experiencia: 35.
+          </li>
+          <li>
+            <strong>Tank</strong>: Enemigo resistente. Vida: 80 HP. Causa 15 puntos de daño. Experiencia: 50.
+          </li>
+          <li>
+            <strong>Shooter</strong>: Enemigo que dispara proyectiles. Se mantiene a distancia. Vida: 40 HP. Causa 18 puntos de daño. Experiencia: 55.
+          </li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <h3>Jefes</h3>
+        <ul class="enemy-list">
+          <li>
+            <strong>McAffe</strong>: Aparece al matar 100 enemigos. Usa tornados de proyectiles y explosivos. Vida: 520 HP. Experiencia: 250.
+          </li>
+          <li>
+            <strong>Norton</strong>: Aparece al matar 200 enemigos. Usa disparos relampagos y se teletransporta. Vida: 420 HP. Experiencia: 340.
+          </li>
+          <li>
+            <strong>Windows Defender</strong>: Aparece al matar 300 enemigos. INMORTAL, debes escapar a la salida que aparece. ¡Su contacto causa muerte instantánea!
+          </li>
+        </ul>
       </article>
     </div>
 
@@ -247,7 +286,8 @@ onBeforeUnmount(() => {
   padding: 1rem;
 }
 
-.panel h2 {
+.panel h2,
+.panel h3 {
   margin-top: 0;
   color: #9affc5;
   letter-spacing: 0.04em;
@@ -262,6 +302,10 @@ onBeforeUnmount(() => {
 .panel ul {
   margin: 0;
   padding-left: 1.2rem;
+}
+
+.enemy-list li {
+  margin-bottom: 0.8rem;
 }
 
 .instructions-footer {

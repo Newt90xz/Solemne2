@@ -141,7 +141,7 @@ Puntaje añadido: ~~0.75~~
   - [ ] Add lobby properties
   - [ ] Add the lobby screen to enter other new stages
 - [ ] Enemy waves, enemy events
-- [ ] Enciclopedia of enemies
+- [x] Enciclopedia of enemies
 - [ ] Gun, enemy and player sound effects.
   - [ ] Gun sound effects
     - [ ] Disk
