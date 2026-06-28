@@ -114,6 +114,7 @@
 
 <script setup lang="ts">
 import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
+import axios from 'axios'
 import {
   DEFAULT_CONTROLS,
   useGameStore,
@@ -187,6 +188,7 @@ let ctx: CanvasRenderingContext2D | null = null
 const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const fontSize = 16
 let columns = 0
+const apihost = 'http://localhost:6139/api'
 let drops: number[] = []
 let animationInterval: number | null = null
 
@@ -304,10 +306,23 @@ onBeforeUnmount(() => {
   }
 })
 
-function apply() {
+async function apply() {
   emit('save', { ...settings })
   gameStore.setSettings(settings)
   gameStore.saveToLocal()
+
+  if (gameStore.authUser.loggedIn) {
+    try {
+      await axios.put(
+        `${apihost}/settings`,
+        { controls: settings.controls },
+        { withCredentials: true },
+      )
+    } catch (err) {
+      console.error('No se pudieron guardar los controles en el servidor', err)
+    }
+  }
+
   closeControls()
 }
 

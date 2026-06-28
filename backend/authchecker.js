@@ -4,7 +4,9 @@ const authorize = (roles) =>
   function (req, res, next) {
     res.set("Cache-Control", "no-store");
 
-    const token = req.cookies.token || req.body.token || req.query.token || req.headers["x-access-token"];
+     const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const token = req.cookies.token || bearerToken;
     
     if (!token) {
       return res.status(401).send("No autenticado");

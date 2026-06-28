@@ -23,8 +23,6 @@ git clone https://github.com/Newt90xz/Solemne2
 
 2. Ejecuta el backend localmente
 
-Redirige el terrminal a la carpeta de backend, ejecuta la imagen de mongodb, instala las dependencias, ejecuta el script para sembrar datos en el backend, luego levanta el servidor:
-
 ```bash
 cd backend
 pnpm install

@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { useGameStore } from '../stores/game'
+
+const gameStore = useGameStore()
+const apihost = 'http://localhost:6139/api'
+
+type LeaderboardEntry = { username: string; score: number; loops: number; _id: string }
+type PersonalRecord = { username: String ; score: number; loops: number }
+
+const activeTab = ref<'global' | 'personal'>('global')
 
 const loading = ref(true)
 const error = ref<string | null>(null)
-const entries = ref<Array<{ username: string; maxscore: number; loops: number; _id: string }>>([])
+const globalEntries = ref<LeaderboardEntry[]>([])
+const personalEntries = ref<PersonalRecord[]>([])
 
-async function loadLeaderboard() {
+async function loadGlobalLeaderboard() {
   loading.value = true
   error.value = null
 
   try {
-    // Devuelve array de objetos { username, maxscore }
-    const response = await axios.get('http://localhost:6139/api/leaderboard')
-    entries.value = response.data || []
+    const response = await axios.get(`${apihost}/leaderboard/global`)
+    globalEntries.value = response.data || []
   } catch (e) {
     console.error(e)
     error.value = 'No se pudo cargar el leaderboard.'
@@ -22,8 +31,34 @@ async function loadLeaderboard() {
   }
 }
 
+async function loadPersonalRecords() {
+  if (!gameStore.authUser.loggedIn) {
+    personalEntries.value = []
+    return
+  }
+
+  loading.value = true
+  error.value = null
+
+  try {
+    const response = await axios.get(`${apihost}/leaderboard/me`, { withCredentials: true })
+    personalEntries.value = response.data || []
+  } catch (e) {
+    console.error(e)
+    error.value = 'No se pudieron cargar tus records.'
+  } finally {
+    loading.value = false
+  }
+}
+
+function selectTab(tab: 'global' | 'personal') {
+  activeTab.value = tab
+  if (tab === 'global' && globalEntries.value.length === 0) loadGlobalLeaderboard()
+  if (tab === 'personal' && personalEntries.value.length === 0) loadPersonalRecords()
+}
+
 onMounted(() => {
-  void loadLeaderboard()
+  void loadGlobalLeaderboard()
 })
 
 const emit = defineEmits<{
@@ -42,9 +77,55 @@ function handleBack() {
       <p>Las mejores puntuaciones del sistema</p>
     </div>
 
+    <div class="leaderboard-tabs">
+      <button
+        type="button"
+        :class="{ active: activeTab === 'global' }"
+        @click="selectTab('global')"
+      >
+        GLOBAL
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeTab === 'personal' }"
+        :disabled="!gameStore.authUser.loggedIn"
+        :title="!gameStore.authUser.loggedIn ? 'Inicia sesión para ver tus records' : ''"
+        @click="selectTab('personal')"
+      >
+        MIS RECORDS
+      </button>
+    </div>
+
     <div class="leaderboard-panel">
       <div v-if="loading" class="leaderboard-state">Cargando puntuaciones...</div>
       <div v-else-if="error" class="leaderboard-state error">{{ error }}</div>
+
+      <table v-else-if="activeTab === 'global'" class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>USUARIO</th>
+            <th>PUNTUACIÓN</th>
+            <th>BUCLES</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(entry, index) in globalEntries"
+            :key="entry._id"
+            :class="{ highlighted: entry.username === gameStore.authUser.username }"
+          >
+            <td>{{ index + 1 }}</td>
+            <td>{{ entry.username }}</td>
+            <td>{{ entry.score }}</td>
+            <td>{{ entry.loops }}</td>
+          </tr>
+          <tr v-if="globalEntries.length === 0">
+            <td colspan="4">No hay datos disponibles.</td>
+          </tr>
+        </tbody>
+      </table>
+
       <table v-else class="leaderboard-table">
         <thead>
           <tr>
@@ -55,14 +136,14 @@ function handleBack() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(entry, index) in entries" :key="entry.username + '-' + index">
+          <tr v-for="(entry, index) in personalEntries" :key="index">
             <td>{{ index + 1 }}</td>
             <td>{{ entry.username }}</td>
-            <td>{{ entry.maxscore }}</td>
-            <td>{{entry.loops}}</td>
+            <td>{{ entry.score }}</td>
+            <td>{{ entry.loops }}</td>
           </tr>
-          <tr v-if="entries.length === 0 && !error">
-            <td colspan="3">No hay datos disponibles.</td>
+          <tr v-if="personalEntries.length === 0">
+            <td colspan="4">Todavía no tienes partidas registradas.</td>
           </tr>
         </tbody>
       </table>
@@ -173,5 +254,35 @@ function handleBack() {
   color: #9df3c4;
   font-size: 0.92rem;
   text-align: center;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.leaderboard-tabs button {
+  border: 1px solid rgba(51, 255, 153, 0.4);
+  background: transparent;
+  color: #33ff99;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.leaderboard-tabs button.active {
+  background: rgba(51, 255, 153, 0.18);
+}
+
+.leaderboard-tabs button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.highlighted {
+  background: rgba(51, 255, 153, 0.15) !important;
+  font-weight: bold;
 }
 </style>

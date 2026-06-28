@@ -288,7 +288,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
-// import axios from 'axios'
+import axios from 'axios'
 import escenarioImg from '../assets/other/escenario.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons.ts'
 import { DEFAULT_CONTROLS, useGameStore } from '../stores/game.ts'
@@ -421,6 +421,7 @@ const controlBindings = computed(() => ({
 }))
 
 const player = reactive({ x: 2500, y: 2500 })
+const apihost = 'http://localhost:6139/api'
 
 const playerSize = computed(() => gameStore.playerStats.playerSize)
 const camera = reactive({ x: 0, y: 0 })
@@ -563,9 +564,18 @@ watch(
   },
 )
 
-watch(isGameOver, (Over) => {
-  if (Over) {
-    return console.log('Subiendo puntaje....')
+watch(isGameOver, async (Over) => {
+  if (!Over) return
+  if (!gameStore.authUser.loggedIn) return // invitados no publican score
+
+  try {
+    await axios.post(
+      `${apihost}/game/end`,
+      { score: finalScore.value, loops: gameStore.playerStats.loops },
+      { withCredentials: true },
+    )
+  } catch (err) {
+    console.error('No se pudo publicar el puntaje', err)
   }
 })
 
@@ -1772,7 +1782,7 @@ function resetRunAfterEscape() {
   // Keep player progression/stats after escaping the immortal boss.
   // Only restart the world loop and infection progress.
   gameStore.playerStats.kills = 0
-
+  gameStore.playerStats.loops += 1
   weaponUnlockMenu.visible = false
   upgradeMenu.visible = false
   upgradeMenu.buildingId = null

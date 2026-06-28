@@ -126,9 +126,9 @@ Puntaje añadido: ~~0.75~~
 - [] Scoreboard and leaderboard.
   - [x] User register
   - [x] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user.
-  - [ ] User Login and cookie behaviours
-  - [ ] Admin Login and authentication
-  - [ ] Manage the GET and POST functions so that it publishes the previous scores.
+  - [X] User Login and cookie behaviours
+  - [x] Admin Login and authentication
+  - [X] Manage the GET and POST functions so that it publishes the previous scores.
 - [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [x] Visual damage response to enemies and player.
 - [x] Separate Enemy structure from main (its currently inside the main game)
@@ -153,5 +153,10 @@ Puntaje añadido: ~~0.75~~
   - [ ] Player sound effects
   - [ ] Boss music
 - [ ] Obstacle attack and make an obstacle sprite
-- [ ] Boss behaviours. (make them more fair to fight against) - [] McAffe - [] Norton - [] Make the teleport more reactable by making it a dash instead - [] Change stun duration  
-       - [] Windows Defender - [] Disables weapon
+- [ ] Boss behaviours. (make them more fair to fight against) 
+  - [] McAffe
+  - [] Norton
+    - [] Make the teleport more reactable by making it a dash instead
+    - [] Change stun duration  
+  - [] Windows Defender
+     - [] Disables weapon

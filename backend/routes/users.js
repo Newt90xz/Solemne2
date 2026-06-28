@@ -34,7 +34,8 @@ router.post("/login", async function (req, res) {
   // Agarrar el usuario de cookies si existe, sino agarrar de req.body.
   const {username, password } = req.body
   const exists = await UsersModel.findOne({ username: username, password: password})
-  // Crear cookie si no existe.
+
+  // Crear cookie si no existe y si es usuario.
   if (!exists){
     return res.status(401).json({ loggedIn: false, message: "Usuario o Contraseña Incorrectas"})
   }
@@ -44,52 +45,107 @@ router.post("/login", async function (req, res) {
     "pan-con-queso",
     { expiresIn: "2h"}
   )
-  if (exists.role == "user"){
+  if (exists.role === "user") {
     res.cookie("token", token, {
-    httpOnly: true,
-    secure: false,
-    samesite: "lax",
-    maxAge: 2 * 60 * 60 * 1000
-  })
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 2 * 60 * 60 * 1000,
+    })
+  } else {
+    response.token = token
   }
-  
   res.json({loggedIn: true, username: exists.username, role: exists.role})
 });
 
-router.get("/leaderboard", async function (req, res, next) {
-  const data = await LeaderboardModel.find()
-    .select("username maxscore loops")
-    .lean();
-  const leaderboard = data.sort((a, b) => b.maxscore - a.maxscore);
-  res.send(leaderboard);
+
+router.get("/leaderboard/global", async function (req, res, next) {
+  try {
+    const data = await LeaderboardModel.find()
+      .select("username score loops")
+      .sort({ score: -1 }) //intrepetacion de mongo para descendiente
+      .limit(50)
+      .lean();
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
 });
 
+
 // User autorized
+router.get("/leaderboard/me", authorize(), async function (req, res, next) {
+  try {
+    const data = await LeaderboardModel.find({ username: req.user.username })
+      .select({ username: 1, score: 1, loops: 1, _id: 0 })
+      .sort({ score: -1 })
+      .lean();
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/profile", authorize(), async function (req, res, next) {
-  
+  const user = await UsersModel.findById(req.user.id).lean();
+  if (!user) return res.status(404).json({ loggedIn: false });
+
   res.json({
     loggedIn: true,
     username: req.user.username,
-    role: req.user.role
+    role: req.user.role,
+    controls: {
+      moveUp: user.keybindup,
+      moveDown: user.keybinddown,
+      moveLeft: user.keybindleft,
+      moveRight: user.keybindright,
+      interact: user.keybindinteract,
+      pause: user.keybindpause,
+      weaponPrev: user.keybindweaponback,
+      weaponNext: user.keybindweaponnext,
+    },
   });
 });
 
-// Posts maxscore and loops of the user after game over
-router.post("/game/end", authorize(),async function (req, res, next) {
-  const { username, maxscore, loops } = req.body;
-  await LeaderboardModel.insertOne({
-    username: username,
-    maxscore: maxscore,
-    loops: loops,
-  })
-    .then(res.status(200).json({ message: "Puntaje Publicado" }))
-    .catch((err) => next(err));
+// Posts score and loops of the user after game over
+router.post("/game/end", authorize(), async function (req, res, next) {
+  try {
+    const { score, loops } = req.body;
+    const username = req.user.username;
+
+    await LeaderboardModel.create({ username, score, loops });
+
+    res.status(200).json({ message: "Puntaje publicado" });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // update keybinds
-router.put("/settings",authorize(), async function (req, res, next) {
-  res.send("respond with a resource");
+router.put("/settings", authorize(), async function (req, res, next) {
+  try {
+    const { controls } = req.body;
+    if (!controls) return res.status(400).json({ message: "Faltan los controles" });
+
+    await UsersModel.findByIdAndUpdate(req.user.id, {
+      keybindup: controls.moveUp,
+      keybinddown: controls.moveDown,
+      keybindleft: controls.moveLeft,
+      keybindright: controls.moveRight,
+      keybindinteract: controls.interact,
+      keybindpause: controls.pause,
+      keybindweaponback: controls.weaponPrev,
+      keybindweaponnext: controls.weaponNext,
+    });
+
+    res.json({ message: "Controles actualizados" });
+  } catch (err) {
+    next(err);
+  }
 });
+
 
 router.post("/logout", async function (req, res, next) {
   res.clearCookie("token", {

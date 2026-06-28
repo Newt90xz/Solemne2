@@ -34,6 +34,7 @@ export interface PlayerStats {
   speedMultiplier: number
   kills: number
   score: number
+  loops: number
   currentdashes: number
   maxdashes: number
   isAkimbo: boolean       
@@ -43,10 +44,12 @@ export interface PlayerStats {
   weaponUnlockTokens: number
 }
 
+// game.ts — agregar token opcional al AuthUser
 export interface AuthUser {
   username: string
   role: string
   loggedIn: boolean
+  token?: string // solo se usa para admin, nunca se persiste a localStorage
 }
 
 export interface ActiveBuff {
@@ -100,6 +103,7 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
   speedMultiplier: 1,
   kills: 0,
   score: 0,
+  loops: 0,
   currentdashes: 1,
   maxdashes: 1,
   isAkimbo: false,

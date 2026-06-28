@@ -15,8 +15,8 @@ const userSchema = new mongoose.Schema({
 });
 
 const LeaderboardSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  maxscore: { type: Number, default: 0 },
+  username: { type: String, required: true },
+  score: { type: Number, default: 0 },
   loops: { type: Number, default: 0 }
 });
 

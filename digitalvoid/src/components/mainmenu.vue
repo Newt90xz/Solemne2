@@ -61,12 +61,12 @@ const HandleLoginUser = async () => {
   try {
     const loginResponse = await axios.post(
       `${apihost}/login`,
-      {username, password}, //incluye los cookies
+      { username, password }, //incluye los cookies
       { withCredentials: true },
     )
 
     if (loginResponse.data?.loggedIn) {
-      gameStore.setAuthUser({username: loginResponse.data?.username, role: loginResponse.data?.role, loggedIn: true})
+      gameStore.setAuthUser({ username: loginResponse.data?.username, role: loginResponse.data?.role, loggedIn: true, token: loginResponse.data.token, })
       gameStore.saveToLocal()
       Iusername.value = ''
       Ipassword.value = ''
@@ -223,12 +223,15 @@ function draw() {
   }
 }
 
-onMounted( async () => {
+onMounted(async () => {
   try {
     const res = await axios.get(`${apihost}/profile`, { withCredentials: true })
     gameStore.setAuthUser({ username: res.data.username, role: res.data.role, loggedIn: true })
+    if (res.data.controls) {
+      gameStore.setSettings({ controls: res.data.controls })
+      gameStore.saveToLocal()
+    }
   } catch {
-    // 401/403 -> no hay sesión válida
     gameStore.setAuthUser({ username: '', role: '', loggedIn: false })
   }
   try {
@@ -280,7 +283,7 @@ onBeforeUnmount(() => {
     try {
       menuAudio.pause()
       menuAudio.src = ''
-    } catch {}
+    } catch { }
     menuAudio = null
   }
 })
@@ -305,8 +308,8 @@ onBeforeUnmount(() => {
         <p>HIGH SCORE: {{ bestScore }}</p>
         <div class="auth-button-row">
           <button class="auth-button" type="button" @click="handleAuthButtonClick">
-             {{ gameStore.authUser.loggedIn ? 'LOGOUT' : 'ACCEDER / REGISTRAR' }}
-            </button>
+            {{ gameStore.authUser.loggedIn ? 'LOGOUT' : 'ACCEDER / REGISTRAR' }}
+          </button>
         </div>
         <div class="xp-bar"><span /></div>
       </div>
@@ -362,12 +365,12 @@ onBeforeUnmount(() => {
 
         <label class="auth-field">
           <span>Usuario</span>
-          <input type="text" placeholder="Usuario..." v-model="Iusername"/>
+          <input type="text" placeholder="Usuario..." v-model="Iusername" />
         </label>
 
         <label class="auth-field">
           <span>Contraseña</span>
-          <input type="password" placeholder="••••••" v-model = "Ipassword" />
+          <input type="password" placeholder="••••••" v-model="Ipassword" />
         </label>
 
         <p v-if="authMessage" class="auth-error">{{ authMessage }}</p>
@@ -395,7 +398,7 @@ onBeforeUnmount(() => {
 
         <label class="auth-field">
           <span>Contraseña</span>
-          <input type="password" placeholder="••••••" v-model = "Ipassword"  />
+          <input type="password" placeholder="••••••" v-model="Ipassword" />
         </label>
 
         <div class="auth-actions">
@@ -457,13 +460,11 @@ onBeforeUnmount(() => {
 
 .scanlines {
   z-index: 1;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(40, 255, 145, 0.04) 0,
-    rgba(40, 255, 145, 0.04) 1px,
-    transparent 1px,
-    transparent 4px
-  );
+  background: repeating-linear-gradient(to bottom,
+      rgba(40, 255, 145, 0.04) 0,
+      rgba(40, 255, 145, 0.04) 1px,
+      transparent 1px,
+      transparent 4px);
 }
 
 .vignette {
@@ -482,20 +483,16 @@ onBeforeUnmount(() => {
   height: 42%;
   background:
     linear-gradient(to top, rgba(0, 255, 136, 0.2), transparent 60%),
-    repeating-linear-gradient(
-      to right,
+    repeating-linear-gradient(to right,
       rgba(0, 255, 136, 0.12) 0,
       rgba(0, 255, 136, 0.12) 1px,
       transparent 1px,
-      transparent 40px
-    ),
-    repeating-linear-gradient(
-      to bottom,
+      transparent 40px),
+    repeating-linear-gradient(to bottom,
       rgba(0, 255, 136, 0.09) 0,
       rgba(0, 255, 136, 0.09) 1px,
       transparent 1px,
-      transparent 34px
-    );
+      transparent 34px);
   transform: perspective(420px) rotateX(62deg);
   transform-origin: top;
 }
@@ -815,8 +812,7 @@ onBeforeUnmount(() => {
   width: 72%;
   height: 72%;
   object-fit: contain;
-  filter: hue-rotate(90deg) saturate(1.2) brightness(1.15)
-    drop-shadow(0 0 14px rgba(91, 255, 164, 0.5));
+  filter: hue-rotate(90deg) saturate(1.2) brightness(1.15) drop-shadow(0 0 14px rgba(91, 255, 164, 0.5));
   animation: logoSpin 12s linear infinite;
 }
 
@@ -851,13 +847,11 @@ onBeforeUnmount(() => {
   display: block;
   width: 58%;
   height: 100%;
-  background: repeating-linear-gradient(
-    90deg,
-    #43ff9f 0,
-    #43ff9f 6px,
-    rgba(22, 126, 74, 0.9) 6px,
-    rgba(22, 126, 74, 0.9) 10px
-  );
+  background: repeating-linear-gradient(90deg,
+      #43ff9f 0,
+      #43ff9f 6px,
+      rgba(22, 126, 74, 0.9) 6px,
+      rgba(22, 126, 74, 0.9) 10px);
   background-size: 20px 100%;
   animation:
     warningPulse 2.2s ease-in-out infinite,
@@ -902,14 +896,17 @@ onBeforeUnmount(() => {
     clip-path: inset(0 0 85% 0);
     transform: translate(-1px, -1px);
   }
+
   30% {
     clip-path: inset(20% 0 60% 0);
     transform: translate(1px, 0);
   }
+
   60% {
     clip-path: inset(62% 0 20% 0);
     transform: translate(-2px, 1px);
   }
+
   100% {
     clip-path: inset(78% 0 2% 0);
     transform: translate(0, 0);
@@ -921,14 +918,17 @@ onBeforeUnmount(() => {
     clip-path: inset(82% 0 2% 0);
     transform: translate(1px, 1px);
   }
+
   35% {
     clip-path: inset(52% 0 28% 0);
     transform: translate(-1px, 0);
   }
+
   70% {
     clip-path: inset(12% 0 68% 0);
     transform: translate(2px, -1px);
   }
+
   100% {
     clip-path: inset(0 0 85% 0);
     transform: translate(0, 0);
@@ -936,25 +936,30 @@ onBeforeUnmount(() => {
 }
 
 @keyframes glitchSkew {
+
   0%,
   90%,
   100% {
     transform: skew(0deg);
   }
+
   92% {
     transform: skew(-2deg);
   }
+
   96% {
     transform: skew(2deg);
   }
 }
 
 @keyframes xpCharge {
+
   0%,
   100% {
     width: 10%;
     opacity: 0.85;
   }
+
   50% {
     width: 24%;
     opacity: 1;
@@ -965,16 +970,19 @@ onBeforeUnmount(() => {
   from {
     background-position: 0 0;
   }
+
   to {
     background-position: 20px 0;
   }
 }
 
 @keyframes warningPulse {
+
   0%,
   100% {
     filter: brightness(1);
   }
+
   50% {
     filter: brightness(1.35);
   }
@@ -984,18 +992,21 @@ onBeforeUnmount(() => {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 @keyframes circlePulse {
+
   0%,
   100% {
     box-shadow:
       0 0 18px rgba(0, 255, 136, 0.2),
       inset 0 0 24px rgba(0, 255, 136, 0.12);
   }
+
   50% {
     box-shadow:
       0 0 26px rgba(0, 255, 136, 0.38),
@@ -1004,6 +1015,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
+
   .hud-top,
   .menu-layout,
   .hud-bottom {
