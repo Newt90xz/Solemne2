@@ -13,11 +13,6 @@
       </header>
 
       <form class="config-form" @submit.prevent="apply">
-        <div class="field field-full">
-          <label for="playerName">Nombre del jugador</label>
-          <input id="playerName" v-model="settings.playerName" type="text" placeholder="Jugador" />
-        </div>
-
         <div class="field">
           <label for="difficulty">Dificultad</label>
           <select id="difficulty" v-model="settings.difficulty">
@@ -160,7 +155,6 @@ const controlConfig: Array<{ key: ControlAction; label: string; description: str
 
 function createDefaultSettings(): GameSettings {
   return {
-    playerName: '',
     difficulty: 'medio',
     mode: 'solitario',
     timeLimit: 60,
@@ -312,7 +306,7 @@ onBeforeUnmount(() => {
 
 function apply() {
   emit('save', { ...settings })
-  gameStore.setSettings({ ...settings })
+  gameStore.setSettings(settings)
   gameStore.saveToLocal()
   closeControls()
 }

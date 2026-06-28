@@ -4,8 +4,6 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user', required: true },
-  maxscore: { type: Number, default: 0 },
-  loops: { type: Number, default: 0 },
   keybindup: { type: String, default: 'w' },
   keybinddown: { type: String, default: 's' },
   keybindleft: { type: String, default: 'a' },
@@ -16,6 +14,13 @@ const userSchema = new mongoose.Schema({
   keybindweaponback: { type: String, default: 'q' },
 });
 
+const LeaderboardSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  maxscore: { type: Number, default: 0 },
+  loops: { type: Number, default: 0 }
+});
+
+const LeaderboardModel = mongoose.models.Leaderboard || mongoose.model('Leaderboard', LeaderboardSchema);
 const UsersModel = mongoose.models.Users || mongoose.model('Users', userSchema);
 
-module.exports = UsersModel;
+module.exports = {UsersModel, LeaderboardModel};

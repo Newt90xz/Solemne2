@@ -15,9 +15,7 @@ export interface ControlBindings {
   weaponPrev: string
   weaponNext: string
 }
-
 export interface GameSettings {
-  playerName: string
   difficulty: Difficulty
   mode: Mode
   timeLimit: number
@@ -45,6 +43,12 @@ export interface PlayerStats {
   weaponUnlockTokens: number
 }
 
+export interface AuthUser {
+  username: string
+  role: string
+  loggedIn: boolean
+}
+
 export interface ActiveBuff {
   type: 'speed' | 'damage'
   value: number
@@ -52,7 +56,6 @@ export interface ActiveBuff {
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
-  playerName: '',
   difficulty: 'medio',
   mode: 'solitario',
   timeLimit: 60,
@@ -106,10 +109,17 @@ const DEFAULT_PLAYER_STATS: PlayerStats = {
   weaponUnlockTokens: 0,
 }
 
+const DEFAULT_AUTH_USER: AuthUser = {
+  username: '',
+  role: 'guest',
+  loggedIn: false,
+}
+
 export const useGameStore = defineStore('game', () => {
   const settings = ref<GameSettings>(normalizeSettings())
   const playerStats = reactive<PlayerStats>({ ...DEFAULT_PLAYER_STATS })
   const activeBuffs = reactive<ActiveBuff[]>([])
+  const authUser = ref<AuthUser>({ ...DEFAULT_AUTH_USER })
 
   function setSettings(payload: Partial<GameSettings>) {
     settings.value = normalizeSettings({
@@ -127,6 +137,17 @@ export const useGameStore = defineStore('game', () => {
   function resetPlayerStats() {
     Object.assign(playerStats, { ...DEFAULT_PLAYER_STATS })
     activeBuffs.length = 0
+  }
+
+  function setAuthUser(payload: Partial<AuthUser>) {
+    authUser.value = {
+      ...authUser.value,
+      ...payload,
+    }
+  }
+
+  function clearAuthUser() {
+    authUser.value = { ...DEFAULT_AUTH_USER }
   }
 
   function addExperience(amount: number) {
@@ -258,8 +279,11 @@ export const useGameStore = defineStore('game', () => {
     settings,
     playerStats,
     activeBuffs,
+    authUser,
     DEFAULT_CONTROLS,
     setSettings,
+    setAuthUser,
+    clearAuthUser,
     resetSettings,
     resetPlayerStats,
     addExperience,

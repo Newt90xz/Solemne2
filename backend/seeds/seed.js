@@ -1,19 +1,15 @@
 var { conectarMongoDB } = require('../db');
-var UsersModel = require('../models/User.js');
+var { UsersModel } = require('../models/User.js');
 
 const doc = [
   {
     username: "John Doe",
-    password: "1234", //cifrar a hash
-    role: "admin",
-    maxscore: 9999,
-    loops: 0
+    password: "1234", //cifrar con bcrypt
+    role: "admin"
   },
   {
     username: "Janice Doe",
-    password: "contraseña",
-    maxscore: 11111,
-    loops: 1
+    password: "contraseña"
   }
 ];
 

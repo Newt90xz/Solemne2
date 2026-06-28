@@ -5,6 +5,8 @@ import malwareLogo from '../assets/other/malware.png'
 // import audio from assets
 import menuTrack from '../assets/audio/Hands of God.mp4'
 import { useGameStore } from '../stores/game'
+import axios from 'axios';
+
 
 const emit = defineEmits<{
   (e: 'new-game'): void
@@ -29,10 +31,128 @@ const handleLeaderboard = () => {
   emit('open-leaderboard')
 }
 
+const OpenLoginMenu = () => {
+  LoginDisplay.value = true
+  RegisterDisplay.value = false
+}
+
+const closeAuthModal = () => {
+  LoginDisplay.value = false
+  RegisterDisplay.value = false
+}
+
+const openRegister = () => {
+  LoginDisplay.value = false
+  RegisterDisplay.value = true
+}
+
+const HandleLoginUser = async () => {
+  const username = Iusername.value.trim()
+  const password = Ipassword.value.trim()
+
+  if (!username || !password) {
+    authMessage.value = 'Ingresa usuario y contraseña.'
+    return
+  }
+
+  authMessage.value = ''
+  LoadingAuthScreen.value = true
+
+  try {
+    const loginResponse = await axios.post(
+      `${apihost}/login`,
+      {username, password}, //incluye los cookies
+      { withCredentials: true },
+    )
+
+    if (loginResponse.data?.loggedIn) {
+      gameStore.setAuthUser({username: loginResponse.data?.username, role: loginResponse.data?.role, loggedIn: true})
+      gameStore.saveToLocal()
+      Iusername.value = ''
+      Ipassword.value = ''
+      closeAuthModal()
+    } else {
+      authMessage.value = loginResponse.data?.message || 'Usuario o contraseña incorrectos.'
+    }
+  } catch (error) {
+    console.error('Login failed', error)
+    authMessage.value = 'No se pudo conectar con el servidor.'
+  } finally {
+    LoadingAuthScreen.value = false
+  }
+}
+
+const HandleRegisterUser = async () => {
+  const username = Iusername.value.trim()
+  const password = Ipassword.value.trim()
+
+  if (!username || !password) {
+    authMessage.value = 'Completa el usuario y la contraseña.'
+    return
+  }
+
+  authMessage.value = ''
+  LoadingAuthScreen.value = true
+
+  try {
+    const registerResponse = await axios.post(
+      `${apihost}/register`,
+      { username, password, role: 'user' },
+      { withCredentials: true },
+    )
+
+    if (!registerResponse.data?.registered) {
+      authMessage.value = registerResponse.data?.message || 'El usuario ya existe.'
+      return
+    }
+
+    // No limpiamos Iusername/Ipassword todavía -- HandleLoginUser los necesita
+    await HandleLoginUser()
+  } catch (error) {
+    console.error('Register failed', error)
+    authMessage.value = 'No se pudo completar el registro.'
+  } finally {
+    LoadingAuthScreen.value = false
+  }
+}
+
+const HandleLogout = async () => {
+  try {
+    const res = await axios.post(`${apihost}/logout`, {}, { withCredentials: true })
+    gameStore.setAuthUser({ username: '', role: '', loggedIn: res.data?.loggedIn ?? false })
+  } catch (error) {
+    console.error('Logout failed', error)
+    gameStore.setAuthUser({ username: '', role: '', loggedIn: false })
+  } finally {
+    gameStore.saveToLocal()
+  }
+}
+
+
+const handleAuthButtonClick = () => {
+  if (gameStore.authUser.loggedIn) {
+    HandleLogout()
+  } else {
+    OpenLoginMenu()
+  }
+}
+
+const displayRole = computed(() => {
+  if (!gameStore.authUser.loggedIn) return 'INVITADO'
+  return gameStore.authUser.role === 'admin' ? 'ADMINISTRADOR' : 'USUARIO'
+})
+
 const gameStore = useGameStore()
-const displayUserName = computed(() => gameStore.settings.playerName.trim() || 'VIRUS_23A')
+const displayUserName = computed(() => gameStore.authUser.username || 'VIRUS_23A')
 const HIGH_SCORE_KEY = 'digitalvoidHighScore'
 const bestScore = ref(0)
+const LoginDisplay = ref(false)
+const RegisterDisplay = ref(false)
+const LoadingAuthScreen = ref(false)
+const authMessage = ref('')
+const Iusername = ref('')
+const Ipassword = ref('')
+const apihost = 'http://localhost:6139/api'
 
 // Main menu audio
 let menuAudio: HTMLAudioElement | null = null
@@ -103,8 +223,14 @@ function draw() {
   }
 }
 
-onMounted(() => {
-  gameStore.loadFromLocal()
+onMounted( async () => {
+  try {
+    const res = await axios.get(`${apihost}/profile`, { withCredentials: true })
+    gameStore.setAuthUser({ username: res.data.username, role: res.data.role, loggedIn: true })
+  } catch {
+    // 401/403 -> no hay sesión válida
+    gameStore.setAuthUser({ username: '', role: '', loggedIn: false })
+  }
   try {
     bestScore.value = Number(localStorage.getItem(HIGH_SCORE_KEY) || '0')
   } catch {
@@ -171,15 +297,16 @@ onBeforeUnmount(() => {
       <div class="hud-box hud-left">
         <p>&gt; CONEXION ESTABLECIDA</p>
         <p>&gt; SISTEMA OBJETIVO: DESCONOCIDO</p>
-        <p>&gt; PERMISOS: INVITADO</p>
+        <p>&gt; PERMISOS: {{ displayRole }}</p>
         <p class="alert">&gt; ESTADO: AMENAZA DETECTADA</p>
       </div>
       <div class="hud-box hud-right">
         <p>USUARIO: {{ displayUserName }}</p>
         <p>HIGH SCORE: {{ bestScore }}</p>
-        <div class="xp-line">
-          <span>NIVEL 1</span>
-          <span>0 / 100 XP</span>
+        <div class="auth-button-row">
+          <button class="auth-button" type="button" @click="handleAuthButtonClick">
+             {{ gameStore.authUser.loggedIn ? 'LOGOUT' : 'ACCEDER / REGISTRAR' }}
+            </button>
         </div>
         <div class="xp-bar"><span /></div>
       </div>
@@ -225,6 +352,58 @@ onBeforeUnmount(() => {
         <p>ESCAPA. NO PUEDES DERROTARLO.</p>
       </div>
     </footer>
+
+    <div v-if="LoginDisplay" class="auth-modal" role="dialog" aria-modal="true" @click.self="closeAuthModal">
+      <div class="auth-panel">
+        <button class="close-button" type="button" @click="closeAuthModal">×</button>
+        <p class="eyebrow">MODO DE ACCESO</p>
+        <h3>Ingreso al sistema</h3>
+        <p class="auth-subtitle"> </p>
+
+        <label class="auth-field">
+          <span>Usuario</span>
+          <input type="text" placeholder="Usuario..." v-model="Iusername"/>
+        </label>
+
+        <label class="auth-field">
+          <span>Contraseña</span>
+          <input type="password" placeholder="••••••" v-model = "Ipassword" />
+        </label>
+
+        <p v-if="authMessage" class="auth-error">{{ authMessage }}</p>
+
+        <div class="auth-actions">
+          <button class="primary-action" type="button" :disabled="LoadingAuthScreen" @click="HandleLoginUser">
+            {{ LoadingAuthScreen ? 'Autenticando...' : 'Entrar' }}
+          </button>
+          <button type="button" @click="openRegister">Crear cuenta</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="RegisterDisplay" class="auth-modal" role="dialog" aria-modal="true" @click.self="closeAuthModal">
+      <div class="auth-panel">
+        <button class="close-button" type="button" @click="closeAuthModal">×</button>
+        <p class="eyebrow">REGISTRO</p>
+        <h3>Registro de operador</h3>
+        <p class="auth-subtitle"></p>
+
+        <label class="auth-field">
+          <span>Nombre de Usuario</span>
+          <input type="text" placeholder="Nombre de usuario" v-model="Iusername" />
+        </label>
+
+        <label class="auth-field">
+          <span>Contraseña</span>
+          <input type="password" placeholder="••••••" v-model = "Ipassword"  />
+        </label>
+
+        <div class="auth-actions">
+          <button class="primary-action" type="button" @click="HandleRegisterUser">Registrar</button>
+          <button type="button" @click="OpenLoginMenu">Volver al login</button>
+        </div>
+      </div>
+    </div>
 
     <div class="corner tl" />
     <div class="corner tr" />
@@ -361,6 +540,125 @@ onBeforeUnmount(() => {
 
 .hud-right {
   min-width: 280px;
+}
+
+.auth-button-row {
+  margin-top: 0.35rem;
+}
+
+.auth-button,
+.auth-panel button {
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(2, 26, 12, 0.7);
+  color: #7bffb5;
+  font-family: 'Share Tech Mono', monospace;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.auth-button:hover,
+.auth-panel button:hover,
+.auth-button:focus-visible,
+.auth-panel button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(112, 255, 178, 0.9);
+  background: rgba(5, 34, 18, 0.9);
+}
+
+.auth-button {
+  padding: 0.55rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.auth-panel {
+  width: min(100%, 420px);
+  padding: 1.25rem;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(2, 18, 10, 0.95);
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.16);
+  position: relative;
+}
+
+.auth-panel h3 {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 1.2rem;
+  color: #9affc5;
+}
+
+.auth-subtitle {
+  margin: 0 0 1rem;
+  color: rgba(188, 255, 217, 0.8);
+  font-size: 0.92rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.8rem;
+  color: #9affc5;
+  font-size: 0.9rem;
+}
+
+.auth-field input {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(63, 255, 155, 0.35);
+  background: rgba(0, 18, 8, 0.7);
+  color: #d0ffe9;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.auth-field input:focus {
+  outline: none;
+  border-color: rgba(112, 255, 178, 0.9);
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+
+.auth-actions button {
+  padding: 0.7rem 0.85rem;
+}
+
+.auth-actions button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.auth-error {
+  margin: 0.6rem 0 0;
+  color: #ff8b8b;
+  font-size: 0.9rem;
+}
+
+.primary-action {
+  background: linear-gradient(90deg, rgba(72, 212, 133, 0.95), rgba(25, 180, 95, 0.9)) !important;
+  color: #031e0f !important;
+  border-color: rgba(112, 255, 178, 0.9) !important;
+}
+
+.close-button {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 1rem;
 }
 
 .xp-line {

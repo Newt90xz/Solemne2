@@ -19,16 +19,22 @@ Digital Void es un juego web desarrollado con Vue 3 y Vite, y usa Pinia para el 
 
 ```bash
 git clone https://github.com/Newt90xz/Solemne2
-cd digitalvoid
 ```
 
-2. Instalar `pnpm` si no está activo:
+2. Ejecuta el backend localmente
+
+Redirige el terrminal a la carpeta de backend, ejecuta la imagen de mongodb, instala las dependencias, ejecuta el script para sembrar datos en el backend, luego levanta el servidor:
 
 ```bash
-npm install pnpm
+cd backend
+pnpm install
+docker compose up -d 
+pnpm run seed
+pnpm run start
 ```
 
-3. Instala dependencias y ejecuta en modo desarrollo:
+
+1. Ejecutar frontend en modo desarrollo:
 
 ```bash
 pnpm install
@@ -37,7 +43,7 @@ pnpm run dev
 
 4. Abre `http://localhost:5173` (o la URL que muestre Vite) en tu navegador.
 
-## Construir para producción
+## Construir para producción (nota: Backend no funciona "aun" con build ya que se arma en otro puerto)
 
 ```bash
 pnpm build
@@ -45,6 +51,7 @@ pnpm run preview
 ```
 
 `pnpm run preview` sirve el contenido de `dist` localmente para pruebas.
+
 
 ## Ejecutar con Docker
 
