@@ -2,11 +2,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import malwareLogo from '../assets/other/malware.png'
-// import audio from assets
 import menuTrack from '../assets/audio/Hands of God.mp4'
 import { useGameStore } from '../stores/game'
 import axios from 'axios';
-
+import { socket } from '../socket'
 
 const emit = defineEmits<{
   (e: 'new-game'): void
@@ -124,6 +123,7 @@ const HandleLogout = async () => {
     console.error('Logout failed', error)
     gameStore.setAuthUser({ username: '', role: '', loggedIn: false })
   } finally {
+    socket.disconnect()
     gameStore.saveToLocal()
   }
 }
@@ -231,6 +231,7 @@ onMounted(async () => {
       gameStore.setSettings({ controls: res.data.controls })
       gameStore.saveToLocal()
     }
+    socket.connect()
   } catch {
     gameStore.setAuthUser({ username: '', role: '', loggedIn: false })
   }

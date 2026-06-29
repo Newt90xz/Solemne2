@@ -22,11 +22,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", usersRouter);
 app.use("/api/admin", adminRouter)
 
-const PORT = 6139;
-app.listen(PORT, () => {
-  console.log(`Servidor de desarrollo escuchando en el puerto ${PORT}`);
-});
-
 conectarMongoDB();
 
 module.exports = app;

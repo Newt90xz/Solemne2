@@ -153,10 +153,10 @@ Puntaje añadido: ~~0.75~~
   - [ ] Player sound effects
   - [ ] Boss music
 - [ ] Obstacle attack and make an obstacle sprite
-- [ ] Boss behaviours. (make them more fair to fight against) 
+- [ ] Boss behaviours. (make them more fair to fight against)
   - [] McAffe
   - [] Norton
     - [] Make the teleport more reactable by making it a dash instead
     - [] Change stun duration  
   - [] Windows Defender
-     - [] Disables weapon
+    - [] Disables weapon
