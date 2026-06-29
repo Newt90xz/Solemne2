@@ -289,7 +289,10 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import axios from 'axios'
-import escenarioImg from '../assets/other/escenario.png'
+import escenarioImg from '../assets/other/Stage-phase-0.png'
+import escenariophase1 from '../assets/other/Stage-phase-1.png'
+import escenariophase2 from '../assets/other/Stage-phase-2.png'
+import escenariofinalphase from '../assets/other/Stage-phase-3.png'
 import { DEFAULT_WEAPON_ID, WEAPON_CATALOG, WEAPON_ORDER, type WeaponId } from '../game/weapons.ts'
 import { DEFAULT_CONTROLS, useGameStore } from '../stores/game.ts'
 import PlayerHub from './player-hub.vue'
@@ -431,7 +434,7 @@ const mouseScreen = reactive({ x: 0, y: 0, active: false })
 const mouseWorld = reactive({ x: 500, y: 500 })
 const mouse = reactive({ down: false })
 
-const worldSize = { width: 7500, height: 7500 }
+const worldSize = { width: 5000, height: 5000 }
 
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
@@ -452,6 +455,7 @@ const isGameOver = computed(() => gameStore.playerStats.health <= 0)
 const isStunned = ref(false)
 const stunTimeLeft = ref(0)
 const DEFAULT_STUN_DURATION = 1.2
+const currentPhaseBackground = ref(escenarioImg)
 
 const stunStyle = computed(() => {
   const r = Math.round(playerSize.value * 1.6)
@@ -563,6 +567,20 @@ watch(
     if (!visible) tryOpenWeaponUnlockMenu()
   },
 )
+watch(() => gameStore.playerStats.kills, (newcount) => {
+  if (newcount === 0){
+    currentPhaseBackground.value = escenarioImg
+  }
+  if (newcount === 100){
+    currentPhaseBackground.value = escenariophase1
+  }
+  if (newcount === 200){
+    currentPhaseBackground.value = escenariophase2
+  }
+  if (newcount === 300){
+    currentPhaseBackground.value = escenariofinalphase
+  }
+})
 
 watch(isGameOver, async (Over) => {
   if (!Over) return
@@ -617,13 +635,14 @@ const sceneStyle = computed(
     }) as CSSProperties,
 )
 
+
 const worldStyle = computed(
   () =>
     ({
       width: `${worldSize.width}px`,
       height: `${worldSize.height}px`,
-      backgroundImage: `url(${escenarioImg})`,
-      backgroundSize: '1500px 1500px',
+      backgroundImage: `url(${currentPhaseBackground.value})`,
+      backgroundSize: '5000px 5000px',
       backgroundRepeat: 'repeat',
       imageRendering: 'pixelated',
       boxSizing: 'border-box',
