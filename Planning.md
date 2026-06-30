@@ -129,7 +129,7 @@ Puntaje añadido: ~~0.75~~
   - [X] User Login and cookie behaviours
   - [x] Admin Login and authentication
   - [X] Manage the GET and POST functions so that it publishes the previous scores.
-- [ ] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
+- [X] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [x] Visual damage response to enemies and player.
 - [x] Separate Enemy structure from main (its currently inside the main game)
 - [ ] Change enemy sprites slightly
