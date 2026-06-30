@@ -1,5 +1,5 @@
 var express = require("express");
-var { UsersModel, LeaderboardModel } = require("../models/User.js");
+var { UsersModel, LeaderboardModel, LobbyModel } = require("../models/User.js");
 var router = express.Router();
 var jwt = require("jsonwebtoken");
 var authorize = require("../authchecker.js");
@@ -155,5 +155,85 @@ router.post("/logout", async function (req, res, next) {
   })
   res.json({ loggedIn: false })
 })
+
+// Lobbies endpoints
+router.get("/lobbies", async function (req, res, next) {
+  try {
+    const lobbies = await LobbyModel.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    res.json(lobbies);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/lobbies", authorize(), async function (req, res, next) {
+  try {
+    const { name, maxPlayers = 4 } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: "Lobby name is required" });
+    }
+
+    const existingLobby = await LobbyModel.findOne({ hostUsername: req.user.username, isActive: true });
+    if (existingLobby) {
+      return res.status(400).json({ message: "You already have an active lobby" });
+    }
+
+    const lobby = await LobbyModel.create({
+      name,
+      hostUsername: req.user.username,
+      players: [req.user.username],
+      maxPlayers: Math.min(Math.max(2, maxPlayers), 8)
+    });
+
+    res.status(201).json(lobby);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/lobbies/:id/join", authorize(), async function (req, res, next) {
+  try {
+    const lobby = await LobbyModel.findById(req.params.id);
+    if (!lobby || !lobby.isActive) {
+      return res.status(404).json({ message: "Lobby not found" });
+    }
+    if (lobby.players.length >= lobby.maxPlayers) {
+      return res.status(400).json({ message: "Lobby is full" });
+    }
+    if (lobby.players.includes(req.user.username)) {
+      return res.status(400).json({ message: "You are already in this lobby" });
+    }
+
+    lobby.players.push(req.user.username);
+    await lobby.save();
+    res.json(lobby);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/lobbies/:id/leave", authorize(), async function (req, res, next) {
+  try {
+    const lobby = await LobbyModel.findById(req.params.id);
+    if (!lobby) {
+      return res.status(404).json({ message: "Lobby not found" });
+    }
+    const playerIndex = lobby.players.indexOf(req.user.username);
+    if (playerIndex === -1) {
+      return res.status(400).json({ message: "You are not in this lobby" });
+    }
+
+    lobby.players.splice(playerIndex, 1);
+
+    if (lobby.players.length === 0 || req.user.username === lobby.hostUsername) {
+      lobby.isActive = false;
+    }
+
+    await lobby.save();
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;

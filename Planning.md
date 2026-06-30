@@ -126,20 +126,20 @@ Puntaje añadido: ~~0.75~~
 - [] Scoreboard and leaderboard.
   - [x] User register
   - [x] Implement a scoring method for how many computers corrupted/escaped. It should be saved in the backend alongside the user.
-  - [X] User Login and cookie behaviours
+  - [x] User Login and cookie behaviours
   - [x] Admin Login and authentication
-  - [X] Manage the GET and POST functions so that it publishes the previous scores.
-- [X] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
+  - [x] Manage the GET and POST functions so that it publishes the previous scores.
+- [x] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [x] Visual damage response to enemies and player.
 - [x] Separate Enemy structure from main (its currently inside the main game)
-- [X] Change enemy sprites slightly
+- [x] Change enemy sprites slightly
 - [x] Add control modality (keybinds)
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 
 - [ ] Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
-  - [ ] Add lobby properties
-  - [ ] Add the lobby screen to enter other new stages
+  - [x] Add lobby properties
+  - [x] Add the lobby screen to enter other new stages
 - [ ] Enemy waves, enemy events
 - [x] Enciclopedia of enemies
 - [ ] Gun, enemy and player sound effects.
@@ -157,6 +157,6 @@ Puntaje añadido: ~~0.75~~
   - [] McAffe
   - [] Norton
     - [] Make the teleport more reactable by making it a dash instead
-    - [] Change stun duration  
+    - [] Change stun duration
   - [] Windows Defender
     - [] Disables weapon

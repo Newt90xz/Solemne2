@@ -4,7 +4,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import malwareLogo from '../assets/other/malware.png'
 import menuTrack from '../assets/audio/Hands of God.mp4'
 import { useGameStore } from '../stores/game'
-import axios from 'axios';
+import axios from 'axios'
 import { socket } from '../socket'
 
 const emit = defineEmits<{
@@ -12,6 +12,7 @@ const emit = defineEmits<{
   (e: 'open-instructions'): void
   (e: 'open-settings'): void
   (e: 'open-leaderboard'): void
+  (e: 'open-lobby'): void
 }>()
 
 const handleNewGame = () => {
@@ -28,6 +29,10 @@ const handleSettings = () => {
 
 const handleLeaderboard = () => {
   emit('open-leaderboard')
+}
+
+const handleOpenLobby = () => {
+  emit('open-lobby')
 }
 
 const OpenLoginMenu = () => {
@@ -65,7 +70,12 @@ const HandleLoginUser = async () => {
     )
 
     if (loginResponse.data?.loggedIn) {
-      gameStore.setAuthUser({ username: loginResponse.data?.username, role: loginResponse.data?.role, loggedIn: true, token: loginResponse.data.token, })
+      gameStore.setAuthUser({
+        username: loginResponse.data?.username,
+        role: loginResponse.data?.role,
+        loggedIn: true,
+        token: loginResponse.data.token,
+      })
       gameStore.saveToLocal()
       Iusername.value = ''
       Ipassword.value = ''
@@ -127,7 +137,6 @@ const HandleLogout = async () => {
     gameStore.saveToLocal()
   }
 }
-
 
 const handleAuthButtonClick = () => {
   if (gameStore.authUser.loggedIn) {
@@ -284,7 +293,7 @@ onBeforeUnmount(() => {
     try {
       menuAudio.pause()
       menuAudio.src = ''
-    } catch { }
+    } catch {}
     menuAudio = null
   }
 })
@@ -324,7 +333,10 @@ onBeforeUnmount(() => {
     <div class="menu-layout">
       <nav class="buttons-container">
         <button class="menu-button active" type="button" @click="handleNewGame">
-          &gt;_ INICIAR INFECCION
+          &gt;_ INICIAR INFECCIÓN
+        </button>
+        <button class="menu-button" type="button" @click="handleOpenLobby">
+          &gt;_ MULTIJUGADOR
         </button>
         <button class="menu-button" type="button" @click="handleLoadGame">
           &gt;_ MANUAL DEL VIRUS
@@ -357,12 +369,18 @@ onBeforeUnmount(() => {
       </div>
     </footer>
 
-    <div v-if="LoginDisplay" class="auth-modal" role="dialog" aria-modal="true" @click.self="closeAuthModal">
+    <div
+      v-if="LoginDisplay"
+      class="auth-modal"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeAuthModal"
+    >
       <div class="auth-panel">
         <button class="close-button" type="button" @click="closeAuthModal">×</button>
         <p class="eyebrow">MODO DE ACCESO</p>
         <h3>Ingreso al sistema</h3>
-        <p class="auth-subtitle"> </p>
+        <p class="auth-subtitle"></p>
 
         <label class="auth-field">
           <span>Usuario</span>
@@ -377,7 +395,12 @@ onBeforeUnmount(() => {
         <p v-if="authMessage" class="auth-error">{{ authMessage }}</p>
 
         <div class="auth-actions">
-          <button class="primary-action" type="button" :disabled="LoadingAuthScreen" @click="HandleLoginUser">
+          <button
+            class="primary-action"
+            type="button"
+            :disabled="LoadingAuthScreen"
+            @click="HandleLoginUser"
+          >
             {{ LoadingAuthScreen ? 'Autenticando...' : 'Entrar' }}
           </button>
           <button type="button" @click="openRegister">Crear cuenta</button>
@@ -385,7 +408,13 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="RegisterDisplay" class="auth-modal" role="dialog" aria-modal="true" @click.self="closeAuthModal">
+    <div
+      v-if="RegisterDisplay"
+      class="auth-modal"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeAuthModal"
+    >
       <div class="auth-panel">
         <button class="close-button" type="button" @click="closeAuthModal">×</button>
         <p class="eyebrow">REGISTRO</p>
@@ -403,7 +432,9 @@ onBeforeUnmount(() => {
         </label>
 
         <div class="auth-actions">
-          <button class="primary-action" type="button" @click="HandleRegisterUser">Registrar</button>
+          <button class="primary-action" type="button" @click="HandleRegisterUser">
+            Registrar
+          </button>
           <button type="button" @click="OpenLoginMenu">Volver al login</button>
         </div>
       </div>
@@ -461,11 +492,13 @@ onBeforeUnmount(() => {
 
 .scanlines {
   z-index: 1;
-  background: repeating-linear-gradient(to bottom,
-      rgba(40, 255, 145, 0.04) 0,
-      rgba(40, 255, 145, 0.04) 1px,
-      transparent 1px,
-      transparent 4px);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(40, 255, 145, 0.04) 0,
+    rgba(40, 255, 145, 0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
 }
 
 .vignette {
@@ -484,16 +517,20 @@ onBeforeUnmount(() => {
   height: 42%;
   background:
     linear-gradient(to top, rgba(0, 255, 136, 0.2), transparent 60%),
-    repeating-linear-gradient(to right,
+    repeating-linear-gradient(
+      to right,
       rgba(0, 255, 136, 0.12) 0,
       rgba(0, 255, 136, 0.12) 1px,
       transparent 1px,
-      transparent 40px),
-    repeating-linear-gradient(to bottom,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      to bottom,
       rgba(0, 255, 136, 0.09) 0,
       rgba(0, 255, 136, 0.09) 1px,
       transparent 1px,
-      transparent 34px);
+      transparent 34px
+    );
   transform: perspective(420px) rotateX(62deg);
   transform-origin: top;
 }
@@ -551,7 +588,10 @@ onBeforeUnmount(() => {
   color: #7bffb5;
   font-family: 'Share Tech Mono', monospace;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
 }
 
 .auth-button:hover,
@@ -813,7 +853,8 @@ onBeforeUnmount(() => {
   width: 72%;
   height: 72%;
   object-fit: contain;
-  filter: hue-rotate(90deg) saturate(1.2) brightness(1.15) drop-shadow(0 0 14px rgba(91, 255, 164, 0.5));
+  filter: hue-rotate(90deg) saturate(1.2) brightness(1.15)
+    drop-shadow(0 0 14px rgba(91, 255, 164, 0.5));
   animation: logoSpin 12s linear infinite;
 }
 
@@ -848,11 +889,13 @@ onBeforeUnmount(() => {
   display: block;
   width: 58%;
   height: 100%;
-  background: repeating-linear-gradient(90deg,
-      #43ff9f 0,
-      #43ff9f 6px,
-      rgba(22, 126, 74, 0.9) 6px,
-      rgba(22, 126, 74, 0.9) 10px);
+  background: repeating-linear-gradient(
+    90deg,
+    #43ff9f 0,
+    #43ff9f 6px,
+    rgba(22, 126, 74, 0.9) 6px,
+    rgba(22, 126, 74, 0.9) 10px
+  );
   background-size: 20px 100%;
   animation:
     warningPulse 2.2s ease-in-out infinite,
@@ -937,7 +980,6 @@ onBeforeUnmount(() => {
 }
 
 @keyframes glitchSkew {
-
   0%,
   90%,
   100% {
@@ -954,7 +996,6 @@ onBeforeUnmount(() => {
 }
 
 @keyframes xpCharge {
-
   0%,
   100% {
     width: 10%;
@@ -978,7 +1019,6 @@ onBeforeUnmount(() => {
 }
 
 @keyframes warningPulse {
-
   0%,
   100% {
     filter: brightness(1);
@@ -1000,7 +1040,6 @@ onBeforeUnmount(() => {
 }
 
 @keyframes circlePulse {
-
   0%,
   100% {
     box-shadow:
@@ -1016,7 +1055,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
-
   .hud-top,
   .menu-layout,
   .hud-bottom {

@@ -20,7 +20,17 @@ const LeaderboardSchema = new mongoose.Schema({
   loops: { type: Number, default: 0 }
 });
 
+const LobbySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  hostUsername: { type: String, required: true },
+  players: { type: [String], default: [] },
+  maxPlayers: { type: Number, default: 4 },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const LeaderboardModel = mongoose.models.Leaderboard || mongoose.model('Leaderboard', LeaderboardSchema);
 const UsersModel = mongoose.models.Users || mongoose.model('Users', userSchema);
+const LobbyModel = mongoose.models.Lobby || mongoose.model('Lobby', LobbySchema);
 
-module.exports = {UsersModel, LeaderboardModel};
+module.exports = { UsersModel, LeaderboardModel, LobbyModel };
