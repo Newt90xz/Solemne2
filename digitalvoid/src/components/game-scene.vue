@@ -300,7 +300,7 @@ import Bosses from './boss-enemies.vue'
 import EnemyCharacter from './EnemyCharacter.vue'
 import spritesheetImg from '../assets/charactersprites/buggy.png'
 import cursorImg from '../assets/other/cursorfire.png'
-import buildingSpritesheet from '../assets/other/buildings.png'
+import buildingSpritesheet from '../assets/other/building.png'
 import upgradeDashIcon from '../assets/icons/upgrade_dash.png'
 import upgradeHealthIcon from '../assets/icons/upgrade_health.png'
 import upgradeAkimboIcon from '../assets/icons/upgrade_akimbo.png'
@@ -1838,6 +1838,9 @@ function resetRunAfterEscape() {
   bullets.length = 0
   explosions.length = 0
   enemies.length = 0
+
+  //Send signal to stages transfer to inbetween screen after reset. Redirect to new component. Basically turn of this component till the inbetween screen sends something back, then execute again.
+
 
   spawnBuildings(10)
   spawnBuildings(10)

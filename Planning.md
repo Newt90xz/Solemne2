@@ -1,12 +1,12 @@
 # Work Planning
 
-## Semana 1, 27 de abril - 1 de mayo:
+## Semana 1, 27 de abril - 1 de mayo
 
 - [x] Videogame genre definition
 - [x] Define technologies to use.
 - [x] Develop mockup.
 
-## Semana 2, 4 de mayo - 8 de mayo:
+## Semana 2, 4 de mayo - 8 de mayo
 
 - [x] Base Game Development
   - [x] File Structure
@@ -132,7 +132,7 @@ Puntaje añadido: ~~0.75~~
 - [X] Map Progress %: Map gets more infected overtime, by changing the stage throughout.
 - [x] Visual damage response to enemies and player.
 - [x] Separate Enemy structure from main (its currently inside the main game)
-- [ ] Change enemy sprites slightly
+- [X] Change enemy sprites slightly
 - [x] Add control modality (keybinds)
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
