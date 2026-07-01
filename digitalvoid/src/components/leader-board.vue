@@ -7,7 +7,7 @@ const gameStore = useGameStore()
 const apihost = 'http://localhost:6139/api'
 
 type LeaderboardEntry = { username: string; score: number; loops: number; _id: string }
-type PersonalRecord = { username: String ; score: number; loops: number }
+type PersonalRecord = { username: string ; score: number; loops: number }
 
 const activeTab = ref<'global' | 'personal'>('global')
 

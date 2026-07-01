@@ -63,7 +63,7 @@ router.get("/leaderboard/global", async function (req, res, next) {
   try {
     const data = await LeaderboardModel.find()
       .select("username score loops")
-      .sort({ score: -1 }) //intrepetacion de mongo para descendiente
+      .sort({ score: -1 }) //intrepetacion de mongo para descendente
       .limit(50)
       .lean();
 
@@ -157,9 +157,48 @@ router.post("/logout", async function (req, res, next) {
 })
 
 // Lobbies endpoints
-router.get("/lobbies", async function (req, res, next) {
+router.get('/lobbies', async function (req, res, next) {
   try {
-    const lobbies = await LobbyModel.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    // First use activeLobbies if available
+    let lobbies = [];
+    const { activeLobbies, io } = req.app.locals;
+    if (activeLobbies) {
+      lobbies = Array.from(activeLobbies.values());
+    }
+
+    // Fall back to DB if no activeLobbies or empty
+    if (!lobbies || lobbies.length === 0) {
+      lobbies = await LobbyModel.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+
+      // Ensure default public lobby exists
+      const defaultLobbyExists = lobbies.some(l => l.name === 'Lobby Público' && l.hostUsername === 'Sistema');
+      if (!defaultLobbyExists) {
+        const defaultLobby = await LobbyModel.create({
+          name: 'Lobby Público',
+          hostUsername: 'Sistema',
+          players: [],
+          maxPlayers: 2,
+          isActive: true
+        });
+        lobbies = [defaultLobby.toObject(), ...lobbies];
+
+        // Also add to activeLobbies
+        if (activeLobbies) {
+          activeLobbies.set(defaultLobby._id.toString(), {
+            id: defaultLobby._id.toString(),
+            name: defaultLobby.name,
+            host: defaultLobby.hostUsername,
+            players: [],
+            maxPlayers: defaultLobby.maxPlayers,
+            isActive: true
+          });
+          if (io) {
+            io.emit('lobby:update', Array.from(activeLobbies.values()));
+          }
+        }
+      }
+    }
+
     res.json(lobbies);
   } catch (err) {
     next(err);
@@ -168,12 +207,28 @@ router.get("/lobbies", async function (req, res, next) {
 
 router.post("/lobbies", authorize(), async function (req, res, next) {
   try {
-    const { name, maxPlayers = 4 } = req.body;
+    const { activeLobbies, io } = req.app.locals;
+    const { name, maxPlayers = 2 } = req.body;
     if (!name) {
       return res.status(400).json({ message: "Lobby name is required" });
     }
 
-    const existingLobby = await LobbyModel.findOne({ hostUsername: req.user.username, isActive: true });
+    // Check activeLobbies first
+    let existingLobby = false;
+    if (activeLobbies) {
+      for (const [, data] of activeLobbies.entries()) {
+        if (data.host === req.user.username) {
+          existingLobby = true;
+          break;
+        }
+      }
+    }
+
+    // Fall back to DB
+    if (!existingLobby) {
+      existingLobby = await LobbyModel.findOne({ hostUsername: req.user.username, isActive: true });
+    }
+
     if (existingLobby) {
       return res.status(400).json({ message: "You already have an active lobby" });
     }
@@ -182,8 +237,24 @@ router.post("/lobbies", authorize(), async function (req, res, next) {
       name,
       hostUsername: req.user.username,
       players: [req.user.username],
-      maxPlayers: Math.min(Math.max(2, maxPlayers), 8)
+      maxPlayers: Math.min(Math.max(2, maxPlayers), 2) // Max 2 players
     });
+
+    // Add to activeLobbies
+    if (activeLobbies) {
+      const lobbyData = {
+        id: lobby._id.toString(),
+        name: lobby.name,
+        host: lobby.hostUsername,
+        players: [req.user.username],
+        maxPlayers: lobby.maxPlayers,
+        isActive: true,
+      };
+      activeLobbies.set(lobby._id.toString(), lobbyData);
+      if (io) {
+        io.emit('lobby:update', Array.from(activeLobbies.values()));
+      }
+    }
 
     res.status(201).json(lobby);
   } catch (err) {
@@ -192,21 +263,9 @@ router.post("/lobbies", authorize(), async function (req, res, next) {
 });
 
 router.post("/lobbies/:id/join", authorize(), async function (req, res, next) {
+  // Joining is now handled via Socket.IO (lobby:join event), but we'll keep this as a fallback
   try {
-    const lobby = await LobbyModel.findById(req.params.id);
-    if (!lobby || !lobby.isActive) {
-      return res.status(404).json({ message: "Lobby not found" });
-    }
-    if (lobby.players.length >= lobby.maxPlayers) {
-      return res.status(400).json({ message: "Lobby is full" });
-    }
-    if (lobby.players.includes(req.user.username)) {
-      return res.status(400).json({ message: "You are already in this lobby" });
-    }
-
-    lobby.players.push(req.user.username);
-    await lobby.save();
-    res.json(lobby);
+    res.status(200).json({ message: "Please use the Socket.IO lobby:join event" });
   } catch (err) {
     next(err);
   }
@@ -214,23 +273,7 @@ router.post("/lobbies/:id/join", authorize(), async function (req, res, next) {
 
 router.post("/lobbies/:id/leave", authorize(), async function (req, res, next) {
   try {
-    const lobby = await LobbyModel.findById(req.params.id);
-    if (!lobby) {
-      return res.status(404).json({ message: "Lobby not found" });
-    }
-    const playerIndex = lobby.players.indexOf(req.user.username);
-    if (playerIndex === -1) {
-      return res.status(400).json({ message: "You are not in this lobby" });
-    }
-
-    lobby.players.splice(playerIndex, 1);
-
-    if (lobby.players.length === 0 || req.user.username === lobby.hostUsername) {
-      lobby.isActive = false;
-    }
-
-    await lobby.save();
-    res.json({ success: true });
+    res.status(200).json({ message: "Please use the Socket.IO disconnect event" });
   } catch (err) {
     next(err);
   }

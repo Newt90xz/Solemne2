@@ -8,6 +8,7 @@ import Leaderboard from './leader-board.vue'
 import LobbyScreen from './LobbyScreen.vue'
 import { ref, onMounted, watch } from 'vue'
 import { useGameStore, type GameSettings } from '../stores/game.ts'
+import type { Lobby } from '../types/lobby'
 import gameMusicTrack from '../assets/audio/Into The Void (feat. Jordan Lindley).mp4'
 
 const currentView = ref<'menu' | 'instructions' | 'game' | 'leaderboard' | 'lobby'>('menu')
@@ -43,6 +44,14 @@ const handleOpenLeaderboard = () => {
 const handleOpenLobby = () => {
   showSettingsOverlay.value = false
   currentView.value = 'lobby'
+}
+
+const currentLobby = ref<Lobby | null>(null)
+
+const handleStartLobbyGame = (lobby: Lobby) => {
+  currentLobby.value = lobby
+  currentView.value = 'game'
+  playGameMusic()
 }
 
 const gameStore = useGameStore()
@@ -140,7 +149,11 @@ function handleStartGame() {
   />
   <Instrucciones v-else-if="currentView === 'instructions'" @go-back="handleBackToMenu" />
   <Leaderboard v-else-if="currentView === 'leaderboard'" @go-back="handleBackToMenu" />
-  <LobbyScreen v-else-if="currentView === 'lobby'" @go-back="handleBackToMenu" />
+  <LobbyScreen
+    v-else-if="currentView === 'lobby'"
+    @go-back="handleBackToMenu"
+    @start-game="handleStartLobbyGame"
+  />
   <GameScene
     v-else-if="currentView === 'game'"
     @exit="handleBackToMenu"

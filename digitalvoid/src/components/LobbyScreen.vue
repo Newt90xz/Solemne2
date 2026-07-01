@@ -1,34 +1,56 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import { useGameStore } from '../stores/game'
+import { socket } from '../socket'
+import type { Lobby } from '../types/lobby'
 
 const emit = defineEmits<{
   (e: 'go-back'): void
+  (e: 'startGame', lobby: Lobby): void
 }>()
 
 const gameStore = useGameStore()
-const lobbies = ref<any[]>([])
+const lobbies = ref<Lobby[]>([])
 const lobbyName = ref('')
-const lobbyMaxPlayers = ref(4)
+const lobbyMaxPlayers = ref(2)
 const creatingLobby = ref(false)
 const joiningLobby = ref(false)
 const loadingLobbies = ref(false)
 const errorMessage = ref('')
+const currentLobby = ref<Lobby | null>(null)
 
 const apihost = 'http://localhost:6139/api'
 
 async function loadLobbies() {
   loadingLobbies.value = true
   try {
-    const res = await axios.get(`${apihost}/lobbies`)
-    lobbies.value = res.data
+    const res = await axios.get<Array<Record<string, unknown>>>(`${apihost}/lobbies`)
+    lobbies.value = res.data.map((lobby: Record<string, unknown>) => ({
+      id: (lobby.id as string) || (lobby._id as { toString(): string })?.toString() || '',
+      _id: (lobby._id as { toString(): string })?.toString(),
+      name: lobby.name as string,
+      host: (lobby.host as string) || (lobby.hostUsername as string),
+      hostUsername: lobby.hostUsername as string,
+      players: lobby.players as string[],
+      maxPlayers: lobby.maxPlayers as number,
+      isActive: lobby.isActive as boolean,
+    }))
   } catch (err) {
     console.error('Error loading lobbies:', err)
     errorMessage.value = 'Error loading lobbies'
   } finally {
     loadingLobbies.value = false
   }
+}
+
+function getLobbyId(lobby: Lobby): string {
+  return lobby.id || lobby._id || ''
+}
+
+function joinLobby(lobby: Lobby) {
+  console.log('Joining lobby:', lobby)
+  socket.emit('lobby:join', getLobbyId(lobby))
 }
 
 async function createLobby() {
@@ -38,42 +60,68 @@ async function createLobby() {
   }
   creatingLobby.value = true
   try {
-    await axios.post(
+    const res = await axios.post(
       `${apihost}/lobbies`,
       { name: lobbyName.value, maxPlayers: lobbyMaxPlayers.value },
-      { withCredentials: true }
+      { withCredentials: true },
     )
     lobbyName.value = ''
     errorMessage.value = ''
-    await loadLobbies()
-  } catch (err: any) {
+    // Join the new lobby
+    socket.emit('lobby:join', res.data._id)
+  } catch (err: unknown) {
     console.error('Error creating lobby:', err)
-    errorMessage.value = err.response?.data?.message || 'Error creating lobby'
+    const axiosError = err as { response?: { data?: { message?: string } } }
+    errorMessage.value = axiosError.response?.data?.message || 'Error creating lobby'
   } finally {
     creatingLobby.value = false
   }
 }
 
-async function joinLobby(lobbyId: string) {
-  joiningLobby.value = true
-  try {
-    await axios.post(
-      `${apihost}/lobbies/${lobbyId}/join`,
-      {},
-      { withCredentials: true }
-    )
-    errorMessage.value = ''
-    await loadLobbies()
-  } catch (err: any) {
-    console.error('Error joining lobby:', err)
-    errorMessage.value = err.response?.data?.message || 'Error joining lobby'
-  } finally {
-    joiningLobby.value = false
+// Socket event listeners
+function handleLobbyUpdate(lobbiesOrLobby: Lobby | Lobby[]) {
+  if (Array.isArray(lobbiesOrLobby)) {
+    lobbies.value = lobbiesOrLobby
+  } else if (lobbiesOrLobby.id) {
+    currentLobby.value = lobbiesOrLobby
+    // Also update the lobbies list
+    const index = lobbies.value.findIndex((l) => l.id === lobbiesOrLobby.id)
+    if (index !== -1) {
+      lobbies.value[index] = lobbiesOrLobby
+    } else {
+      lobbies.value.push(lobbiesOrLobby)
+    }
   }
+}
+
+function handleLobbyError(message: string) {
+  errorMessage.value = message
+}
+
+function handleLobbyStartGame(lobby: Lobby) {
+  currentLobby.value = lobby
+  emit('startGame', lobby)
 }
 
 onMounted(() => {
   loadLobbies()
+
+  // Connect socket if not already connected
+  if (!socket.connected && gameStore.authUser.loggedIn) {
+    socket.connect()
+  }
+
+  // Add socket event listeners
+  socket.on('lobby:update', handleLobbyUpdate)
+  socket.on('lobby:error', handleLobbyError)
+  socket.on('lobby:startGame', handleLobbyStartGame)
+})
+
+onBeforeUnmount(() => {
+  // Remove socket event listeners
+  socket.off('lobby:update', handleLobbyUpdate)
+  socket.off('lobby:error', handleLobbyError)
+  socket.off('lobby:startGame', handleLobbyStartGame)
 })
 </script>
 
@@ -93,54 +141,79 @@ onMounted(() => {
     </div>
 
     <div class="content">
-      <div class="create-lobby-panel">
-        <h2>Crear Lobby</h2>
-        <div class="input-group">
-          <label>Nombre del Lobby</label>
-          <input type="text" v-model="lobbyName" placeholder="Mi Lobby" />
-        </div>
-        <div class="input-group">
-          <label>Máximo de Jugadores</label>
-          <input type="number" v-model.number="lobbyMaxPlayers" min="2" max="8" />
-        </div>
-        <button class="create-button" :disabled="!gameStore.authUser.loggedIn || creatingLobby" @click="createLobby">
-          {{ creatingLobby ? 'Creando...' : 'Crear Lobby' }}
-        </button>
-        <p v-if="!gameStore.authUser.loggedIn" class="login-hint">Debes iniciar sesión para crear un lobby</p>
+      <!-- If in a lobby -->
+      <div v-if="currentLobby" class="current-lobby">
+        <h2>{{ currentLobby.name }}</h2>
+        <p>Host: {{ currentLobby.host }}</p>
+        <p>Jugadores ({{ currentLobby.players.length }}/{{ currentLobby.maxPlayers }}):</p>
+        <ul class="player-list">
+          <li v-for="player in currentLobby.players" :key="player">{{ player }}</li>
+        </ul>
+        <p v-if="currentLobby.players.length === currentLobby.maxPlayers" class="waiting-message">
+          ¡Partida empezando en breve...!
+        </p>
+        <p v-else class="waiting-message">Esperando a que se una el otro jugador...</p>
       </div>
 
-      <div class="lobbies-panel">
-        <h2>Lobbies Disponibles</h2>
-        <button class="refresh-button" @click="loadLobbies" :disabled="loadingLobbies">
-          {{ loadingLobbies ? 'Cargando...' : '↻ Actualizar' }}
-        </button>
-        <div v-if="lobbies.length === 0" class="empty-state">
-          No hay lobbies disponibles. ¡Crea uno!
+      <!-- Otherwise, show lobbies list and create form -->
+      <template v-else>
+        <div class="create-lobby-panel">
+          <h2>Crear Lobby</h2>
+          <div class="input-group">
+            <label>Nombre del Lobby</label>
+            <input type="text" v-model="lobbyName" placeholder="Mi Lobby" />
+          </div>
+          <div class="input-group">
+            <label>Máximo de Jugadores</label>
+            <input type="number" v-model.number="lobbyMaxPlayers" min="2" max="2" disabled />
+          </div>
+          <button
+            class="create-button"
+            :disabled="!gameStore.authUser.loggedIn || creatingLobby"
+            @click="createLobby"
+          >
+            {{ creatingLobby ? 'Creando...' : 'Crear Lobby' }}
+          </button>
+          <p v-if="!gameStore.authUser.loggedIn" class="login-hint">
+            Debes iniciar sesión para crear un lobby
+          </p>
         </div>
-        <div class="lobbies-list">
-          <div v-for="lobby in lobbies" :key="lobby._id" class="lobby-card">
-            <div class="lobby-info">
-              <span class="lobby-name">{{ lobby.name }}</span>
-              <span class="lobby-host">Host: {{ lobby.hostUsername }}</span>
-            </div>
-            <div class="lobby-status">
-              <span class="player-count">{{ lobby.players.length }} / {{ lobby.maxPlayers }}</span>
-              <button
-                class="join-button"
-                :disabled="
-                  !gameStore.authUser.loggedIn ||
-                  lobby.players.length >= lobby.maxPlayers ||
-                  lobby.players.includes(gameStore.authUser.username) ||
-                  joiningLobby
-                "
-                @click="joinLobby(lobby._id)"
-              >
-                Unirse
-              </button>
+
+        <div class="lobbies-panel">
+          <h2>Lobbies Disponibles</h2>
+          <button class="refresh-button" @click="loadLobbies" :disabled="loadingLobbies">
+            {{ loadingLobbies ? 'Cargando...' : '↻ Actualizar' }}
+          </button>
+          <div v-if="lobbies.length === 0" class="empty-state">
+            No hay lobbies disponibles. ¡Crea uno!
+          </div>
+          <div class="lobbies-list">
+            <div v-for="lobby in lobbies" :key="lobby.id" class="lobby-card">
+              <div class="lobby-info">
+                <span class="lobby-name">{{ lobby.name }}</span>
+                <span class="lobby-host">Host: {{ lobby.host }}</span>
+              </div>
+              <div class="lobby-status">
+                <span class="player-count"
+                  >{{ lobby.players.length }} / {{ lobby.maxPlayers }}</span
+                >
+                <button
+                  class="join-button"
+                  :disabled="
+                    !gameStore.authUser.loggedIn ||
+                    lobby.players.length >= lobby.maxPlayers ||
+                    lobby.players.includes(gameStore.authUser.username) ||
+                    joiningLobby
+                  "
+                  @click="joinLobby(lobby)"
+                >
+                  Unirse
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
@@ -275,7 +348,8 @@ onMounted(() => {
 }
 
 .create-lobby-panel,
-.lobbies-panel {
+.lobbies-panel,
+.current-lobby {
   flex: 1;
   border: 1px solid rgba(63, 255, 155, 0.35);
   background: rgba(2, 26, 12, 0.7);
@@ -284,7 +358,8 @@ onMounted(() => {
 }
 
 .create-lobby-panel h2,
-.lobbies-panel h2 {
+.lobbies-panel h2,
+.current-lobby h2 {
   font-size: 1.5rem;
   color: #9affc5;
   margin: 0 0 1rem 0;
@@ -416,6 +491,23 @@ onMounted(() => {
 .join-button {
   width: auto;
   margin: 0;
+}
+
+.player-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.player-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed rgba(51, 255, 153, 0.3);
+}
+
+.waiting-message {
+  color: #9affc5;
+  font-size: 1.1rem;
+  margin-top: 1rem;
 }
 
 .error-message {

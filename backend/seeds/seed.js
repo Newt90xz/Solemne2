@@ -1,5 +1,5 @@
 var { conectarMongoDB } = require('../db');
-var { UsersModel, LeaderboardModel } = require('../models/User.js');
+var { UsersModel, LeaderboardModel, LobbyModel } = require('../models/User.js');
 
 const doc = [
   {
@@ -41,13 +41,23 @@ const doc2 = [
   }
 ];
 
+const defaultLobby = {
+  name: 'Lobby Público',
+  hostUsername: 'Sistema',
+  players: [],
+  maxPlayers: 2,
+  isActive: true
+};
+
 const seed = async () => {
   try {
     await conectarMongoDB();
     await UsersModel.deleteMany({});
     await LeaderboardModel.deleteMany({});
+    await LobbyModel.deleteMany({});
     await UsersModel.insertMany(doc);
     await LeaderboardModel.insertMany(doc2);
+    await LobbyModel.create(defaultLobby);
     console.log('Seed insertado correctamente');
   } catch (error) {
     console.error('Error en seed:', error);

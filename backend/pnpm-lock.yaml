@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      cookie:
-        specifier: ^2.0.0
-        version: 2.0.0
       cookie-parser:
         specifier: ~1.4.4
         version: 1.4.7
@@ -111,10 +108,6 @@ packages:
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
-
-  cookie@2.0.0:
-    resolution: {integrity: sha512-hRSFuKJ6SYHrFVNltQdagQFMk7e0Q/VrORTGqZGyUAmmhA3EwPeldHCTg0HqUaDodQOfQDe7qXuOtpf4lwCsaA==}
-    engines: {node: '>=22'}
 
   cors@2.8.6:
     resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
@@ -517,8 +510,6 @@ snapshots:
   cookie@0.3.1: {}
 
   cookie@0.7.2: {}
-
-  cookie@2.0.0: {}
 
   cors@2.8.6:
     dependencies:
