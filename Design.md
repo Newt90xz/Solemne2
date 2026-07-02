@@ -245,16 +245,38 @@ Base de datos: `digitalvoiddb`.
 | username        | String  | Sí        | —                 | Sí    |
 | password        | String  | Sí        | —                 | No    |
 | role            | String  | Sí        | `"user"`          | No    |
-| maxscore        | Integer | No        | `0`               | No    |
-| loops           | Integer | No        | `0`               | No    |
-| keybind-up      | String  | No        | `"w"`             | No    |
-| keybind-down    | String  | No        | `"s"`             | No    |
-| keybind-left    | String  | No        | `"a"`             | No    |
-| keybind-right   | String  | No        | `"d"`             | No    |
-| keybind-dash    | String  | No        | `"shift"`         | No    |
-| keybind-shoot   | String  | No        | `"mouse1"`        | No    |
-| keybind-weaponnext | String | No     | `"e"`             | No    |
-| keybind-weaponback | String | No     | `"q"`             | No    |
+| keybind-up      | String  | No        | `"KeyW"`          | No    |
+| keybind-down    | String  | No        | `"KeyS"`          | No    |
+| keybind-left    | String  | No        | `"KeyA"`          | No    |
+| keybind-right   | String  | No        | `"KeyD"`          | No    |
+| keybindinteract   | String  | No        | `"KeyF"`        | No    |
+| keybindpause    | String  | No        | `"Escape"`        | No    |
+| keybind-dash    | String  | No        | `"contextmenu"`   | No    |
+| keybind-shoot   | String  | No        | `"click"`        | No    |
+| keybind-weaponnext | String | No     | `"KeyE"`             | No    |
+| keybind-weaponback | String | No     | `"KeyQ"`             | No    |
+
+#### Schema del leaderboard:
+
+
+| Campo           | Tipo    | Requerido | Valor por defecto |
+|-----------------|---------|-----------|-------------------|
+| username        | String  | Sí        | —                 |
+| score           | String  | No        | 0                 |
+| loops           | String  | No        | 0                 |
+
+
+#### Schema del lobby:
+
+| Campo          | Tipo        | Requerido | Valor por defecto | Unico |
+|----------------|-------------|-----------|-------------------|-------|
+| name           | String      | Sí        | —                 | No    |
+| hostUsername   | String      | Sí        | —                 | No    |
+| players        | [String]    | No        | []                | No    |
+| maxPlayers     | Number      | No        | 4                 | No    |
+| isActive       | Boolean     | No        | true              | No    |
+| createdAt      | Date        | No        | Date.now()        | No    |
+
 
 ### Endpoints
 ---
@@ -263,17 +285,20 @@ Base de datos: `digitalvoiddb`.
 | Método | Ruta               | Descripción                                      |
 |--------|--------------------|--------------------------------------------------|
 | POST   | `/api/register`    | Crea un nuevo usuario con maxscore y loops en 0  |
-| POST   | `/api/login`       | Autentica al usuario, setea cookie (o token si es admin) |
+| POST   | `/api/login`       | Autentica al usuario y setea cookie `token` (admin recibe token en body) |
 | GET    | `/api/leaderboard` | Retorna el ranking global de todos los usuarios  |
 
 #### Usuario autenticado (requiere cookie)
 
 | Método | Ruta             | Descripción                                                  |
 |--------|------------------|--------------------------------------------------------------|
-| GET    | `/api/profile`   | Retorna los datos del usuario logueado (score, loops, keybinds) |
-| PUT    | `/api/game/end`  | Actualiza maxscore y loops si el nuevo score supera el anterior |
-| PUT    | `/api/settings`  | Actualiza las preferencias de keybinds del usuario           |
-| POST   | `/api/logout`    | Elimina la cookie de sesión                                  |
+| GET    | `/api/leaderboard/me`| Retorna el ranking del usuario autenticado               |
+| GET    | `/api/profile`   | Retorna datos del usuario logueado (controles y role)     |
+| POST   | `/api/game/end`  | Publica el puntaje y loops tras el fin de una partida     |
+| PUT    | `/api/settings`  | Actualiza las preferencias de keybinds del usuario        |
+| POST   | `/api/logout`    | Elimina la cookie de sesión                               |
+| GET    | `/api/lobbies`| Lista lobbies activos (viven en memoria del servidor)     |
+
 
 #### Admin (requiere Bearer token)
 
@@ -330,10 +355,10 @@ Devuelve:
 
 El usuario nunca envía su score directamente al endpoint de registro. El flujo es:
 
-1. Al registrarse (`POST /api/register`), se crea el usuario con nombre, contraseña, el resto de los campos vacios.
+1. Al registrarse (`POST /api/register`), se crea el usuario con nombre, contraseña encryptada, el resto de los campos por defecto.
 2. Al terminar una partida, el frontend llama a `PUT /api/game/end` actualizando el puntaje obtenido y los loops realizados.
-3. El backend compara el puntaje recibido con el `maxscore` almacenado:
-   - Si el nuevo puntaje es mayor → actualiza `maxscore` y `loops`.
+3. El backend compara el puntaje recibido con el `score` almacenado:
+   - Si el nuevo puntaje es mayor → actualiza `score` y `loops`.
    - Si es menor o igual → no modifica nada.
 
 ### Dependencias definidas en la fase 2
