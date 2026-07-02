@@ -4,14 +4,16 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user', required: true },
-  keybindup: { type: String, default: 'w' },
-  keybinddown: { type: String, default: 's' },
-  keybindleft: { type: String, default: 'a' },
-  keybindright: { type: String, default: 'd' },
+  keybindup: { type: String, default: 'KeyW' },
+  keybinddown: { type: String, default: 'KeyS' },
+  keybindleft: { type: String, default: 'KeyA' },
+  keybindright: { type: String, default: 'KeyD' },
+  keybindinteract: { type: String, default: 'KeyF' },
+  keybindpause: { type: String, default: 'Escape' },   
   keybinddash: { type: String, default: 'contextmenu' },
   keybindshoot: { type: String, default: 'click' },
-  keybindweaponnext: { type: String, default: 'e' },
-  keybindweaponback: { type: String, default: 'q' },
+  keybindweaponnext: { type: String, default: 'KeyE' },
+  keybindweaponback: { type: String, default: 'KeyQ' },
 });
 
 const LeaderboardSchema = new mongoose.Schema({

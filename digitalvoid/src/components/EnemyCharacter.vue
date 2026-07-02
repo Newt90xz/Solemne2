@@ -18,6 +18,7 @@ interface Enemy {
   tornadoCooldown?: number
   explosiveTimer?: number
   explosiveCooldown?: number
+  lastHitBy?: 'host' | 'guest'
 }
 
 interface Props {

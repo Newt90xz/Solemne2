@@ -185,12 +185,30 @@ function handleBack() {
 }
 
 .leaderboard-panel {
-  flex: 1;
-  overflow: auto;
+  height: 500px;
+  overflow-y: auto;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(51, 255, 153, 0.25);
   border-radius: 1rem;
-  padding: 1rem;
+  padding: 0 1rem;
+}
+
+.leaderboard-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.leaderboard-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 1rem;
+}
+
+.leaderboard-panel::-webkit-scrollbar-thumb {
+  background: rgba(51, 255, 153, 0.3);
+  border-radius: 1rem;
+}
+
+.leaderboard-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(51, 255, 153, 0.6);
 }
 
 .leaderboard-state {
@@ -210,6 +228,19 @@ function handleBack() {
   border-collapse: collapse;
 }
 
+.leaderboard-table th {
+  position: sticky;
+  top: 0;
+  background: #000000;
+  z-index: 1;
+  text-transform: uppercase;
+  color: #c8ffe6;
+  font-size: 0.95rem;
+  padding-top: 1.5rem; 
+  padding-bottom: 0.95rem;
+  box-shadow: inset 0 -1px 0 rgba(51, 255, 153, 0.12);
+}
+
 .leaderboard-table th,
 .leaderboard-table td {
   padding: 0.95rem 1rem;
@@ -221,6 +252,13 @@ function handleBack() {
   text-transform: uppercase;
   color: #c8ffe6;
   font-size: 0.95rem;
+  position: sticky;
+  top: 0;
+  background: #000000;
+  z-index: 1;
+  padding-top: 1.5rem; 
+  padding-bottom: 0.95rem;
+  box-shadow: inset 0 -1px 0 rgba(51, 255, 153, 0.12);
 }
 
 .leaderboard-table tr:nth-child(odd) {

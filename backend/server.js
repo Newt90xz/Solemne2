@@ -4,12 +4,17 @@ var { Server } = require("socket.io");
 var app = require("./app.js");
 var { LobbyModel } = require("./models/User.js");
 
-const PORT = 6139;
+const PORT = process.env.PORT || 6139;
 const server = http.createServer(app);
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:4173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -77,10 +82,23 @@ io.on("connection", (socket) => {
     socket.data.lobbyId = null;
     const data = activeLobbies.get(lobbyId);
     if (!data) return;
+    data.players = data.players.filter((p) => p !== username);
     if (data.host === username) {
-      await closeLobby(lobbyId);
+      const nextHost = data.players[0];
+      if (!nextHost) {
+        await closeLobby(lobbyId);
+        return;
+      }
+      data.host = nextHost;
+      try {
+        await LobbyModel.findByIdAndUpdate(lobbyId, {
+          hostUsername: nextHost,
+          players: data.players,
+        });
+      } catch {}
+      io.to(lobbyId).emit("lobby:hostChanged", nextHost);
+      broadcastList();
     } else {
-      data.players = data.players.filter((p) => p !== username);
       try {
         await LobbyModel.findByIdAndUpdate(lobbyId, { players: data.players });
       } catch {}
@@ -141,7 +159,7 @@ io.on("connection", (socket) => {
     socket.to(socket.data.lobbyId).emit("coop:snapshot", payload);
   });
 
-  // Enemigos
+  // Ver enemigos
   socket.on("coop:enemies", (list) => {
     if (!socket.data.lobbyId) return;
     socket.to(socket.data.lobbyId).emit("coop:enemies", list);
@@ -153,6 +171,35 @@ io.on("connection", (socket) => {
     socket.to(socket.data.lobbyId).emit("coop:hit", payload);
   });
 
+  // Registra daño recibido
+  socket.on("coop:damage", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:damage", payload);
+  });
+
+  // Disparo de enemigos al guest y host
+  socket.on("coop:efire", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:efire", payload);
+  });
+
+  socket.on("coop:escapepoint", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:escapepoint", payload);
+  });
+  socket.on("coop:loop", () => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:loop");
+  });
+  socket.on("coop:kills", (n) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:kills", n);
+  });
+  socket.on("coop:score", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:score", payload);
+  });
+  
   socket.on("lobby:join", async (lobbyId) => {
     const data = activeLobbies.get(lobbyId);
     if (!data || !data.isActive) return socket.emit("lobby:error", "Sala no disponible");

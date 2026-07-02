@@ -4,19 +4,23 @@ var { UsersModel, LeaderboardModel, LobbyModel } = require('../models/User.js');
 const doc = [
   {
     username: 'JohnDoe',
+    // Contraseña: 1234
     password: '$2a$10$EObQhVPIBm1iZgBLTIF8l.ZbDvk3TG1wZhnnsROaLYReWImSSoqaC',
     role: 'admin'
   },
   {
     username: 'JaniceDoe',
+    // Contraseña: contraseña
     password: '$2a$10$gUE/SqiTDCCk7Dkx6.uvg.39p0xMQgyYw2BT7rLoZjSGdcAWimne.'
   },
   {
     username: 'Cj',
+    // Contraseña: 12345
     password: '$2a$10$ZnQSkhIDsI4M6xKluou6Y.KqQHqXhJ2m6TCL9oCvp2zOzehJPEG5.'
   },
   {
     username: 'Winston',
+    // Contraseña: 1984
     password: '$2a$10$sAPpfqtA0iiEnlhF.OaYeOPSMna/HLw45cVdbJ/WrOByd.sJ4aNw6'
   }
 ];

@@ -86,6 +86,8 @@
         @shake="onBossShake"
         @escape="handleBossEscape"
         @escape-point="handleBossEscapePoint"
+        :remote-targets="remoteTargetsForBoss"
+        @damage-remote="handleBossDamageRemote"
       />
       <div
         v-if="coopEscapePoint.active"
@@ -428,6 +430,8 @@ interface Enemy {
   tornadoCooldown?: number
   explosiveTimer?: number
   explosiveCooldown?: number
+  // Ultimo golpe (para registrar puntaje y acumular kills)
+  lastHitBy?: 'host' | 'guest'
 }
 
 interface CircleHitbox {
@@ -446,8 +450,11 @@ const props = defineProps<{
   lobbyContext?: { lobbyId: string | null; role: 'host' | 'guest' } | null
 }>()
 
+// Define los roles de host y guest. Para cuando el host muera, el guest se tome su puesto y no pierda progreso.
+const coopRole = ref<'host' | 'guest' | null>(props.lobbyContext?.role ?? null)
+
 const isCoopGuest = computed(
-  () => props.lobbyContext?.role === 'guest' && gameStore.authUser.loggedIn,
+    () => coopRole.value === 'guest' && gameStore.authUser.loggedIn,
 )
 
 const viewportRef = ref<HTMLElement | null>(null)
@@ -824,7 +831,7 @@ let enemySpawnInterval: number | null = null
 let coopStateInterval: number | null = null
 let lastDamageTime = 0
 let remoteDamageTime = 0
-const WAVE_CHANCE_RAMP = 0.03
+const WAVE_CHANCE_RAMP = 0.008
 const WAVE_CHANCE_MAX = 0.8
 const WAVE_MIN_SIZE = 5
 const WAVE_MAX_SIZE = 9
@@ -1044,7 +1051,7 @@ function getRemoteHitbox(rp: { x: number; y: number }): CircleHitbox {
 function nearestTargetTo(x: number, y: number) {
   let best = { x: player.x + playerSize.value / 2, y: player.y + playerSize.value / 2 }
   let bestD = (best.x - x) ** 2 + (best.y - y) ** 2
-  if (props.lobbyContext?.role === 'host') {
+  if (coopRole.value === 'host') {
     for (const name in remotePlayers) {
       const rp = remotePlayers[name]
       if (!rp) continue
@@ -1059,6 +1066,14 @@ function nearestTargetTo(x: number, y: number) {
   }
   return best
 }
+
+const remoteTargetsForBoss = computed(() => {
+    if (coopRole.value !== 'host') return []
+  return Object.values(remotePlayers).map((rp) => ({
+    x: rp.x + playerSize.value / 2,
+    y: rp.y + playerSize.value / 2,
+  }))
+})
 
 function getEnemyHitbox(enemy: Enemy): CircleHitbox {
   return {
@@ -1363,7 +1378,7 @@ function updateEnemies(dt: number) {
       e.y += pushY
     }
 
-    if (props.lobbyContext?.role === 'host') {
+      if (coopRole.value === 'host') {
       for (const name in remotePlayers) {
         const rp = remotePlayers[name]
         if (!rp) continue
@@ -1377,8 +1392,15 @@ function updateEnemies(dt: number) {
     // check death
     if (e.hp <= 0) {
       gameStore.incrementKills()
+      if (props.lobbyContext && socket.connected) {
+        socket.emit('coop:kills', gameStore.playerStats.kills)
+      }
       const experienceAmount = ENEMY_EXPERIENCE[e.type]
-      gameStore.addExperience(experienceAmount)
+      if (e.lastHitBy === 'guest') {
+        socket.emit('coop:score', { experienceAmount })
+      } else {
+        gameStore.addExperience(experienceAmount)
+      }
       enemies.splice(i, 1)
       continue
     }
@@ -1782,7 +1804,7 @@ function applyAreaDamageToPlayer(x: number, y: number, radius: number, damage: n
     playerDamageFlash.value = true
     playerDamageFlashTimer.value = 0.2
   }
-  if (props.lobbyContext?.role === 'host') {
+  if (coopRole.value === 'host') {
     for (const name in remotePlayers) {
       const rp = remotePlayers[name]
       if (!rp) continue
@@ -1999,9 +2021,13 @@ function handleBossEscape() {
 }
 
 function handleBossEscapePoint(p: { x: number; y: number; active: boolean; radius: number }) {
-  if (props.lobbyContext?.role === 'host' && socket.connected) {
+  if (coopRole.value === 'host' && socket.connected) {
     socket.emit('coop:escapepoint', p)
   }
+}
+
+function handleBossDamageRemote(p: { amount: number }) {
+  if (socket.connected) socket.emit('coop:damage', { amount: p.amount })
 }
 
 function onBossShake(payload: { duration: number; intensity: number }) {
@@ -2163,7 +2189,7 @@ function updateRemoteBullets(dt: number) {
 }
 
 function broadcastEnemyBullets() {
-  if (props.lobbyContext?.role !== 'host' || !socket.connected) return
+  if (coopRole.value !== 'host' || !socket.connected) return
   const alive = new Set<number>()
   for (const b of bullets) {
     if (b.owner !== 'enemy') continue
@@ -2186,6 +2212,7 @@ function dealDamageToEnemy(enemy: Enemy, damage: number) {
     socket.emit('coop:hit', { enemyId: enemy.id, damage })
     return
   }
+  enemy.lastHitBy = 'host'
   enemy.hp -= damage
 }
 
@@ -2328,7 +2355,7 @@ function updateBullets(dt: number) {
     const bulletHitbox = getBulletHitbox(bullet)
     // bullets can hit the player (enemy-fired)
     if (bullet.owner === 'enemy') {
-      if (props.lobbyContext?.role === 'host') {
+      if (coopRole.value === 'host') {
         let hitRemote = false
         for (const name in remotePlayers) {
           const rp = remotePlayers[name]
@@ -2694,6 +2721,18 @@ function checkGuestEscape() {
   }
 }
 
+// Maneja la muerte del host, pasando la posicion al player 2.
+function becomeHost() {
+  if (coopRole.value === 'host') return
+  coopRole.value = 'host'
+  coopEscapePoint.active = false
+  if (!enemySpawnInterval) {
+    enemySpawnInterval = window.setInterval(spawnEnemyTick, ENEMY_SPAWN_INTERVAL_MS)
+  }
+}
+
+
+
 function setupCoop() {
   const ctx = props.lobbyContext
   if (!ctx || !gameStore.authUser.loggedIn) return  // invitado = juega solo, sin socket
@@ -2714,6 +2753,7 @@ function setupCoop() {
     remotePlayers[s.user] = { x: s.x, y: s.y, angle: s.angle }
   })
   socket.on('coop:fire', (shots: Partial<Bullet>[]) => {
+    //Procesa los disparos en ambas pantallas
     for (const s of shots) {
       remoteBullets.push({ ...(s as Bullet), id: nextBulletId++, maxTtl: s.ttl ?? 1, owner: 'player' })
     }
@@ -2723,7 +2763,8 @@ function setupCoop() {
     obstacles.splice(0, obstacles.length, ...snap.obstacles)
   })
   socket.on('coop:enemies', (list: Enemy[]) => {
-    if (props.lobbyContext?.role !== 'guest') return
+    // Ignora los enemigos del guest, priorizando los del host.
+    if (coopRole.value !== 'guest') return
     const incoming = new Set(list.map((e) => e.id))
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const current = enemies[i]
@@ -2736,12 +2777,16 @@ function setupCoop() {
     }
   })
   socket.on('coop:hit', (h: { enemyId: number; damage: number }) => {
-    if (props.lobbyContext?.role !== 'host') return
+    // Maneja el daño recibido del player2, asi que host no deberia estar involucrado.
+    if (coopRole.value !== 'host') return
     const enemy = enemies.find((e) => e.id === h.enemyId)
-    if (enemy) enemy.hp -= h.damage
+    if (enemy) {
+      enemy.lastHitBy = 'guest'
+      enemy.hp -= h.damage
+    }
   })
   socket.on('coop:damage', (d: { amount: number }) => {
-    if (props.lobbyContext?.role !== 'guest') return
+    if (coopRole.value !== 'guest') return
     gameStore.takeDamage(d.amount)
     playerDamageFlash.value = true
     playerDamageFlashTimer.value = 0.2
@@ -2750,13 +2795,25 @@ function setupCoop() {
     remoteBullets.push({ ...(s as Bullet), id: nextBulletId++, maxTtl: s.ttl ?? 1, owner: 'enemy' })
   })
   socket.on('coop:escapepoint', (p: { x: number; y: number; active: boolean; radius: number }) => {
+  // Sincronizar punto de escape en ambos lados
     coopEscapePoint.x = p.x
     coopEscapePoint.y = p.y
     coopEscapePoint.radius = p.radius
     coopEscapePoint.active = p.active
   })
   socket.on('coop:loop', () => {
+    // Si uno toca la salida, entonces ambos escapan.
     emit('loop-complete')
+  })
+  socket.on('coop:kills', (n: number) => {
+    // Kills de ambos lados.
+    gameStore.playerStats.kills = n
+  })
+  socket.on('coop:score', (p: { experienceAmount: number }) => {
+    gameStore.addExperience(p.experienceAmount)
+  })
+  socket.on('lobby:hostChanged', (newHost: string) => {
+    if (newHost === gameStore.authUser.username) becomeHost()
   })
   if (ctx.role === 'host') {
     socket.emit('lobby:open', { name: `Inyección de ${gameStore.authUser.username}` })
@@ -2767,7 +2824,7 @@ function setupCoop() {
   coopStateInterval = window.setInterval(() => {
     if (!socket.connected) return
     socket.emit('coop:state', { x: player.x, y: player.y, angle: aimAngleDeg.value })
-    if (props.lobbyContext?.role === 'host') {
+    if (coopRole.value === 'host') {
       socket.emit('coop:enemies', enemies.map((e) => ({
         id: e.id, x: e.x, y: e.y, size: e.size, speed: e.speed,
         hp: e.hp, maxHp: e.maxHp, color: e.color, type: e.type,
@@ -2780,7 +2837,7 @@ function teardownCoop() {
   if (!props.lobbyContext) return
   socket.emit('lobby:leave')
   if (coopStateInterval) { clearInterval(coopStateInterval); coopStateInterval = null }
-  ;['lobby:opened','lobby:joined','lobby:peerJoined','lobby:peerLeft','lobby:closed','lobby:error','coop:state','coop:fire','coop:snapshot','coop:enemies','coop:hit','coop:damage','coop:efire']
+  ;['lobby:opened','lobby:joined','lobby:peerJoined','lobby:peerLeft','lobby:closed','lobby:error','coop:state','coop:fire','coop:snapshot','coop:enemies','coop:hit','coop:damage','coop:efire','coop:kills','coop:score','lobby:hostChanged']
     .forEach((e) => socket.off(e))
   for (const k in remotePlayers) delete remotePlayers[k]
   remoteBullets.length = 0

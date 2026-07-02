@@ -18,7 +18,7 @@ Digital Void es un juego web desarrollado con Vue 3 y Vite, y usa Pinia para el 
 1. Clona el repositorio:
 
 ```bash
-git clone https://github.com/Newt90xz/Solemne2
+git clone https://github.com/Newt90xz/Digitalvoid
 ```
 
 2. Ejecuta el backend localmente
@@ -32,61 +32,64 @@ pnpm run start
 ```
 
 
-1. Ejecutar frontend en modo desarrollo:
+3. Ejecutar frontend en modo desarrollo:
 
 ```bash
 pnpm install
 pnpm run dev
 ```
 
-4. Abre `http://localhost:5173` (o la URL que muestre Vite) en tu navegador.
+4. Abre `http://localhost:5173`
 
-## Construir para producción (nota: Backend no funciona "aun" con build ya que se arma en otro puerto)
+## Construir para producción
+
+5. Ejecutar frontend en modo producción optimizada:
 
 ```bash
 pnpm build
 pnpm run preview
 ```
-
 `pnpm run preview` sirve el contenido de `dist` localmente para pruebas.
+
+6. Abre `http://localhost:4173`
 
 
 ## Ejecutar con Docker
 
-1. Construir la imagen:
-
-Para construir la imagen de Docker, asegúrate de tener abierto docker y debes estar en la raíz del proyecto (donde se encuentra el `Dockerfile`) en este caso es en solemne2, luego ejecuta:
-
-```bash
-docker build -t TU-USUARIO/digitalvoid:1.0 .
-```
-
-2. Ejecutar el contenedor (puerto 10081):
-
-```bash
-docker run --rm -p 10081:10081 TU-USUARIO/digitalvoid:1.0
-```
-
-Se abrirá la aplicación en `http://localhost:10081`.
-
-3. Uso con Docker Compose:
+Para ejecutar los contenedores del backend, frontend y la base de datos de mongo locales, ejecuta el siguiente comando en tu terminal:
 
 ```bash
 docker compose up --build
 ```
 
-Se abrirá la aplicación en `http://localhost:10081`.
+### Ejecutar con DockerHub
 
-## Imagen en DockerHub
-
-Ejecutar la imagen desde dockerhud:
-
-https://hub.docker.com/r/mrireal/digitalvoid
+Si prefieres usar las imágenes ya publicadas en DockerHub en lugar de construirlas, primero debes descargar el archivo docker-compose.yml del repositorio público a tu carpeta local.
+Esto es necesario porque este archivo ya contiene las direcciones correctas de las imágenes del juego para que se descarguen automáticamente. 
+Ejecuta lo siguiente:
 
 ```bash
-docker pull mrireal/digitalvoid:1.0
-
-docker run --rm -p 10081:10081 mrireal/digitalvoid:1.0
+curl -O https://raw.githubusercontent.com/Newt90xz/Digitalvoid/main/docker-compose.yml
 ```
 
-La aplicación estara en `http://localhost:10081`.
+Luego simplemente ejecuta:
+
+```bash
+docker compose pull
+docker compose up
+```
+
+Esto descargara y ejecutara los contenedores dentro de Dockerhub.
+
+Las direcciones de estos son:
+
+- Backend: https://hub.docker.com/r/zeeloved/digitalvoid-backend
+- Frontend: https://hub.docker.com/r/zeeloved/digitalvoid-web
+
+
+## Cooperativo
+Para probar el cooperativo localmente, debe abrir el frontend en dos pestañas de incognito, iniciar sesion con dos cuentas diferentes, y entrar a multijugador.  
+En una cuenta de las cuentas, iniciar "Nueva Inyeccion" y luego en la otra "Inyeccion en proceso", ahi saldra una sala abierta donde estara jugando la primera cuenta, uno simplemente lo presiona y juega en tiempo real.
+
+Imagen de prueba:  
+<img src="./digitalvoid/src/assets/other/image.png" alt="alt text" width="1000" height="500" />

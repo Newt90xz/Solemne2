@@ -137,10 +137,10 @@ Puntaje añadido: ~~0.75~~
 
 ## Semana 3, 29 de junio - 2 de julio (jueves)
 
-- [ ] Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
+- [x] Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
   - [x] Add lobby properties
   - [x] Add the lobby screen to enter other new stages
-- [ ] Enemy waves, enemy events
+- [x] Enemy waves, enemy events
 - [x] Enciclopedia of enemies
 - [ ] Gun, enemy and player sound effects.
   - [ ] Gun sound effects
@@ -152,11 +152,11 @@ Puntaje añadido: ~~0.75~~
   - [ ] Enemy sound effects
   - [ ] Player sound effects
   - [ ] Boss music
-- [ ] Obstacle attack and make an obstacle sprite
-- [ ] Boss behaviours. (make them more fair to fight against)
-  - [] McAffe
-  - [] Norton
-    - [] Make the teleport more reactable by making it a dash instead
-    - [] Change stun duration
-  - [] Windows Defender
-    - [] Disables weapon
+- [x] Obstacle attack and make an obstacle sprite
+- [X] Boss behaviours. (make them more fair to fight against)
+  - [x] McAffe
+  - [x] Norton
+    - [x] Make the teleport more reactable by making it a dash instead
+    - [x] Change stun duration  
+  - [x] Windows Defender
+    - [x] Disables weapon

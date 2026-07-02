@@ -1,9 +1,40 @@
 version: "3.9"
+
 services:
-  web:
-    build: .
-    ports:
-      - "10081:10081"
+  mongo:
+    image: mongo:7
     restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "3095:27017"
+
+  backend:
+    image: zeeloved/digitalvoid-backend:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - mongo
     environment:
       - NODE_ENV=production
+      - PORT=6139
+      - MONGO_URI=mongodb://mongo:27017/digitalvoiddb
+      - CORS_ORIGIN=http://localhost:10081,http://localhost:5173
+    ports:
+      - "6139:6139"
+
+  web:
+    image: zeeloved/digitalvoid-web:latest
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "10081:10081"
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  mongo-data:

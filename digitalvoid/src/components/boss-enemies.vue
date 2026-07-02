@@ -138,6 +138,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    remoteTargets: {
+      type: Array as PropType<{ x: number; y: number }[]>,
+      default: () => [],
+    },
   },
   emits: {
     'state-change': (active: boolean) => typeof active === 'boolean',
@@ -145,6 +149,7 @@ export default defineComponent({
       typeof payload.duration === 'number' && typeof payload.intensity === 'number',
     escape: () => true,
     'escape-point': (p: { x: number; y: number; active: boolean; radius: number }) => typeof p === 'object' && typeof p.x === 'number' && typeof p.y === 'number',
+    'damage-remote': (p: { amount: number }) => typeof p.amount === 'number',
   },
   setup(props, { emit }) {
     const gameStore = useGameStore()
@@ -795,6 +800,15 @@ function updateBosses(dt: number) {
       gameStore.takeDamage(BOSS_CONTACT_DAMAGE)
     }
     contactDamageCooldown = BOSS_CONTACT_COOLDOWN
+
+    for (const rt of props.remoteTargets) {
+    const remoteHitbox = { x: rt.x, y: rt.y, radius: props.playerSize * 0.25 }
+    if (circlesOverlap(bossHitbox, remoteHitbox) && contactDamageCooldown <= 0) {
+      const amount = boss.type === 'windows-defender' ? 9999 : BOSS_CONTACT_DAMAGE //Daño recibido si toca WDefender
+      emit('damage-remote', { amount })
+      contactDamageCooldown = BOSS_CONTACT_COOLDOWN
+    }
+  }
   }
 
   boss.tornadoTimer = (boss.tornadoTimer ?? 1.2) - dt
