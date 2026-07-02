@@ -335,12 +335,15 @@ import gusanoBulletSpritesheet from '../assets/weaponsprites/gusanosprite.png'
 import { socket } from '../socket'
 import type { Lobby } from '../types/lobby'
 
-// Weapon sound effects
-import diskSound from '../assets/audio/gun sound effects/disk_sound.wav'
-import hammerSound from '../assets/audio/gun sound effects/hammer_sound.wav'
-import wormSound from '../assets/audio/gun sound effects/worm_sound.wav'
-import adsSound from '../assets/audio/gun sound effects/ads_sound.wav'
-import horseSound from '../assets/audio/gun sound effects/horse_sound.wav'
+// Weapon sound effects and other sounds
+import diskSound from '../assets/audio/sound_effects/disk_sound.wav'
+import hammerSound from '../assets/audio/sound_effects/hammer_sound.wav'
+import wormSound from '../assets/audio/sound_effects/worm_sound.wav'
+import adsSound from '../assets/audio/sound_effects/ads_sound.wav'
+import horseSound from '../assets/audio/sound_effects/horse_sound.wav'
+import playerDamageSound from '../assets/audio/sound_effects/playerDamage_sound.wav'
+import enemyDeathSound from '../assets/audio/sound_effects/enemyDeath_sound.mp3'
+import bossMusic from '../assets/audio/sound_effects/boss_music.mp3'
 
 // Weapon sound map
 const weaponSoundMap: Record<WeaponId, string> = {
@@ -351,11 +354,43 @@ const weaponSoundMap: Record<WeaponId, string> = {
   virus_troyano: horseSound,
 }
 
+// Create audio elements for sounds we need to control (like boss music)
+const bossAudio = new Audio(bossMusic)
+bossAudio.loop = true
+bossAudio.volume = 0.4
+
 // Function to play weapon sound
 function playWeaponSound(weaponId: WeaponId) {
   const audio = new Audio(weaponSoundMap[weaponId])
   audio.volume = 0.5
   audio.play()
+}
+
+// Function to play player damage sound
+function playPlayerDamageSound() {
+  const audio = new Audio(playerDamageSound)
+  audio.volume = 0.6
+  audio.play()
+}
+
+// Function to play enemy death sound
+function playEnemyDeathSound() {
+  const audio = new Audio(enemyDeathSound)
+  audio.volume = 0.5
+  audio.play()
+}
+
+// Function to start boss music
+function startBossMusic() {
+  if (bossAudio.paused) {
+    bossAudio.play()
+  }
+}
+
+// Function to stop boss music
+function stopBossMusic() {
+  bossAudio.pause()
+  bossAudio.currentTime = 0
 }
 
 interface Bullet {
@@ -1377,6 +1412,7 @@ function updateEnemies(dt: number) {
         lastDamageTime = DAMAGE_COOLDOWN
         playerDamageFlash.value = true
         playerDamageFlashTimer.value = 0.2
+        playPlayerDamageSound()
       }
 
       // Push del enemigo hacia atrás
@@ -1405,6 +1441,7 @@ function updateEnemies(dt: number) {
       const experienceAmount = ENEMY_EXPERIENCE[e.type]
       gameStore.addExperience(experienceAmount)
       enemies.splice(i, 1)
+      playEnemyDeathSound()
       continue
     }
 
@@ -2016,6 +2053,11 @@ function updateCamera() {
 
 function handleBossStateChange(active: boolean) {
   bossActive.value = active
+  if (active) {
+    startBossMusic()
+  } else {
+    stopBossMusic()
+  }
 }
 
 function handleBossEscape() {

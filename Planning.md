@@ -143,15 +143,15 @@ Puntaje añadido: ~~0.75~~
 - [ ] Enemy waves, enemy events
 - [x] Enciclopedia of enemies
 - [ ] Gun, enemy and player sound effects.
-  - [ ] Gun sound effects
-    - [ ] Disk
-    - [ ] Hammer
-    - [ ] Worm
-    - [ ] Ads
-    - [ ] Horse
-  - [ ] Enemy sound effects
-  - [ ] Player sound effects
-  - [ ] Boss music
+  - [x] Gun sound effects
+    - [x] Disk
+    - [x] Hammer
+    - [x] Worm
+    - [x] Ads
+    - [x] Horse
+  - [x] Enemy sound effects
+  - [x] Player sound effects
+  - [x] Boss music
 - [ ] Obstacle attack and make an obstacle sprite
 - [ ] Boss behaviours. (make them more fair to fight against)
   - [] McAffe
