@@ -3,6 +3,7 @@ var { UsersModel, LeaderboardModel, LobbyModel } = require("../models/User.js");
 var router = express.Router();
 var jwt = require("jsonwebtoken");
 var authorize = require("../authchecker.js");
+var bcrypt = require('bcrypt')
 
 // No authorization
 router.post("/register", async function (req, res, next) {
@@ -16,9 +17,11 @@ router.post("/register", async function (req, res, next) {
     if (existing) {
       return res.json({ registered: false });
     } else {  
+      // 10-12 rondas de sal esta bien.
+      const encrypted = await  bcrypt.hash(password , 10 )  
       const user = await UsersModel.create([{
         username: username,
-        password: password,
+        password: encrypted,
         role: userRole,
       }],{lean: true});
       if (user) {
@@ -33,10 +36,16 @@ router.post("/register", async function (req, res, next) {
 router.post("/login", async function (req, res) {
   // Agarrar el usuario de cookies si existe, sino agarrar de req.body.
   const {username, password } = req.body
-  const exists = await UsersModel.findOne({ username: username, password: password})
+
+  const exists = await UsersModel.findOne({ username: username})
 
   // Crear cookie si no existe y si es usuario.
-  if (!exists){
+  if (exists){
+    const isTheSame = await bcrypt.compare(password,exists.password)
+    if (!isTheSame){
+      return res.status(401).json({ loggedIn: false, message: "Usuario o Contraseña Incorrectas"})
+    }
+  } else{
     return res.status(401).json({ loggedIn: false, message: "Usuario o Contraseña Incorrectas"})
   }
 
@@ -156,127 +165,10 @@ router.post("/logout", async function (req, res, next) {
   res.json({ loggedIn: false })
 })
 
-// Lobbies endpoints
-router.get('/lobbies', async function (req, res, next) {
-  try {
-    // First use activeLobbies if available
-    let lobbies = [];
-    const { activeLobbies, io } = req.app.locals;
-    if (activeLobbies) {
-      lobbies = Array.from(activeLobbies.values());
-    }
-
-    // Fall back to DB if no activeLobbies or empty
-    if (!lobbies || lobbies.length === 0) {
-      lobbies = await LobbyModel.find({ isActive: true }).sort({ createdAt: -1 }).lean();
-
-      // Ensure default public lobby exists
-      const defaultLobbyExists = lobbies.some(l => l.name === 'Lobby Público' && l.hostUsername === 'Sistema');
-      if (!defaultLobbyExists) {
-        const defaultLobby = await LobbyModel.create({
-          name: 'Lobby Público',
-          hostUsername: 'Sistema',
-          players: [],
-          maxPlayers: 2,
-          isActive: true
-        });
-        lobbies = [defaultLobby.toObject(), ...lobbies];
-
-        // Also add to activeLobbies
-        if (activeLobbies) {
-          activeLobbies.set(defaultLobby._id.toString(), {
-            id: defaultLobby._id.toString(),
-            name: defaultLobby.name,
-            host: defaultLobby.hostUsername,
-            players: [],
-            maxPlayers: defaultLobby.maxPlayers,
-            isActive: true
-          });
-          if (io) {
-            io.emit('lobby:update', Array.from(activeLobbies.values()));
-          }
-        }
-      }
-    }
-
-    res.json(lobbies);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post("/lobbies", authorize(), async function (req, res, next) {
-  try {
-    const { activeLobbies, io } = req.app.locals;
-    const { name, maxPlayers = 2 } = req.body;
-    if (!name) {
-      return res.status(400).json({ message: "Lobby name is required" });
-    }
-
-    // Check activeLobbies first
-    let existingLobby = false;
-    if (activeLobbies) {
-      for (const [, data] of activeLobbies.entries()) {
-        if (data.host === req.user.username) {
-          existingLobby = true;
-          break;
-        }
-      }
-    }
-
-    // Fall back to DB
-    if (!existingLobby) {
-      existingLobby = await LobbyModel.findOne({ hostUsername: req.user.username, isActive: true });
-    }
-
-    if (existingLobby) {
-      return res.status(400).json({ message: "You already have an active lobby" });
-    }
-
-    const lobby = await LobbyModel.create({
-      name,
-      hostUsername: req.user.username,
-      players: [req.user.username],
-      maxPlayers: Math.min(Math.max(2, maxPlayers), 2) // Max 2 players
-    });
-
-    // Add to activeLobbies
-    if (activeLobbies) {
-      const lobbyData = {
-        id: lobby._id.toString(),
-        name: lobby.name,
-        host: lobby.hostUsername,
-        players: [req.user.username],
-        maxPlayers: lobby.maxPlayers,
-        isActive: true,
-      };
-      activeLobbies.set(lobby._id.toString(), lobbyData);
-      if (io) {
-        io.emit('lobby:update', Array.from(activeLobbies.values()));
-      }
-    }
-
-    res.status(201).json(lobby);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post("/lobbies/:id/join", authorize(), async function (req, res, next) {
-  // Joining is now handled via Socket.IO (lobby:join event), but we'll keep this as a fallback
-  try {
-    res.status(200).json({ message: "Please use the Socket.IO lobby:join event" });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post("/lobbies/:id/leave", authorize(), async function (req, res, next) {
-  try {
-    res.status(200).json({ message: "Please use the Socket.IO disconnect event" });
-  } catch (err) {
-    next(err);
-  }
+// Lobbies: la lista de salas abiertas vive en memoria (activeLobbies).
+router.get("/lobbies", function (req, res) {
+  const { activeLobbies } = req.app.locals;
+  res.json(activeLobbies ? Array.from(activeLobbies.values()) : []);
 });
 
 module.exports = router;

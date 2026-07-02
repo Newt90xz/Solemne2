@@ -143,6 +143,15 @@ export const useGameStore = defineStore('game', () => {
     activeBuffs.length = 0
   }
 
+  function startNewInjection() {
+  const score = playerStats.score
+  const loops = playerStats.loops
+  Object.assign(playerStats, { ...DEFAULT_PLAYER_STATS })
+  activeBuffs.length = 0
+  playerStats.score = score
+  playerStats.loops = loops + 1
+}
+
   function setAuthUser(payload: Partial<AuthUser>) {
     authUser.value = {
       ...authUser.value,
@@ -290,6 +299,7 @@ export const useGameStore = defineStore('game', () => {
     clearAuthUser,
     resetSettings,
     resetPlayerStats,
+    startNewInjection,
     addExperience,
     levelUp,
     takeDamage,

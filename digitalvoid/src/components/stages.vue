@@ -5,15 +5,22 @@ import Instrucciones from './instructions.vue'
 import Configuración from './configuration.vue'
 import GameScene from './game-scene.vue'
 import Leaderboard from './leader-board.vue'
-import LobbyScreen from './LobbyScreen.vue'
+import InjectionScreen from './Injection-screen.vue'
 import { ref, onMounted, watch } from 'vue'
 import { useGameStore, type GameSettings } from '../stores/game.ts'
-import type { Lobby } from '../types/lobby'
 import gameMusicTrack from '../assets/audio/Into The Void (feat. Jordan Lindley).mp4'
 
-const currentView = ref<'menu' | 'instructions' | 'game' | 'leaderboard' | 'lobby'>('menu')
+type LobbyContext = { lobbyId: string | null; role: 'host' | 'guest' } | null
+
+const currentView = ref<'menu' | 'instructions' | 'game' | 'leaderboard' | 'injection'>('menu')
 const showSettingsOverlay = ref(false)
 const settingsOrigin = ref<'menu' | 'game'>('menu')
+const runKey = ref(0)
+const sessionLoops = ref(0)
+const lobbyContext = ref<LobbyContext>(null)
+
+const gameStore = useGameStore()
+let gameMusic: HTMLAudioElement | null = null
 
 const handleOpenInstructions = () => {
   showSettingsOverlay.value = false
@@ -31,35 +38,41 @@ const handleOpenSettings = () => {
   showSettingsOverlay.value = true
 }
 
-const handleNewGameView = () => {
-  showSettingsOverlay.value = false
-  currentView.value = 'game'
-}
-
 const handleOpenLeaderboard = () => {
   showSettingsOverlay.value = false
   currentView.value = 'leaderboard'
 }
 
-const handleOpenLobby = () => {
+const handleOpenInjection = () => {
   showSettingsOverlay.value = false
-  currentView.value = 'lobby'
+  currentView.value = 'injection'
 }
 
-const currentLobby = ref<Lobby | null>(null)
+const handleLoopComplete = () => {
+  sessionLoops.value++
+  currentView.value = 'injection'
+}
 
-const handleStartLobbyGame = (lobby: Lobby) => {
-  currentLobby.value = lobby
+const handleStartInjection = (payload: { lobbyId: string | null; role: 'host' | 'guest' }) => {
+  gameStore.startNewInjection()
+  lobbyContext.value = payload
+  runKey.value++
+  showSettingsOverlay.value = false
   currentView.value = 'game'
   playGameMusic()
 }
 
-const gameStore = useGameStore()
-let gameMusic: HTMLAudioElement | null = null
+const handleStartGame = () => {
+  gameStore.resetPlayerStats()
+  lobbyContext.value = null
+  runKey.value++
+  showSettingsOverlay.value = false
+  currentView.value = 'game'
+  playGameMusic()
+}
 
 function getMusicVolume() {
   const volume = gameStore.settings.musicVolume
-  // Scale down global music volume for calmer playback
   return typeof volume === 'number' ? Math.min(1, Math.max(0, volume * 0.15)) : 0.015
 }
 
@@ -91,11 +104,9 @@ function playGameMusic() {
   try {
     const music = ensureGameMusic()
     music.currentTime = 0
-    void music.play().catch(() => {
-      // Ignore autoplay restrictions or playback failures.
-    })
+    void music.play().catch(() => {})
   } catch {
-    // Keep the game flow alive even if the browser blocks audio setup.
+    /* empty */
   }
 }
 
@@ -132,11 +143,6 @@ function handleCloseSettings() {
     currentView.value = 'menu'
   }
 }
-
-function handleStartGame() {
-  handleNewGameView()
-  playGameMusic()
-}
 </script>
 <template>
   <Mainmenu
@@ -144,20 +150,23 @@ function handleStartGame() {
     @open-instructions="handleOpenInstructions"
     @open-settings="handleOpenSettings"
     @open-leaderboard="handleOpenLeaderboard"
-    @open-lobby="handleOpenLobby"
+    @open-lobby="handleOpenInjection"
     @new-game="handleStartGame"
   />
   <Instrucciones v-else-if="currentView === 'instructions'" @go-back="handleBackToMenu" />
   <Leaderboard v-else-if="currentView === 'leaderboard'" @go-back="handleBackToMenu" />
-  <LobbyScreen
-    v-else-if="currentView === 'lobby'"
+  <InjectionScreen
+    v-else-if="currentView === 'injection'"
+    @start-injection="handleStartInjection"
     @go-back="handleBackToMenu"
-    @start-game="handleStartLobbyGame"
   />
   <GameScene
     v-else-if="currentView === 'game'"
+    :key="runKey"
+    :lobby-context="lobbyContext"
     @exit="handleBackToMenu"
     @open-settings="handleOpenSettings"
+    @loop-complete="handleLoopComplete"
   />
   <div v-if="showSettingsOverlay" class="settings-overlay">
     <Configuración @save="handleSaveSettings" @go-back="handleCloseSettings" />

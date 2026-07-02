@@ -54,9 +54,11 @@ interface BossEnemy {
   introStartY?: number
   introTargetX?: number
   introTargetY?: number
-  teleportTimer?: number
-  teleportCooldown?: number
-  teleportFxTimeLeft?: number
+  dashTimer?: number
+  dashCooldown?: number
+  dashTimeLeft?: number
+  dashVx?: number
+  dashVy?: number
 }
 
 interface BossBullet {
@@ -132,12 +134,17 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    coopGuest: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: {
     'state-change': (active: boolean) => typeof active === 'boolean',
     shake: (payload: { duration: number; intensity: number }) =>
       typeof payload.duration === 'number' && typeof payload.intensity === 'number',
     escape: () => true,
+    'escape-point': (p: { x: number; y: number; active: boolean; radius: number }) => typeof p === 'object' && typeof p.x === 'number' && typeof p.y === 'number',
   },
   setup(props, { emit }) {
     const gameStore = useGameStore()
@@ -164,8 +171,9 @@ export default defineComponent({
     const NORTON_SHOTGUN_SPREAD_DEG = 55
     const NORTON_SHOTGUN_SPEED = 820
     const NORTON_SHOTGUN_DAMAGE = 9
-    const NORTON_TELEPORT_COOLDOWN = 2.35
-    const NORTON_TELEPORT_FX = 0.16
+    const NORTON_DASH_COOLDOWN = 2.35
+    const NORTON_DASH_DURATION = 0.22
+    const NORTON_DASH_SPEED = 1700
     const NORTON_EXPERIENCE = 340
     const WINDOWS_DEFENDER_SIZE = 260
     const WINDOWS_DEFENDER_SPEED = 200
@@ -308,12 +316,7 @@ const bossStyle = computed(() => {
     borderRadius: '0px',
     border: 'none',
     zIndex: 12,
-    opacity:
-      boss.teleportFxTimeLeft && boss.teleportFxTimeLeft > 0
-        ? '0.55'
-        : introActive
-          ? '0.98'
-          : '1',
+    opacity: introActive ? '0.98' : '1',
   }as CSSProperties
 })
 
@@ -349,6 +352,8 @@ const bossStyle = computed(() => {
         }
       }
 
+      emit('escape-point', { x: chosen.x, y: chosen.y, active: true, radius: WINDOWS_DEFENDER_ESCAPE_RADIUS })
+      
       escapePoint.x = chosen.x
       escapePoint.y = chosen.y
       escapePoint.active = true
@@ -361,6 +366,7 @@ const bossStyle = computed(() => {
       escapePoint.active = false
       escapeIndicator.active = false
       escapeIndicator.timeLeft = 0
+      emit('escape-point', { x: 0, y: 0, active: false, radius: 0 })
     }
 
     function spawnMcAffeBoss() {
@@ -426,9 +432,9 @@ const bossStyle = computed(() => {
         introStartY: startY,
         introTargetX: bossX,
         introTargetY: targetY,
-        teleportTimer: 2,
-        teleportCooldown: NORTON_TELEPORT_COOLDOWN,
-        teleportFxTimeLeft: 0,
+        dashTimer: 2,
+        dashCooldown: NORTON_DASH_COOLDOWN,
+        dashTimeLeft: 0,
       })
 
       nortonSpawned = true
@@ -463,9 +469,6 @@ const bossStyle = computed(() => {
         introStartY: startY,
         introTargetX: bossX,
         introTargetY: targetY,
-        teleportTimer: 0,
-        teleportCooldown: 0,
-        teleportFxTimeLeft: 0,
       })
 
       windowsDefenderSpawned = true
@@ -567,7 +570,7 @@ function spawnBossTornado(boss: BossEnemy) {
           owner: 'enemy',
           ownerId: boss.id,
           stun: true,
-          stunDuration: 0.35,
+          stunDuration: 0.2,
         })
       }
     }
@@ -610,22 +613,28 @@ function spawnBossTornado(boss: BossEnemy) {
       }
     }
 
-    function teleportNorton(boss: BossEnemy) {
-      const minDist = 260
-      const maxDist = 560
+    function startNortonDash(boss: BossEnemy) {
+      const minDist = 240
+      const maxDist = 480
       const angle = Math.random() * Math.PI * 2
       const dist = minDist + Math.random() * (maxDist - minDist)
 
-      const targetX = props.player.x + props.playerSize / 2 + Math.cos(angle) * dist
-      const targetY = props.player.y + props.playerSize / 2 + Math.sin(angle) * dist
+      const playerCx = props.player.x + props.playerSize / 2
+      const playerCy = props.player.y + props.playerSize / 2
+      const targetX = playerCx + Math.cos(angle) * dist
+      const targetY = playerCy + Math.sin(angle) * dist
 
-      boss.x = Math.max(boss.size / 2, Math.min(targetX, props.worldSize.width - boss.size / 2))
-      boss.y = Math.max(boss.size / 2, Math.min(targetY, props.worldSize.height - boss.size / 2))
-      boss.teleportFxTimeLeft = NORTON_TELEPORT_FX
+      const dx = targetX - boss.x
+      const dy = targetY - boss.y
+      const len = Math.hypot(dx, dy) || 1
 
-      // Make Norton harder to kill by evading and recovering a bit on each blink.
+      boss.dashVx = (dx / len) * NORTON_DASH_SPEED
+      boss.dashVy = (dy / len) * NORTON_DASH_SPEED
+      boss.dashTimeLeft = NORTON_DASH_DURATION
+
+      // Keep him slippery: small recover on each dash, like the old blink.
       boss.hp = Math.min(boss.maxHp, boss.hp + 8)
-      requestShake(0.35, 10)
+      requestShake(0.3, 8)
     }
 
     function removeBoss(index: number) {
@@ -743,16 +752,19 @@ function updateBosses(dt: number) {
     boss.y += (dy / dist) * moveSpeed * dt
   }
     } else if (boss.type === 'norton') {
-      // Norton: que funcione como un enemigo más "chico" (persigue al player)
-      // y que el TP sea lo que le da personalidad, no quedarse fijo arriba.
-      const dx = targetX - boss.x
-      const dy = targetY - boss.y
-      const dist = Math.hypot(dx, dy) || 1
-      const nx = dx / dist
-      const ny = dy / dist
-      const moveSpeed = boss.speed ?? NORTON_SPEED
-      boss.x += nx * moveSpeed * dt
-      boss.y += ny * moveSpeed * dt
+      // Norton persigue al player, y el dash es lo que le da personalidad:
+      // se lanza rápido para reposicionarse en vez de quedarse fijo.
+      if ((boss.dashTimeLeft ?? 0) > 0) {
+        boss.x += (boss.dashVx ?? 0) * dt
+        boss.y += (boss.dashVy ?? 0) * dt
+      } else {
+        const dx = targetX - boss.x
+        const dy = targetY - boss.y
+        const dist = Math.hypot(dx, dy) || 1
+        const moveSpeed = boss.speed ?? NORTON_SPEED
+        boss.x += (dx / dist) * moveSpeed * dt
+        boss.y += (dy / dist) * moveSpeed * dt
+      }
     } else {
       const desiredX = targetX
       const desiredY = Math.max(boss.size / 2, targetY - 360)
@@ -806,15 +818,18 @@ function updateBosses(dt: number) {
       boss.explosiveTimer = boss.explosiveCooldown ?? BOSS_EXPLOSIVE_COOLDOWN
     }
   } else if (boss.type === 'norton') {
-    boss.teleportTimer = (boss.teleportTimer ?? 1.6) - dt
-    if (boss.teleportTimer <= 0) {
-      teleportNorton(boss)
-      boss.teleportTimer = boss.teleportCooldown ?? NORTON_TELEPORT_COOLDOWN
+    if ((boss.dashTimeLeft ?? 0) > 0) {
+      // Wind down the active dash.
+      boss.dashTimeLeft = Math.max(0, (boss.dashTimeLeft ?? 0) - dt)
+    } else {
+      boss.dashTimer = (boss.dashTimer ?? 1.6) - dt
+      if (boss.dashTimer <= 0) {
+        startNortonDash(boss)
+        boss.dashTimer = boss.dashCooldown ?? NORTON_DASH_COOLDOWN
+      }
     }
-    boss.teleportFxTimeLeft = Math.max(0, (boss.teleportFxTimeLeft ?? 0) - dt)
   } else if (boss.type === 'windows-defender') {
     boss.hp = boss.maxHp
-    boss.teleportFxTimeLeft = 0
     const bossBullets = bullets.filter(
       (bullet) => bullet.ownerId === boss.id && bullet.type === 'orbiting',
     )
@@ -837,7 +852,7 @@ function updateBosses(dt: number) {
       const dt = (ts - lastTime) / 1000
       lastTime = ts
 
-      updateBosses(dt)
+      if (!props.coopGuest) updateBosses(dt)
       rafId = requestAnimationFrame(loop)
     }
 

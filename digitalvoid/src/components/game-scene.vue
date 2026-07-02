@@ -81,10 +81,21 @@
         :is-paused="isPaused"
         :is-game-over="isGameOver"
         :is-menu-open="isMenuOpen"
+        :coop-guest="isCoopGuest"
         @state-change="handleBossStateChange"
         @shake="onBossShake"
         @escape="handleBossEscape"
+        @escape-point="handleBossEscapePoint"
       />
+      <div
+        v-if="coopEscapePoint.active"
+        class="coop-escape-point"
+        :style="{
+          transform: `translate(${Math.round(coopEscapePoint.x - camera.x)}px, ${Math.round(coopEscapePoint.y - camera.y)}px)`,
+          width: `${coopEscapePoint.radius * 2}px`,
+          height: `${coopEscapePoint.radius * 2}px`,
+        }"
+      ></div>
 
       <!-- Upgrade Menu Overlay Centered -->
       <div v-if="weaponUnlockMenu.visible || upgradeMenu.visible" class="upgrade-overlay">
@@ -231,6 +242,12 @@
         class="bullet"
         :style="bulletStyle(bullet)"
       ></div>
+      <div
+        v-for="b in remoteBullets"
+        :key="'r' + b.id"
+        class="bullet"
+        :style="bulletStyle(b)"
+      ></div>
 
       <EnemyCharacter
         v-for="e in normalEnemies"
@@ -269,6 +286,12 @@
       </div>
 
       <div class="player" :style="playerStyle"></div>
+      <div
+        v-for="(rp, name) in remotePlayers"
+        :key="name"
+        class="player remote-player"
+        :style="remotePlayerStyle(rp)"
+      ></div>
       <div v-if="isStunned" class="stun-ring" :style="stunStyle"></div>
       <div v-if="showDashBar || showAkimboBar" class="cooldown-bars" :style="cooldownBarsStyle">
         <div v-if="showDashBar" class="cooldown-bar cooldown-bar-dash">
@@ -309,6 +332,8 @@ import troyanoBulletSpritesheet from '../assets/weaponsprites/troyanobullet.png'
 import memoriaBulletSpritesheet from '../assets/weaponsprites/memorybulletsprite.png'
 import martilloBulletTexture from '../assets/weaponsprites/martillobullet.png'
 import gusanoBulletSpritesheet from '../assets/weaponsprites/gusanosprite.png'
+import { socket } from '../socket'
+import type { Lobby } from '../types/lobby'
 
 interface Bullet {
   id: number
@@ -383,6 +408,7 @@ interface Obstacle {
   y: number
   w: number
   h: number
+  ttl?: number
 }
 
 interface Enemy {
@@ -413,7 +439,16 @@ interface CircleHitbox {
 const emit = defineEmits<{
   (e: 'exit'): void
   (e: 'open-settings'): void
+  (e: 'loop-complete'): void
 }>()
+
+const props = defineProps<{
+  lobbyContext?: { lobbyId: string | null; role: 'host' | 'guest' } | null
+}>()
+
+const isCoopGuest = computed(
+  () => props.lobbyContext?.role === 'guest' && gameStore.authUser.loggedIn,
+)
 
 const viewportRef = ref<HTMLElement | null>(null)
 const sceneRef = ref<HTMLElement | null>(null)
@@ -424,6 +459,8 @@ const controlBindings = computed(() => ({
 }))
 
 const player = reactive({ x: 2500, y: 2500 })
+const remotePlayers = reactive<Record<string, { x: number; y: number; angle: number }>>({})
+const coopEscapePoint = reactive({ x: 0, y: 0, active: false, radius: 72 })
 const apihost = 'http://localhost:6139/api'
 
 const playerSize = computed(() => gameStore.playerStats.playerSize)
@@ -439,11 +476,14 @@ const worldSize = { width: 5000, height: 5000 }
 const buildings = reactive<Building[]>([])
 let nextBuildingId = 1
 const captureRange = 48
+const playerMoveDir = { x: 0, y: 0 }
 const obstacles = reactive<Obstacle[]>([])
 let nextObstacleId = 1
 
 const keys = reactive({ up: false, down: false, left: false, right: false })
 const bullets = reactive<Bullet[]>([])
+const remoteBullets = reactive<Bullet[]>([])
+const broadcastedEnemyBullets = new Set<number>()
 const explosions = reactive<Explosion[]>([])
 const damageNumbers = reactive<DamageNumber[]>([])
 const enemies = reactive<Enemy[]>([])
@@ -514,6 +554,7 @@ const isMenuOpen = computed(() => weaponUnlockMenu.visible || upgradeMenu.visibl
 const isInputLocked = computed(
   () => isPaused.value || isMenuOpen.value || isGameOver.value || isStunned.value,
 )
+const windowsDefenderActive = computed(() => enemies.some((e) => e.type === 'windows-defender'))
 
 function tryOpenWeaponUnlockMenu() {
   if (weaponUnlockMenu.visible) return
@@ -595,6 +636,7 @@ watch(isGameOver, async (Over) => {
   } catch (err) {
     console.error('No se pudo publicar el puntaje', err)
   }
+  teardownCoop()
 })
 
 const objectiveText = 'Sobrevive el mayor tiempo posible.'
@@ -669,6 +711,18 @@ const playerStyle = computed(() => {
     filter: playerDamageFlash.value ? 'brightness(2) hue-rotate(320deg)' : 'none',
   } as CSSProperties
 })
+
+function remotePlayerStyle(rp: { x: number; y: number; angle: number }): CSSProperties {
+  return {
+    width: `${playerSize.value}px`,
+    height: `${playerSize.value}px`,
+    backgroundImage: `url(${spritesheetImg})`,
+    backgroundSize: `${playerSize.value}px ${playerSize.value * SPRITE_FRAMES}px`,
+    backgroundPosition: '0px 0px',
+    backgroundRepeat: 'no-repeat',
+    transform: `translate(${Math.round(rp.x - camera.x)}px, ${Math.round(rp.y - camera.y)}px) rotate(${rp.angle}deg)`,
+  } as CSSProperties
+}
 
 const playerCenterScreen = computed(() => ({
   x: player.x - camera.x + playerSize.value / 2,
@@ -767,7 +821,21 @@ let nextExplosionId = 1
 let nextEnemyId = 1
 let shootAccumulator = 0
 let enemySpawnInterval: number | null = null
+let coopStateInterval: number | null = null
 let lastDamageTime = 0
+let remoteDamageTime = 0
+const WAVE_CHANCE_RAMP = 0.03
+const WAVE_CHANCE_MAX = 0.8
+const WAVE_MIN_SIZE = 5
+const WAVE_MAX_SIZE = 9
+const WAVE_SPAWN_RADIUS = 520
+const WAVE_LINE_SPACING = 90
+let waveChance = 0
+const BOSS_OBSTACLE_COOLDOWN = 2.4
+const BOSS_OBSTACLE_AHEAD = 260
+const BOSS_OBSTACLE_LIFETIME = 5
+let bossObstacleTimer = 0
+
 const DAMAGE_COOLDOWN = 0.5 // segundos entre cada daño
 const ENEMY_DAMAGE = {
   grunt: 10,
@@ -907,12 +975,89 @@ function spawnEnemy(opts?: Partial<Enemy>) {
   return base
 }
 
+function pickWaveType(): Enemy['type'] {
+  const roll = randRange(0, 100)
+  if (roll < 40) return 'tank'
+  if (roll < 80) return 'shooter'
+  if (roll < 92) return 'grunt'
+  return 'runner'
+}
+
+function spawnWave() {
+  const count = randRange(WAVE_MIN_SIZE, WAVE_MAX_SIZE)
+  const cx = player.x + playerSize.value / 2
+  const cy = player.y + playerSize.value / 2
+  const clampX = (v: number) => Math.max(60, Math.min(worldSize.width - 60, v))
+  const clampY = (v: number) => Math.max(60, Math.min(worldSize.height - 60, v))
+
+  if (Math.random() < 0.5) {
+    for (let i = 0; i < count; i += 1) {
+      const a = (i / count) * Math.PI * 2
+      spawnEnemy({
+        type: pickWaveType(),
+        x: clampX(cx + Math.cos(a) * WAVE_SPAWN_RADIUS),
+        y: clampY(cy + Math.sin(a) * WAVE_SPAWN_RADIUS),
+      })
+    }
+  } else {
+    const a = Math.random() * Math.PI * 2
+    const dirX = Math.cos(a)
+    const dirY = Math.sin(a)
+    const perpX = -dirY
+    const perpY = dirX
+    for (let i = 0; i < count; i += 1) {
+      const off = (i - (count - 1) / 2) * WAVE_LINE_SPACING
+      spawnEnemy({
+        type: pickWaveType(),
+        x: clampX(cx + dirX * WAVE_SPAWN_RADIUS + perpX * off),
+        y: clampY(cy + dirY * WAVE_SPAWN_RADIUS + perpY * off),
+      })
+    }
+  }
+}
+
+function updateWaves(dt: number) {
+  if (isPaused.value || isGameOver.value || bossActive.value) return
+  waveChance = Math.min(WAVE_CHANCE_MAX, waveChance + WAVE_CHANCE_RAMP * dt)
+  if (Math.random() < waveChance * dt) {
+    spawnWave()
+    waveChance = 0
+  }
+}
+
 function getPlayerHitbox(): CircleHitbox {
   return {
     x: player.x + playerSize.value / 2.5,
     y: player.y + playerSize.value / 2,
     radius: playerSize.value * PLAYER_HITBOX_SCALE,
   }
+}
+
+function getRemoteHitbox(rp: { x: number; y: number }): CircleHitbox {
+  return {
+    x: rp.x + playerSize.value / 2.5,
+    y: rp.y + playerSize.value / 2,
+    radius: playerSize.value * PLAYER_HITBOX_SCALE,
+  }
+}
+
+function nearestTargetTo(x: number, y: number) {
+  let best = { x: player.x + playerSize.value / 2, y: player.y + playerSize.value / 2 }
+  let bestD = (best.x - x) ** 2 + (best.y - y) ** 2
+  if (props.lobbyContext?.role === 'host') {
+    for (const name in remotePlayers) {
+      const rp = remotePlayers[name]
+      if (!rp) continue
+      const cx = rp.x + playerSize.value / 2
+      const cy = rp.y + playerSize.value / 2
+      const d = (cx - x) ** 2 + (cy - y) ** 2
+      if (d < bestD) {
+        bestD = d
+        best = { x: cx, y: cy }
+      }
+    }
+  }
+  return best
 }
 
 function getEnemyHitbox(enemy: Enemy): CircleHitbox {
@@ -1133,8 +1278,9 @@ function updateEnemies(dt: number) {
     const e = enemies[i]
     if (!e) continue
     if (e.type === 'mcaffe' || e.type === 'norton' || e.type === 'windows-defender') continue
-    const px = player.x + playerSize.value / 2
-    const py = player.y + playerSize.value / 2
+    const target = nearestTargetTo(e.x, e.y)
+    const px = target.x
+    const py = target.y
     const dx = px - e.x
     const dy = py - e.y
     const dist = Math.hypot(dx, dy) || 1
@@ -1215,6 +1361,17 @@ function updateEnemies(dt: number) {
       const pushY = (overlap.dy / safeDist) * push
       e.x += pushX
       e.y += pushY
+    }
+
+    if (props.lobbyContext?.role === 'host') {
+      for (const name in remotePlayers) {
+        const rp = remotePlayers[name]
+        if (!rp) continue
+        if (circlesOverlap(getRemoteHitbox(rp), enemyHitbox).overlapping && remoteDamageTime <= 0) {
+          socket.emit('coop:damage', { amount: ENEMY_DAMAGE[e.type] })
+          remoteDamageTime = DAMAGE_COOLDOWN
+        }
+      }
     }
 
     // check death
@@ -1361,6 +1518,36 @@ function spawnObstacles(count = 6) {
 
     obstacles.push({ id: nextObstacleId++, x, y, w, h })
   }
+}
+function spawnBossObstacle() {
+  const w = randRange(70, 160)
+  const h = randRange(40, 120)
+  const cx = player.x + playerSize.value / 2
+  const cy = player.y + playerSize.value / 2
+  const x = cx + playerMoveDir.x * BOSS_OBSTACLE_AHEAD
+  const y = cy + playerMoveDir.y * BOSS_OBSTACLE_AHEAD
+  obstacles.push({
+    id: nextObstacleId++,
+    x: Math.max(w / 2, Math.min(worldSize.width - w / 2, x)),
+    y: Math.max(h / 2, Math.min(worldSize.height - h / 2, y)),
+    w,
+    h,
+    ttl: BOSS_OBSTACLE_LIFETIME,
+  })
+}
+
+function updateBossObstacles(dt: number) {
+  for (let i = obstacles.length - 1; i >= 0; i -= 1) {
+    const o = obstacles[i]
+    if (!o || o.ttl === undefined) continue
+    o.ttl -= dt
+    if (o.ttl <= 0) obstacles.splice(i, 1)
+  }
+  if (!bossActive.value || isPaused.value || isGameOver.value || !isMoving) return
+  bossObstacleTimer -= dt
+  if (bossObstacleTimer > 0) return
+  bossObstacleTimer = BOSS_OBSTACLE_COOLDOWN
+  spawnBossObstacle()
 }
 
 function bulletStyle(bullet: Bullet) {
@@ -1595,6 +1782,15 @@ function applyAreaDamageToPlayer(x: number, y: number, radius: number, damage: n
     playerDamageFlash.value = true
     playerDamageFlashTimer.value = 0.2
   }
+  if (props.lobbyContext?.role === 'host') {
+    for (const name in remotePlayers) {
+      const rp = remotePlayers[name]
+      if (!rp) continue
+      if (circlesOverlap({ x, y, radius }, getRemoteHitbox(rp)).overlapping) {
+        socket.emit('coop:damage', { amount: damage })
+      }
+    }
+  }
 }
 
 function matchesBinding(event: KeyboardEvent, binding: string) {
@@ -1797,64 +1993,15 @@ function handleBossStateChange(active: boolean) {
   bossActive.value = active
 }
 
-function resetRunAfterEscape() {
-  // Keep player progression/stats after escaping the immortal boss.
-  // Only restart the world loop and infection progress.
-  gameStore.playerStats.kills = 0
-  gameStore.playerStats.loops += 1
-  weaponUnlockMenu.visible = false
-  upgradeMenu.visible = false
-  upgradeMenu.buildingId = null
-  bossActive.value = false
-
-  keys.up = false
-  keys.down = false
-  keys.left = false
-  keys.right = false
-  mouse.down = false
-  mouseScreen.active = false
-  shootAccumulator = 0
-  lastDamageTime = 0
-  dashRechargeTimer.value = 0
-  dashTimeLeft = 0
-  isDashing.value = false
-  isStunned.value = false
-  stunTimeLeft.value = 0
-  akimboTimeLeft.value = 0
-
-  screenShake.x = 0
-  screenShake.y = 0
-  screenShake.timeLeft = 0
-  screenShake.duration = 0
-  screenShake.intensity = 0
-
-  player.x = 2500
-  player.y = 2500
-  camera.x = 0
-  camera.y = 0
-
-  buildings.length = 0
-  obstacles.length = 0
-  bullets.length = 0
-  explosions.length = 0
-  enemies.length = 0
-
-  //Send signal to stages transfer to inbetween screen after reset. Redirect to new component. Basically turn of this component till the inbetween screen sends something back, then execute again.
-
-
-  spawnBuildings(10)
-  spawnBuildings(10)
-  spawnObstacles(8)
-  spawnEnemies(MIN_ACTIVE_ENEMIES)
-
-  showObjective.value = true
-  window.setTimeout(() => {
-    showObjective.value = false
-  }, 5000)
+function handleBossEscape() {
+  emit('loop-complete')
+  if (props.lobbyContext && socket.connected) socket.emit('coop:loop')
 }
 
-function handleBossEscape() {
-  resetRunAfterEscape()
+function handleBossEscapePoint(p: { x: number; y: number; active: boolean; radius: number }) {
+  if (props.lobbyContext?.role === 'host' && socket.connected) {
+    socket.emit('coop:escapepoint', p)
+  }
 }
 
 function onBossShake(payload: { duration: number; intensity: number }) {
@@ -1893,7 +2040,7 @@ function shootFromEnemy(enemy: Enemy, targetX: number, targetY: number) {
 }
 
 function shootFromPlayer() {
-  if (isPaused.value || isGameOver.value) return
+  if (isPaused.value || isGameOver.value || windowsDefenderActive.value) return
 
   const weapon = selectedWeapon.value
   const { dx, dy } = aimDelta.value
@@ -1906,6 +2053,7 @@ function shootFromPlayer() {
   const pelletCount = Math.max(1, weapon.pellets)
   const spreadRad = (weapon.spreadDeg * Math.PI) / 180
   const akimboActive = akimboTimeLeft.value > 0.0001
+  const coopStartIdx = bullets.length
 
   for (let i = 0; i < pelletCount; i += 1) {
     const spreadFactor = pelletCount === 1 ? 0 : i / (pelletCount - 1) - 0.5
@@ -1991,6 +2139,54 @@ function shootFromPlayer() {
       }
     }
   }
+if (props.lobbyContext && socket.connected) {
+    const created = bullets.slice(coopStartIdx)
+    if (created.length) {
+      socket.emit('coop:fire', created.map((b) => ({
+        weaponId: b.weaponId, x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+        angleDeg: b.angleDeg, size: b.size, ttl: b.ttl, damage: b.damage,
+        color: b.color, type: b.type,
+      })))
+    }
+  }
+}
+
+function updateRemoteBullets(dt: number) {
+  for (let i = remoteBullets.length - 1; i >= 0; i -= 1) {
+    const b = remoteBullets[i]
+    if (!b) continue
+    b.x += b.vx * dt
+    b.y += b.vy * dt
+    b.ttl -= dt
+    if (b.ttl <= 0) remoteBullets.splice(i, 1)
+  }
+}
+
+function broadcastEnemyBullets() {
+  if (props.lobbyContext?.role !== 'host' || !socket.connected) return
+  const alive = new Set<number>()
+  for (const b of bullets) {
+    if (b.owner !== 'enemy') continue
+    alive.add(b.id)
+    if (broadcastedEnemyBullets.has(b.id)) continue
+    broadcastedEnemyBullets.add(b.id)
+    socket.emit('coop:efire', {
+      weaponId: b.weaponId, x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+      angleDeg: b.angleDeg, size: b.size, ttl: b.ttl, color: b.color, type: b.type,
+    })
+  }
+  for (const id of broadcastedEnemyBullets) {
+    if (!alive.has(id)) broadcastedEnemyBullets.delete(id)
+  }
+}
+
+function dealDamageToEnemy(enemy: Enemy, damage: number) {
+  spawnDamageNumber(enemy.x, enemy.y, damage)
+  if (isCoopGuest.value) {
+    socket.emit('coop:hit', { enemyId: enemy.id, damage })
+    return
+  }
+  enemy.hp -= damage
 }
 
 function updateBullets(dt: number) {
@@ -2132,6 +2328,22 @@ function updateBullets(dt: number) {
     const bulletHitbox = getBulletHitbox(bullet)
     // bullets can hit the player (enemy-fired)
     if (bullet.owner === 'enemy') {
+      if (props.lobbyContext?.role === 'host') {
+        let hitRemote = false
+        for (const name in remotePlayers) {
+          const rp = remotePlayers[name]
+          if (!rp) continue
+          if (circlesOverlap(bulletHitbox, getRemoteHitbox(rp)).overlapping) {
+            if (bullet.damage && bullet.damage > 0) socket.emit('coop:damage', { amount: bullet.damage })
+            hitRemote = true
+            break
+          }
+        }
+        if (hitRemote) {
+          bullets.splice(i, 1)
+          continue
+        }
+      }
       const ph = getPlayerHitbox()
       const pOverlap = circlesOverlap(bulletHitbox, ph)
       if (pOverlap.overlapping) {
@@ -2177,17 +2389,15 @@ function updateBullets(dt: number) {
           if (!bullet.hitEnemyIds) bullet.hitEnemyIds = new Set()
           if (bullet.hitEnemyIds.has(enemy.id)) continue
 
-          enemy.hp -= bullet.damage
+          dealDamageToEnemy(enemy, bullet.damage)
           bullet.hitEnemyIds.add(enemy.id)
           hitEnemy = true
-          spawnDamageNumber(enemy.x, enemy.y, bullet.damage)
 
           // Once bullet leaves the enemy's hitbox, clear it so it can hit again on re-entry
           // (handled naturally since we only add on overlap)
         } else {
-          enemy.hp -= bullet.damage
+          dealDamageToEnemy(enemy, bullet.damage)
           hitEnemy = true
-          spawnDamageNumber(enemy.x, enemy.y, bullet.damage)
           if (bullet.type === 'explosive') {
             spawnExplosion(bullet.x, bullet.y, EXPLOSION_MAX_RADIUS)
           }
@@ -2392,6 +2602,9 @@ function loop(ts: number) {
   if (lastDamageTime > 0) {
     lastDamageTime -= dt
   }
+  if (remoteDamageTime > 0) {
+    remoteDamageTime -= dt
+  }
 
   if (screenShake.timeLeft > 0) {
     screenShake.timeLeft = Math.max(0, screenShake.timeLeft - dt)
@@ -2424,6 +2637,8 @@ function loop(ts: number) {
 
   if (moving) {
     const len = Math.hypot(vx, vy) || 1
+    playerMoveDir.x = vx / len
+    playerMoveDir.y = vy / len
     vx = (vx / len) * speed
     vy = (vy / len) * speed
     player.x += vx * dt
@@ -2444,10 +2659,15 @@ function loop(ts: number) {
 
   updateAutoShoot(dt)
   updateBullets(dt)
+  updateRemoteBullets(dt)
+  if (!isCoopGuest.value) updateEnemies(dt)
+  if (!isCoopGuest.value) updateWaves(dt)
+  if (isCoopGuest.value) checkGuestEscape()
   updateExplosions(dt)
   updateDamageNumbers(dt)
-  updateEnemies(dt)
   updateCamera()
+  broadcastEnemyBullets()
+  if (!isCoopGuest.value) updateBossObstacles(dt)
 
   // Update player damage flash
   if (playerDamageFlashTimer.value > 0) {
@@ -2460,8 +2680,112 @@ function loop(ts: number) {
   rafId = requestAnimationFrame(loop)
 }
 
+function checkGuestEscape() {
+  if (!coopEscapePoint.active) return
+  const cx = player.x + playerSize.value / 2
+  const cy = player.y + playerSize.value / 2
+  const pr = playerSize.value * 0.28
+  const dx = cx - coopEscapePoint.x
+  const dy = cy - coopEscapePoint.y
+  if (Math.hypot(dx, dy) <= pr + coopEscapePoint.radius) {
+    coopEscapePoint.active = false
+    socket.emit('coop:loop')
+    emit('loop-complete')
+  }
+}
+
+function setupCoop() {
+  const ctx = props.lobbyContext
+  if (!ctx || !gameStore.authUser.loggedIn) return  // invitado = juega solo, sin socket
+  if (!socket.connected) socket.connect()
+
+  socket.on('lobby:opened', (d: Lobby) => console.log('sala abierta:', d.id))
+  socket.on('lobby:joined', (d: Lobby) => console.log('entraste a:', d.id))
+  socket.on('lobby:peerJoined', () => {
+    socket.emit('coop:snapshot', {
+      buildings: buildings.map((b) => ({ ...b })),
+      obstacles: obstacles.map((o) => ({ ...o })),
+    })
+  })
+  socket.on('lobby:peerLeft', (u: string) => { delete remotePlayers[u] })
+  socket.on('lobby:closed', () => { for (const k in remotePlayers) delete remotePlayers[k] })
+  socket.on('lobby:error',     (m: string) => console.warn('lobby:', m))
+  socket.on('coop:state', (s: { user: string; x: number; y: number; angle: number }) => {
+    remotePlayers[s.user] = { x: s.x, y: s.y, angle: s.angle }
+  })
+  socket.on('coop:fire', (shots: Partial<Bullet>[]) => {
+    for (const s of shots) {
+      remoteBullets.push({ ...(s as Bullet), id: nextBulletId++, maxTtl: s.ttl ?? 1, owner: 'player' })
+    }
+  })
+  socket.on('coop:snapshot', (snap: { buildings: Building[]; obstacles: Obstacle[] }) => {
+    buildings.splice(0, buildings.length, ...snap.buildings)
+    obstacles.splice(0, obstacles.length, ...snap.obstacles)
+  })
+  socket.on('coop:enemies', (list: Enemy[]) => {
+    if (props.lobbyContext?.role !== 'guest') return
+    const incoming = new Set(list.map((e) => e.id))
+    for (let i = enemies.length - 1; i >= 0; i -= 1) {
+      const current = enemies[i]
+      if (current && !incoming.has(current.id)) enemies.splice(i, 1)
+    }
+    for (const e of list) {
+      const existing = enemies.find((x) => x.id === e.id)
+      if (existing) Object.assign(existing, e)
+      else enemies.push({ ...e })
+    }
+  })
+  socket.on('coop:hit', (h: { enemyId: number; damage: number }) => {
+    if (props.lobbyContext?.role !== 'host') return
+    const enemy = enemies.find((e) => e.id === h.enemyId)
+    if (enemy) enemy.hp -= h.damage
+  })
+  socket.on('coop:damage', (d: { amount: number }) => {
+    if (props.lobbyContext?.role !== 'guest') return
+    gameStore.takeDamage(d.amount)
+    playerDamageFlash.value = true
+    playerDamageFlashTimer.value = 0.2
+  })
+  socket.on('coop:efire', (s: Partial<Bullet>) => {
+    remoteBullets.push({ ...(s as Bullet), id: nextBulletId++, maxTtl: s.ttl ?? 1, owner: 'enemy' })
+  })
+  socket.on('coop:escapepoint', (p: { x: number; y: number; active: boolean; radius: number }) => {
+    coopEscapePoint.x = p.x
+    coopEscapePoint.y = p.y
+    coopEscapePoint.radius = p.radius
+    coopEscapePoint.active = p.active
+  })
+  socket.on('coop:loop', () => {
+    emit('loop-complete')
+  })
+  if (ctx.role === 'host') {
+    socket.emit('lobby:open', { name: `Inyección de ${gameStore.authUser.username}` })
+  } else if (ctx.lobbyId) {
+    socket.emit('lobby:join', ctx.lobbyId)
+  }
+
+  coopStateInterval = window.setInterval(() => {
+    if (!socket.connected) return
+    socket.emit('coop:state', { x: player.x, y: player.y, angle: aimAngleDeg.value })
+    if (props.lobbyContext?.role === 'host') {
+      socket.emit('coop:enemies', enemies.map((e) => ({
+        id: e.id, x: e.x, y: e.y, size: e.size, speed: e.speed,
+        hp: e.hp, maxHp: e.maxHp, color: e.color, type: e.type,
+      })))
+    }
+  }, 50)
+}
+
+function teardownCoop() {
+  if (!props.lobbyContext) return
+  socket.emit('lobby:leave')
+  if (coopStateInterval) { clearInterval(coopStateInterval); coopStateInterval = null }
+  ;['lobby:opened','lobby:joined','lobby:peerJoined','lobby:peerLeft','lobby:closed','lobby:error','coop:state','coop:fire','coop:snapshot','coop:enemies','coop:hit','coop:damage','coop:efire']
+    .forEach((e) => socket.off(e))
+  for (const k in remotePlayers) delete remotePlayers[k]
+  remoteBullets.length = 0
+}
 onMounted(() => {
-  gameStore.resetPlayerStats()
   selectedWeaponId.value = DEFAULT_WEAPON_ID
   weaponUnlockMenu.visible = false
   bossActive.value = false
@@ -2480,12 +2804,13 @@ onMounted(() => {
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('mouseleave', onMouseLeave)
   window.addEventListener('wheel', onWheel, { passive: false })
-  spawnBuildings(10)
-  spawnBuildings(10)
-  spawnObstacles(8)
-  spawnEnemies(MIN_ACTIVE_ENEMIES)
-  enemySpawnInterval = window.setInterval(spawnEnemyTick, ENEMY_SPAWN_INTERVAL_MS)
-
+  if (!isCoopGuest.value) {
+    spawnBuildings(10)
+    spawnBuildings(10)
+    spawnObstacles(8)
+    spawnEnemies(MIN_ACTIVE_ENEMIES)
+    enemySpawnInterval = window.setInterval(spawnEnemyTick, ENEMY_SPAWN_INTERVAL_MS)
+  }
   showObjective.value = true
   setTimeout(() => {
     showObjective.value = false
@@ -2493,6 +2818,7 @@ onMounted(() => {
   window.addEventListener('contextmenu', preventDefaultMenu)
 
   rafId = requestAnimationFrame(loop)
+  setupCoop()
 })
 
 onUnmounted(() => {
@@ -2505,6 +2831,7 @@ onUnmounted(() => {
   window.removeEventListener('wheel', onWheel)
   if (rafId) cancelAnimationFrame(rafId)
   if (enemySpawnInterval) clearInterval(enemySpawnInterval)
+  teardownCoop()
 })
 </script>
 
@@ -3351,5 +3678,24 @@ onUnmounted(() => {
 
 .upgrade-overlay .objective-panel {
   animation: slideDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.remote-player {
+  transition: transform 0.06s linear;
+  filter: hue-rotate(160deg) brightness(1.1);
+  opacity: 0.95;
+}
+
+.coop-escape-point {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin-left: -72px;
+  margin-top: -72px;
+  border: 3px dashed #46ff9f;
+  border-radius: 50%;
+  box-shadow: 0 0 24px rgba(70, 255, 159, 0.6);
+  z-index: 4;
+  pointer-events: none;
 }
 </style>

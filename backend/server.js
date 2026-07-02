@@ -1,8 +1,8 @@
 var http = require("http");
-var cookie = require("cookie");
 var jwt = require("jsonwebtoken");
 var { Server } = require("socket.io");
 var app = require("./app.js");
+var { LobbyModel } = require("./models/User.js");
 
 const PORT = 6139;
 const server = http.createServer(app);
@@ -21,168 +21,163 @@ const activeLobbies = new Map();
 app.locals.io = io;
 app.locals.activeLobbies = activeLobbies;
 
-// Create default public lobby on server start
-const createDefaultLobby = async () => {
-  const { LobbyModel } = require("./models/User.js");
-  // Check if default lobby already exists in DB or activeLobbies
-  let defaultLobby = null;
-  for (const [, data] of activeLobbies.entries()) {
-    if (data.name === 'Lobby Público' && data.host === 'Sistema') {
-      defaultLobby = data;
-      // Reset players for a fresh start
-      defaultLobby.players = [];
-      break;
-    }
-  }
-  if (!defaultLobby) {
-    const dbLobby = await LobbyModel.findOne({ name: 'Lobby Público', hostUsername: 'Sistema', isActive: true });
-    if (dbLobby) {
-      // Update the database to have no players for fresh start
-      await LobbyModel.findByIdAndUpdate(dbLobby._id, { players: [] });
-      defaultLobby = {
-        id: dbLobby._id.toString(),
-        name: dbLobby.name,
-        host: dbLobby.hostUsername,
-        players: [], // Fresh players list
-        maxPlayers: dbLobby.maxPlayers,
-        isActive: true,
-      };
-    } else {
-      // Create new default lobby
-      const newLobby = await LobbyModel.create({
-        name: 'Lobby Público',
-        hostUsername: 'Sistema',
-        players: [],
-        maxPlayers: 2,
-        isActive: true,
-      });
-      defaultLobby = {
-        id: newLobby._id.toString(),
-        name: newLobby.name,
-        host: newLobby.hostUsername,
-        players: [],
-        maxPlayers: newLobby.maxPlayers,
-        isActive: true,
-      };
-    }
-    // Add to activeLobbies
-    activeLobbies.set(defaultLobby.id, defaultLobby);
-  }
-  console.log('Default lobby created/loaded:', defaultLobby.id);
-};
+function lobbyList() {
+  return Array.from(activeLobbies.values());
+}
+function broadcastList() {
+  io.emit("lobby:update", lobbyList());
+}
+async function closeLobby(lobbyId) {
+  if (!activeLobbies.has(lobbyId)) return;
+  activeLobbies.delete(lobbyId);
+  io.to(lobbyId).emit("lobby:closed", lobbyId);
+  try {
+    await LobbyModel.findByIdAndUpdate(lobbyId, { isActive: false, players: [] });
+  } catch {}
+  broadcastList();
+}
 
-// Wait for MongoDB connection and create default lobby
 setTimeout(() => {
-  createDefaultLobby();
-}, 2000);
+  LobbyModel.updateMany({ isActive: true }, { isActive: false }).catch(() => {});
+}, 1500);
+
+function parseCookies(header) {
+  const out = {};
+  if (!header) return out;
+  for (const part of header.split(";")) {
+    const i = part.indexOf("=");
+    if (i === -1) continue;
+    const key = part.slice(0, i).trim();
+    if (key) out[key] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
 
 io.use((socket, next) => {
-  const cookies = cookie.parse(socket.handshake.headers.cookie || "");
+  const cookies = parseCookies(socket.handshake.headers.cookie || "");
   const token = cookies.token;
-
-  if (!token) {
-    return next(new Error("No autenticado"));
-  }
-
+  if (!token) return next(new Error("No autenticado"));
   try {
-    const decoded = jwt.verify(token, "pan-con-queso");
-    socket.user = decoded;
+    socket.user = jwt.verify(token, "pan-con-queso");
     next();
-  } catch (err) {
+  } catch {
     next(new Error("Token inválido"));
   }
 });
 
 io.on("connection", (socket) => {
-  console.log(`${socket.user.username} conectado (socket ${socket.id})`);
+  const username = socket.user.username;
+  console.log(`${username} conectado (socket ${socket.id})`);
+  socket.data.lobbyId = null;
 
-  // Join a lobby
-  socket.on("lobby:join", async (lobbyId) => {
+  async function leaveCurrent() {
+    const lobbyId = socket.data.lobbyId;
+    if (!lobbyId) return;
+    socket.leave(lobbyId);
+    socket.data.lobbyId = null;
+    const data = activeLobbies.get(lobbyId);
+    if (!data) return;
+    if (data.host === username) {
+      await closeLobby(lobbyId);
+    } else {
+      data.players = data.players.filter((p) => p !== username);
+      try {
+        await LobbyModel.findByIdAndUpdate(lobbyId, { players: data.players });
+      } catch {}
+      io.to(lobbyId).emit("lobby:peerLeft", username);
+      broadcastList();
+    }
+  }
+
+
+  socket.on("lobby:open", async ({ name, maxPlayers = 2 } = {}) => {
     try {
-      const { LobbyModel } = require("./models/User.js");
-      const lobby = await LobbyModel.findById(lobbyId);
-
-      if (!lobby || !lobby.isActive) {
-        socket.emit("lobby:error", "Lobby no encontrada");
-        return;
-      }
-
-      // Leave any previous lobby
+      await leaveCurrent();
       for (const [id, data] of activeLobbies.entries()) {
-        if (data.players.includes(socket.user.username)) {
-          socket.leave(id);
-          data.players = data.players.filter((p) => p !== socket.user.username);
-          // If host leaves and no players left, mark lobby as inactive
-          if (data.host === socket.user.username || data.players.length === 0) {
-            await LobbyModel.findByIdAndUpdate(id, { isActive: false, players: data.players });
-            activeLobbies.delete(id);
-            io.emit("lobby:update", Array.from(activeLobbies.values()));
-          } else {
-            await LobbyModel.findByIdAndUpdate(id, { players: data.players });
-            io.to(id).emit("lobby:playerLeft", socket.user.username);
-            io.emit("lobby:update", Array.from(activeLobbies.values()));
-          }
-        }
+        if (data.host === username) await closeLobby(id);
       }
-
+      const doc = await LobbyModel.create({
+        name: name || `Inyección de ${username}`,
+        hostUsername: username,
+        players: [username],
+        maxPlayers: Math.min(Math.max(2, maxPlayers), 2),
+        isActive: true,
+      });
+      const lobbyId = doc._id.toString();
+      const data = {
+        id: lobbyId,
+        name: doc.name,
+        host: username,
+        players: [username],
+        maxPlayers: doc.maxPlayers,
+        isActive: true,
+      };
+      activeLobbies.set(lobbyId, data);
       socket.join(lobbyId);
-
-      // Add to active lobbies
-      if (!activeLobbies.has(lobbyId)) {
-        activeLobbies.set(lobbyId, {
-          id: lobbyId,
-          name: lobby.name,
-          host: lobby.hostUsername,
-          players: [socket.user.username],
-          maxPlayers: lobby.maxPlayers,
-          isActive: true,
-        });
-        await LobbyModel.findByIdAndUpdate(lobbyId, { players: [socket.user.username] });
-      } else {
-        const lobbyData = activeLobbies.get(lobbyId);
-        if (lobbyData.players.length >= lobbyData.maxPlayers) {
-          socket.emit("lobby:error", "Lobby llena");
-          return;
-        }
-        if (!lobbyData.players.includes(socket.user.username)) {
-          lobbyData.players.push(socket.user.username);
-          await LobbyModel.findByIdAndUpdate(lobbyId, { players: lobbyData.players });
-        }
-      }
-
-      const currentLobby = activeLobbies.get(lobbyId);
-      io.to(lobbyId).emit("lobby:update", currentLobby);
-      io.emit("lobby:update", Array.from(activeLobbies.values()));
-
-      // Check if lobby is full to start game
-      if (currentLobby.players.length === currentLobby.maxPlayers) {
-        setTimeout(() => {
-          io.to(lobbyId).emit("lobby:startGame", currentLobby);
-        }, 1000);
-      }
+      socket.data.lobbyId = lobbyId;
+      socket.emit("lobby:opened", data);
+      broadcastList();
     } catch (err) {
-      console.error("Error joining lobby:", err);
-      socket.emit("lobby:error", "Error al unirse a la lobby");
+      console.error("lobby:open", err);
+      socket.emit("lobby:error", "No se pudo abrir la sala");
     }
   });
 
-  socket.on("disconnect", async () => {
-    console.log(`${socket.user.username} desconectado`);
-    for (const [id, data] of activeLobbies.entries()) {
-      if (data.players.includes(socket.user.username)) {
-        socket.leave(id);
-        data.players = data.players.filter((p) => p !== socket.user.username);
-        const { LobbyModel } = require("./models/User.js");
-        if (data.host === socket.user.username || data.players.length === 0) {
-          await LobbyModel.findByIdAndUpdate(id, { isActive: false, players: data.players });
-          activeLobbies.delete(id);
-        } else {
-          await LobbyModel.findByIdAndUpdate(id, { players: data.players });
-          io.to(id).emit("lobby:playerLeft", socket.user.username);
-        }
-        io.emit("lobby:update", Array.from(activeLobbies.values()));
-      }
+  // Ver al jugador en cooperativo. Devuelve las coordenadas.
+  socket.on("coop:state", (payload) => {
+  if (!socket.data.lobbyId) return;
+  socket.to(socket.data.lobbyId).emit("coop:state", { user: username, ...payload });
+  });
+
+  // Ver los disparos
+  socket.on("coop:fire", (shots) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:fire", shots);
+  });
+
+  //Building y Obstaculos
+  socket.on("coop:snapshot", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:snapshot", payload);
+  });
+
+  // Enemigos
+  socket.on("coop:enemies", (list) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:enemies", list);
+  });
+
+  // Registrar daño de disparos en ambos lados
+  socket.on("coop:hit", (payload) => {
+    if (!socket.data.lobbyId) return;
+    socket.to(socket.data.lobbyId).emit("coop:hit", payload);
+  });
+
+  socket.on("lobby:join", async (lobbyId) => {
+    const data = activeLobbies.get(lobbyId);
+    if (!data || !data.isActive) return socket.emit("lobby:error", "Sala no disponible");
+    if (data.players.length >= data.maxPlayers && !data.players.includes(username))
+      return socket.emit("lobby:error", "Sala llena");
+
+    await leaveCurrent();
+    socket.join(lobbyId);
+    socket.data.lobbyId = lobbyId;
+    if (!data.players.includes(username)) {
+      data.players.push(username);
+      try {
+        await LobbyModel.findByIdAndUpdate(lobbyId, { players: data.players });
+      } catch {}
     }
+    socket.emit("lobby:joined", data); 
+    socket.to(lobbyId).emit("lobby:peerJoined", username); 
+    broadcastList();
+  });
+
+  socket.on("lobby:leave", leaveCurrent);
+
+  socket.on("disconnect", async () => {
+    console.log(`${username} desconectado`);
+    await leaveCurrent();
   });
 });
 
