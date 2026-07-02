@@ -141,7 +141,26 @@ Puntaje añadido: ~~0.75~~
   - [x] Add lobby properties
   - [x] Add the lobby screen to enter other new stages
 - [x] Enemy waves, enemy events
+- [x] Enemy waves, enemy events
 - [x] Enciclopedia of enemies
+- [x] Gun, enemy and player sound effects.
+  - [x] Gun sound effects
+    - [x] Disk
+    - [x] Hammer
+    - [x] Worm
+    - [x] Ads
+    - [x] Horse
+  - [x] Enemy sound effects
+  - [x] Player sound effects
+  - [x] Boss music
+- [ ] Obstacle attack and make an obstacle sprite
+- [ ] Boss behaviours. (make them more fair to fight against)
+  - [] McAffe
+  - [] Norton
+    - [] Make the teleport more reactable by making it a dash instead
+    - [] Change stun duration
+  - [] Windows Defender
+    - [] Disables weapon
 - [ ] Gun, enemy and player sound effects.
   - [ ] Gun sound effects
     - [ ] Disk
