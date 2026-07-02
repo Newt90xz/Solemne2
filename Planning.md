@@ -140,9 +140,9 @@ Puntaje añadido: ~~0.75~~
 - [ ] Add an inbetween screen after loops. Strips upgrades and displays point system to upgrade basic stats.
   - [x] Add lobby properties
   - [x] Add the lobby screen to enter other new stages
-- [ ] Enemy waves, enemy events
+- [x] Enemy waves, enemy events
 - [x] Enciclopedia of enemies
-- [ ] Gun, enemy and player sound effects.
+- [x] Gun, enemy and player sound effects.
   - [x] Gun sound effects
     - [x] Disk
     - [x] Hammer

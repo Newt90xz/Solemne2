@@ -362,7 +362,7 @@ bossAudio.volume = 0.4
 // Function to play weapon sound
 function playWeaponSound(weaponId: WeaponId) {
   const audio = new Audio(weaponSoundMap[weaponId])
-  audio.volume = 0.5
+  audio.volume = 0.35
   audio.play()
 }
 
@@ -2032,6 +2032,7 @@ function persistHighScore() {
 }
 
 function exitGame() {
+  stopBossMusic()
   persistHighScore()
   emit('exit')
 }
