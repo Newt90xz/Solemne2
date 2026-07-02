@@ -335,6 +335,29 @@ import gusanoBulletSpritesheet from '../assets/weaponsprites/gusanosprite.png'
 import { socket } from '../socket'
 import type { Lobby } from '../types/lobby'
 
+// Weapon sound effects
+import diskSound from '../assets/audio/gun sound effects/disk_sound.wav'
+import hammerSound from '../assets/audio/gun sound effects/hammer_sound.wav'
+import wormSound from '../assets/audio/gun sound effects/worm_sound.wav'
+import adsSound from '../assets/audio/gun sound effects/ads_sound.wav'
+import horseSound from '../assets/audio/gun sound effects/horse_sound.wav'
+
+// Weapon sound map
+const weaponSoundMap: Record<WeaponId, string> = {
+  Disparo_Memoria: diskSound,
+  ransomware: hammerSound,
+  gusano: wormSound,
+  tormenta_anuncios: adsSound,
+  virus_troyano: horseSound,
+}
+
+// Function to play weapon sound
+function playWeaponSound(weaponId: WeaponId) {
+  const audio = new Audio(weaponSoundMap[weaponId])
+  audio.volume = 0.5
+  audio.play()
+}
+
 interface Bullet {
   id: number
   weaponId: WeaponId | string
@@ -608,20 +631,23 @@ watch(
     if (!visible) tryOpenWeaponUnlockMenu()
   },
 )
-watch(() => gameStore.playerStats.kills, (newcount) => {
-  if (newcount === 0){
-    currentPhaseBackground.value = escenarioImg
-  }
-  if (newcount === 100){
-    currentPhaseBackground.value = escenariophase1
-  }
-  if (newcount === 200){
-    currentPhaseBackground.value = escenariophase2
-  }
-  if (newcount === 300){
-    currentPhaseBackground.value = escenariofinalphase
-  }
-})
+watch(
+  () => gameStore.playerStats.kills,
+  (newcount) => {
+    if (newcount === 0) {
+      currentPhaseBackground.value = escenarioImg
+    }
+    if (newcount === 100) {
+      currentPhaseBackground.value = escenariophase1
+    }
+    if (newcount === 200) {
+      currentPhaseBackground.value = escenariophase2
+    }
+    if (newcount === 300) {
+      currentPhaseBackground.value = escenariofinalphase
+    }
+  },
+)
 
 watch(isGameOver, async (Over) => {
   if (!Over) return
@@ -676,7 +702,6 @@ const sceneStyle = computed(
       imageRendering: 'pixelated',
     }) as CSSProperties,
 )
-
 
 const worldStyle = computed(
   () =>
@@ -2043,6 +2068,7 @@ function shootFromPlayer() {
   if (isPaused.value || isGameOver.value || windowsDefenderActive.value) return
 
   const weapon = selectedWeapon.value
+  playWeaponSound(selectedWeaponId.value)
   const { dx, dy } = aimDelta.value
   const aimLength = Math.hypot(dx, dy)
   if (aimLength < 1) return
@@ -2139,14 +2165,25 @@ function shootFromPlayer() {
       }
     }
   }
-if (props.lobbyContext && socket.connected) {
+  if (props.lobbyContext && socket.connected) {
     const created = bullets.slice(coopStartIdx)
     if (created.length) {
-      socket.emit('coop:fire', created.map((b) => ({
-        weaponId: b.weaponId, x: b.x, y: b.y, vx: b.vx, vy: b.vy,
-        angleDeg: b.angleDeg, size: b.size, ttl: b.ttl, damage: b.damage,
-        color: b.color, type: b.type,
-      })))
+      socket.emit(
+        'coop:fire',
+        created.map((b) => ({
+          weaponId: b.weaponId,
+          x: b.x,
+          y: b.y,
+          vx: b.vx,
+          vy: b.vy,
+          angleDeg: b.angleDeg,
+          size: b.size,
+          ttl: b.ttl,
+          damage: b.damage,
+          color: b.color,
+          type: b.type,
+        })),
+      )
     }
   }
 }
@@ -2171,8 +2208,16 @@ function broadcastEnemyBullets() {
     if (broadcastedEnemyBullets.has(b.id)) continue
     broadcastedEnemyBullets.add(b.id)
     socket.emit('coop:efire', {
-      weaponId: b.weaponId, x: b.x, y: b.y, vx: b.vx, vy: b.vy,
-      angleDeg: b.angleDeg, size: b.size, ttl: b.ttl, color: b.color, type: b.type,
+      weaponId: b.weaponId,
+      x: b.x,
+      y: b.y,
+      vx: b.vx,
+      vy: b.vy,
+      angleDeg: b.angleDeg,
+      size: b.size,
+      ttl: b.ttl,
+      color: b.color,
+      type: b.type,
     })
   }
   for (const id of broadcastedEnemyBullets) {
@@ -2334,7 +2379,8 @@ function updateBullets(dt: number) {
           const rp = remotePlayers[name]
           if (!rp) continue
           if (circlesOverlap(bulletHitbox, getRemoteHitbox(rp)).overlapping) {
-            if (bullet.damage && bullet.damage > 0) socket.emit('coop:damage', { amount: bullet.damage })
+            if (bullet.damage && bullet.damage > 0)
+              socket.emit('coop:damage', { amount: bullet.damage })
             hitRemote = true
             break
           }
@@ -2696,7 +2742,7 @@ function checkGuestEscape() {
 
 function setupCoop() {
   const ctx = props.lobbyContext
-  if (!ctx || !gameStore.authUser.loggedIn) return  // invitado = juega solo, sin socket
+  if (!ctx || !gameStore.authUser.loggedIn) return // invitado = juega solo, sin socket
   if (!socket.connected) socket.connect()
 
   socket.on('lobby:opened', (d: Lobby) => console.log('sala abierta:', d.id))
@@ -2707,15 +2753,24 @@ function setupCoop() {
       obstacles: obstacles.map((o) => ({ ...o })),
     })
   })
-  socket.on('lobby:peerLeft', (u: string) => { delete remotePlayers[u] })
-  socket.on('lobby:closed', () => { for (const k in remotePlayers) delete remotePlayers[k] })
-  socket.on('lobby:error',     (m: string) => console.warn('lobby:', m))
+  socket.on('lobby:peerLeft', (u: string) => {
+    delete remotePlayers[u]
+  })
+  socket.on('lobby:closed', () => {
+    for (const k in remotePlayers) delete remotePlayers[k]
+  })
+  socket.on('lobby:error', (m: string) => console.warn('lobby:', m))
   socket.on('coop:state', (s: { user: string; x: number; y: number; angle: number }) => {
     remotePlayers[s.user] = { x: s.x, y: s.y, angle: s.angle }
   })
   socket.on('coop:fire', (shots: Partial<Bullet>[]) => {
     for (const s of shots) {
-      remoteBullets.push({ ...(s as Bullet), id: nextBulletId++, maxTtl: s.ttl ?? 1, owner: 'player' })
+      remoteBullets.push({
+        ...(s as Bullet),
+        id: nextBulletId++,
+        maxTtl: s.ttl ?? 1,
+        owner: 'player',
+      })
     }
   })
   socket.on('coop:snapshot', (snap: { buildings: Building[]; obstacles: Obstacle[] }) => {
@@ -2768,10 +2823,20 @@ function setupCoop() {
     if (!socket.connected) return
     socket.emit('coop:state', { x: player.x, y: player.y, angle: aimAngleDeg.value })
     if (props.lobbyContext?.role === 'host') {
-      socket.emit('coop:enemies', enemies.map((e) => ({
-        id: e.id, x: e.x, y: e.y, size: e.size, speed: e.speed,
-        hp: e.hp, maxHp: e.maxHp, color: e.color, type: e.type,
-      })))
+      socket.emit(
+        'coop:enemies',
+        enemies.map((e) => ({
+          id: e.id,
+          x: e.x,
+          y: e.y,
+          size: e.size,
+          speed: e.speed,
+          hp: e.hp,
+          maxHp: e.maxHp,
+          color: e.color,
+          type: e.type,
+        })),
+      )
     }
   }, 50)
 }
@@ -2779,9 +2844,25 @@ function setupCoop() {
 function teardownCoop() {
   if (!props.lobbyContext) return
   socket.emit('lobby:leave')
-  if (coopStateInterval) { clearInterval(coopStateInterval); coopStateInterval = null }
-  ;['lobby:opened','lobby:joined','lobby:peerJoined','lobby:peerLeft','lobby:closed','lobby:error','coop:state','coop:fire','coop:snapshot','coop:enemies','coop:hit','coop:damage','coop:efire']
-    .forEach((e) => socket.off(e))
+  if (coopStateInterval) {
+    clearInterval(coopStateInterval)
+    coopStateInterval = null
+  }
+  ;[
+    'lobby:opened',
+    'lobby:joined',
+    'lobby:peerJoined',
+    'lobby:peerLeft',
+    'lobby:closed',
+    'lobby:error',
+    'coop:state',
+    'coop:fire',
+    'coop:snapshot',
+    'coop:enemies',
+    'coop:hit',
+    'coop:damage',
+    'coop:efire',
+  ].forEach((e) => socket.off(e))
   for (const k in remotePlayers) delete remotePlayers[k]
   remoteBullets.length = 0
 }
