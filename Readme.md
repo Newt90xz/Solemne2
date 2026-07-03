@@ -61,7 +61,9 @@ Para ejecutar los contenedores del backend, frontend y la base de datos de mongo
 ```bash
 docker compose up --build
 ```
+Esto se encargara de levantar los contenedores y levantar los servicios. Al terminar, esta estara corriendo en `localhost://10081`.
 
+`localhost://10081`
 ### Ejecutar con DockerHub
 
 Si prefieres usar las imágenes ya publicadas en DockerHub en lugar de construirlas, primero debes descargar el archivo docker-compose.yml del repositorio público a tu carpeta local.
@@ -79,6 +81,8 @@ docker compose pull
 docker compose up
 ```
 
+Esto descargara las imagenes y luego las ejecutara en el docker, y se levantaran en `localhost://10081`.
+
 Esto descargara y ejecutara los contenedores dentro de Dockerhub.
 
 Las direcciones de estos son:
@@ -89,7 +93,7 @@ Las direcciones de estos son:
 
 ## Cooperativo
 Para probar el cooperativo localmente, debe abrir el frontend en dos pestañas de incognito, iniciar sesion con dos cuentas diferentes, y entrar a multijugador.  
-En una cuenta de las cuentas, iniciar "Nueva Inyeccion" y luego en la otra "Inyeccion en proceso", ahi saldra una sala abierta donde estara jugando la primera cuenta, uno simplemente lo presiona y juega en tiempo real.
+En una de las cuentas, iniciar "Nueva Inyeccion" y luego en la otra "Inyeccion en proceso", ahi saldra una sala abierta donde estara jugando la primera cuenta, uno simplemente lo presiona y juega en tiempo real.
 
 Imagen de prueba:  
 <img src="./digitalvoid/src/assets/other/image.png" alt="alt text" width="1000" height="500" />
