@@ -63,7 +63,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   mode: 'solitario',
   timeLimit: 60,
   sound: true,
-  musicVolume: 0.05,
+  musicVolume: 0.80,
   controls: {
     moveUp: 'KeyW',
     moveDown: 'KeyS',
