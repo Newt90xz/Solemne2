@@ -63,7 +63,6 @@ docker compose up --build
 ```
 Esto se encargara de levantar los contenedores y levantar los servicios. Al terminar, esta estara corriendo en `localhost://10081`.
 
-`localhost://10081`
 ### Ejecutar con DockerHub
 
 Si prefieres usar las imágenes ya publicadas en DockerHub en lugar de construirlas, primero debes descargar el archivo docker-compose.yml del repositorio público a tu carpeta local.
